@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet Users Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .action-btns .btn {
+            margin-right: 5px;
+        }
+        .search-container {
+            margin-bottom: 20px;
+        }
+        .points-badge {
+            font-size: 0.9rem;
+            padding: 5px 10px;
+        }
+        .user-card {
+            transition: all 0.3s ease;
+        }
+        .user-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="mb-0">Wallet Users</h2>
+                <p class="text-muted">Manage all wallet users and their points</p>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="input-group search-container">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search users...">
+                    <button class="btn btn-outline-secondary" type="button" id="searchBtn">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="usersContainer">
+            <!-- Users will be loaded here via JavaScript -->
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center" id="pagination">
+                        <!-- Pagination will be added here -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addUserForm">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="mobile" class="form-label">Mobile</label>
+                            <input type="text" class="form-control" id="mobile" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" required>
+                        </div>
+                        <!-- <div class="mb-3">
+                            <label for="initialPoints" class="form-label">Initial Points</label>
+                            <input type="number" class="form-control" id="initialPoints" value="0">
+                        </div> -->
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveUserBtn">Save User</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUserForm">
+                        <input type="hidden" id="editUserId">
+                        <div class="mb-3">
+                            <label for="editUsername" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="editUsername" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editMobile" class="form-label">Mobile</label>
+                            <input type="text" class="form-control" id="editMobile" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="editEmail" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="updateUserBtn">Update User</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Points Transaction Modal -->
+    <div class="modal fade" id="pointsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="pointsModalTitle">Add/Redeem Points</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="pointsForm">
+                        <input type="hidden" id="transactionUserId">
+                        <input type="hidden" id="transactionType">
+                        <div class="mb-3">
+                            <label for="pointsAmount" class="form-label">Points</label>
+                            <input type="number" class="form-control" id="pointsAmount" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="transactionReason" class="form-label">Reason</label>
+                            <input type="text" class="form-control" id="transactionReason">
+                        </div>
+                        <div class="mb-3">
+                            <label for="ticketId" class="form-label">Ticket ID</label>
+                            <input type="text" class="form-control" id="ticketId" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="submitPointsBtn">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions Modal -->
+    <div class="modal fade" id="transactionsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">User Transactions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Points</th>
+                                    <th>Reason</th>
+                                    <th>Ticket ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTableBody">
+                                <!-- Transactions will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let currentPage = 1;
+            const usersPerPage = 8;
+            let allUsers = [];
+            let filteredUsers = [];
+
+            // Load users on page load
+            loadUsers();
+
+            // Search functionality
+            document.getElementById('searchBtn').addEventListener('click', searchUsers);
+            document.getElementById('searchInput').addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') {
+                    searchUsers();
+                }
+            });
+
+            // Add new user
+            document.getElementById('saveUserBtn').addEventListener('click', addNewUser);
+
+            // Update user
+            document.getElementById('updateUserBtn').addEventListener('click', updateUser);
+
+            // Submit points transaction
+            document.getElementById('submitPointsBtn').addEventListener('click', submitPointsTransaction);
+
+            async function loadUsers(page = 1) {
+                try {
+                    const response = await axios.get('/api/walletuser');
+                    allUsers = response.data;
+                    filteredUsers = [...allUsers];
+                    renderUsers(page);
+                    renderPagination();
+                } catch (error) {
+                    console.error('Error loading users:', error);
+                    alert('Failed to load users');
+                }
+            }
+
+            function renderUsers(page) {
+                currentPage = page;
+                const startIndex = (page - 1) * usersPerPage;
+                const endIndex = startIndex + usersPerPage;
+                const usersToDisplay = filteredUsers.slice(startIndex, endIndex);
+                
+                const usersContainer = document.getElementById('usersContainer');
+                usersContainer.innerHTML = '';
+
+                if (usersToDisplay.length === 0) {
+                    usersContainer.innerHTML = '<div class="col-12 text-center py-5"><h4>No users found</h4></div>';
+                    return;
+                }
+
+                usersToDisplay.forEach(user => {
+                    const userCard = document.createElement('div');
+                    userCard.className = 'col-md-6 col-lg-3 mb-4';
+                    userCard.innerHTML = `
+                        <div class="card user-card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">${user.username}</h5>
+                                <p class="card-text text-muted mb-1">
+                                    <i class="bi bi-telephone"></i> ${user.mobile}
+                                </p>
+                                <p class="card-text text-muted mb-3">
+                                    <i class="bi bi-envelope"></i> ${user.email}
+                                </p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-primary rounded-pill points-badge">
+                                        ${user.wallet.points} points
+                                    </span>
+                                    <div class="action-btns">
+                                        <button class="btn btn-sm btn-outline-primary view-transactions" 
+                                            data-userid="${user._id}" data-username="${user.username}">
+                                            <i class="bi bi-list-ul"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    usersContainer.appendChild(userCard);
+                });
+
+                // Add event listeners to the new buttons
+                document.querySelectorAll('.view-transactions').forEach(btn => {
+                    btn.addEventListener('click', viewTransactions);
+                });
+            }
+
+            function renderPagination() {
+                const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+                const pagination = document.getElementById('pagination');
+                pagination.innerHTML = '';
+
+                if (totalPages <= 1) return;
+
+                // Previous button
+                const prevLi = document.createElement('li');
+                prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+                prevLi.innerHTML = `<a class="page-link" href="#">Previous</a>`;
+                prevLi.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) {
+                        renderUsers(currentPage - 1);
+                    }
+                });
+                pagination.appendChild(prevLi);
+
+                // Page numbers
+                for (let i = 1; i <= totalPages; i++) {
+                    const pageLi = document.createElement('li');
+                    pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                    pageLi.innerHTML = `<a class="page-link" href="#">${i}</a>`;
+                    pageLi.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        renderUsers(i);
+                    });
+                    pagination.appendChild(pageLi);
+                }
+
+                // Next button
+                const nextLi = document.createElement('li');
+                nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+                nextLi.innerHTML = `<a class="page-link" href="#">Next</a>`;
+                nextLi.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) {
+                        renderUsers(currentPage + 1);
+                    }
+                });
+                pagination.appendChild(nextLi);
+            }
+
+            function searchUsers() {
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                if (searchTerm.trim() === '') {
+                    filteredUsers = [...allUsers];
+                } else {
+                    filteredUsers = allUsers.filter(user => 
+                        user.username.toLowerCase().includes(searchTerm) ||
+                        user.mobile.toLowerCase().includes(searchTerm) ||
+                        user.email.toLowerCase().includes(searchTerm)
+                    );
+                }
+                renderUsers(1);
+                renderPagination();
+            }
+
+            async function addNewUser() {
+                const username = document.getElementById('username').value;
+                const mobile = document.getElementById('mobile').value;
+                const email = document.getElementById('email').value;
+                const initialPoints = 0;
+
+                try {
+                    const response = await axios.post('/api/walletuser', {
+                        username,
+                        mobile,
+                        email,
+                        wallet: {
+                            points: parseInt(initialPoints)
+                        }
+                    });
+
+                    // Add transaction if initial points > 0
+                    if (initialPoints > 0) {
+                        await axios.post('/api/wallettransaction', {
+                            userId: response.data._id,
+                            type: 'add',
+                            points: parseInt(initialPoints),
+                            reason: 'Initial points',
+                            ticketId: 'INIT-' + Date.now()
+                        });
+                    }
+
+                    document.getElementById('addUserForm').reset();
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addUserModal'));
+                    modal.hide();
+                    loadUsers();
+                    alert('User added successfully!');
+                } catch (error) {
+                    console.error('Error adding user:', error);
+                    alert('Failed to add user: ' + (error.response?.data?.message || error.message));
+                }
+            }
+
+            function editUser(e) {
+                const userId = e.target.closest('button').dataset.userid;
+                const user = allUsers.find(u => u._id === userId);
+                
+                document.getElementById('editUserId').value = userId;
+                document.getElementById('editUsername').value = user.username;
+                document.getElementById('editMobile').value = user.mobile;
+                document.getElementById('editEmail').value = user.email;
+                
+                const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+                modal.show();
+            }
+
+            async function updateUser() {
+                const userId = document.getElementById('editUserId').value;
+                const username = document.getElementById('editUsername').value;
+                const mobile = document.getElementById('editMobile').value;
+                const email = document.getElementById('editEmail').value;
+
+                try {
+                    await axios.put(`/api/walletuser/${userId}`, {
+                        username,
+                        mobile,
+                        email
+                    });
+
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+                    modal.hide();
+                    loadUsers();
+                    alert('User updated successfully!');
+                } catch (error) {
+                    console.error('Error updating user:', error);
+                    alert('Failed to update user: ' + (error.response?.data?.message || error.message));
+                }
+            }
+
+            async function deleteUser(e) {
+                if (!confirm('Are you sure you want to delete this user?')) return;
+                
+                const userId = e.target.closest('button').dataset.userid;
+                try {
+                    await axios.delete(`/api/walletuser/${userId}`);
+                    loadUsers();
+                    alert('User deleted successfully!');
+                } catch (error) {
+                    console.error('Error deleting user:', error);
+                    alert('Failed to delete user: ' + (error.response?.data?.message || error.message));
+                }
+            }
+
+            function openPointsModal(btn, type) {
+                const userId = btn.dataset.userid;
+                const username = btn.dataset.username;
+                
+                document.getElementById('transactionUserId').value = userId;
+                document.getElementById('transactionType').value = type;
+                document.getElementById('pointsModalTitle').textContent = 
+                    type === 'add' ? `Add Points to ${username}` : `Redeem Points from ${username}`;
+                
+                const modal = new bootstrap.Modal(document.getElementById('pointsModal'));
+                modal.show();
+            }
+
+            async function submitPointsTransaction() {
+                const userId = document.getElementById('transactionUserId').value;
+                const type = document.getElementById('transactionType').value;
+                const points = document.getElementById('pointsAmount').value;
+                const reason = document.getElementById('transactionReason').value;
+                const ticketId = document.getElementById('ticketId').value;
+
+                try {
+                    await axios.post('/api/wallettransaction', {
+                        userId,
+                        type,
+                        points: parseInt(points),
+                        reason,
+                        ticketId
+                    });
+
+                    document.getElementById('pointsForm').reset();
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('pointsModal'));
+                    modal.hide();
+                    loadUsers();
+                    alert('Points transaction completed successfully!');
+                } catch (error) {
+                    console.error('Error processing points transaction:', error);
+                    alert('Failed to process transaction: ' + (error.response?.data?.message || error.message));
+                }
+            }
+
+            async function viewTransactions(e) {
+                const userId = e.target.closest('button').dataset.userid;
+                const username = e.target.closest('button').dataset.username;
+                
+                try {
+                    const response = await axios.get(`/api/wallettransaction/user/${userId}`);
+                    const transactions = response.data;
+                    
+                    const tableBody = document.getElementById('transactionsTableBody');
+                    tableBody.innerHTML = '';
+                    
+                    if (transactions.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">No transactions found</td></tr>';
+                    } else {
+                        transactions.forEach(tx => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${new Date(tx.timestamp).toLocaleString()}</td>
+                                <td>
+                                    <span class="badge ${tx.type === 'add' ? 'bg-success' : 'bg-warning'}">
+                                        ${tx.type}
+                                    </span>
+                                </td>
+                                <td>${tx.points}</td>
+                                <td>${tx.reason || '-'}</td>
+                                <td>${tx.ticketId}</td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    }
+                    
+                    document.querySelector('#transactionsModal .modal-title').textContent = 
+                        `${username}'s Transactions`;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('transactionsModal'));
+                    modal.show();
+                } catch (error) {
+                    console.error('Error fetching transactions:', error);
+                    alert('Failed to load transactions');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

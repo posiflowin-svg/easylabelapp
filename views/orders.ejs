@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orders Management</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .order-card { transition: all 0.3s ease; }
+    .order-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+    .loading-spinner { display: none; }
+    .loading-spinner.active { display: inline-block; }
+    .password-section {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+      <!-- Password Verification -->
+      <div id="passwordSection" class="p-8 password-section">
+        <div class="text-center mb-6">
+          <i class="fas fa-lock text-4xl text-blue-500 mb-4"></i>
+          <h1 class="text-2xl font-bold text-gray-800">Admin Access Required</h1>
+          <p class="text-gray-600 mt-2">Enter the admin password to access orders</p>
+        </div>
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+            Admin Password
+          </label>
+          <div class="relative">
+            <input id="passwordInput" type="password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-blue-500 pr-10">
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <i class="fas fa-key text-gray-400"></i>
+            </div>
+          </div>
+        </div>
+        <button id="verifyPasswordBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200 flex items-center justify-center">
+          <i class="fas fa-sign-in-alt mr-2"></i> Verify Password
+        </button>
+        <div id="passwordError" class="text-red-500 mt-2 text-center hidden">
+          <i class="fas fa-exclamation-circle mr-1"></i> Invalid password. Please try again.
+        </div>
+      </div>
+
+      <!-- Orders Dashboard (hidden until password verified) -->
+      <div id="ordersDashboard" class="hidden">
+        <!-- Header with logout button -->
+        <div class="flex justify-between items-center border-b border-gray-200 p-4">
+          <h1 class="text-xl font-bold text-gray-800">
+            <i class="fas fa-boxes mr-2 text-blue-500"></i> Orders Management
+          </h1>
+          <div class="flex items-center space-x-4">
+            <button id="usersBtn" class="text-sm text-gray-600 hover:text-purple-600 flex items-center">
+              <i class="fas fa-user mr-1"></i> Users
+            </button>
+            <button id="couponsBtn" class="text-sm text-gray-600 hover:text-purple-600 flex items-center">
+              <i class="fas fa-tag mr-1"></i> Coupons
+            </button>
+            <button id="logoutBtn" class="text-sm text-gray-600 hover:text-blue-600 flex items-center">
+              <i class="fas fa-sign-out-alt mr-1"></i> Lock Dashboard
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="border-b border-gray-200">
+          <nav class="flex -mb-px">
+            <button data-tab="active" class="tab-btn active mr-8 py-4 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600">
+              <i class="fas fa-clock mr-1"></i> Active Orders
+            </button>
+            <button data-tab="processing" class="tab-btn mr-8 py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                <i class="fas fa-cog mr-1"></i> Processing
+            </button>
+            <button data-tab="in_transit" class="tab-btn mr-8 py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+              <i class="fas fa-truck mr-1"></i> In Transit
+            </button>
+            <button data-tab="completed" class="tab-btn py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+              <i class="fas fa-check-circle mr-1"></i> Completed
+            </button>
+          </nav>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="p-6">
+          <!-- Search Box -->
+          <div class="mb-6 relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fas fa-search text-gray-400"></i>
+            </div>
+            <input type="text" id="searchInput" placeholder="Search by Order ID or Phone..." 
+                   class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+          </div>
+
+          <!-- Active Orders Tab -->
+          <div id="activeTab" class="tab-content active">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-semibold text-gray-800">
+                <i class="fas fa-clock text-blue-500 mr-2"></i> Active Orders
+              </h2>
+              <span id="activeCount" class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">0 orders</span>
+            </div>
+            <div id="activeOrdersList" class="space-y-4">
+              <!-- Orders will be loaded here -->
+            </div>
+            <div id="activeLoading" class="loading-spinner text-center py-8">
+              <i class="fas fa-spinner fa-spin text-2xl text-blue-500"></i>
+            </div>
+            <button id="loadMoreActive" class="mt-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg w-full hidden">
+              <i class="fas fa-plus-circle mr-1"></i> Load More
+            </button>
+          </div>
+
+          <!-- Processing Tab -->
+          <div id="processingTab" class="tab-content">
+              <div class="flex justify-between items-center mb-4">
+                  <h2 class="text-xl font-semibold text-gray-800">
+                      <i class="fas fa-cog text-purple-500 mr-2"></i> Processing Orders
+                  </h2>
+                  <span id="processingCount" class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded">0 orders</span>
+              </div>
+              <div id="processingOrdersList" class="space-y-4">
+                  <!-- Orders will be loaded here -->
+              </div>
+              <div id="processingLoading" class="loading-spinner text-center py-8">
+                  <i class="fas fa-spinner fa-spin text-2xl text-blue-500"></i>
+              </div>
+              <button id="loadMoreProcessing" class="mt-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg w-full hidden">
+                  <i class="fas fa-plus-circle mr-1"></i> Load More
+              </button>
+          </div>
+
+          <!-- In Transit Tab -->
+          <div id="in_transitTab" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-semibold text-gray-800">
+                <i class="fas fa-truck text-yellow-500 mr-2"></i> Orders In Transit
+              </h2>
+              <span id="in_transitCount" class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded">0 orders</span>
+            </div>
+            <div id="in_transitOrdersList" class="space-y-4">
+              <!-- Orders will be loaded here -->
+            </div>
+            <div id="in_transitLoading" class="loading-spinner text-center py-8">
+              <i class="fas fa-spinner fa-spin text-2xl text-blue-500"></i>
+            </div>
+            <button id="loadMoreIn_transit" class="mt-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg w-full hidden">
+              <i class="fas fa-plus-circle mr-1"></i> Load More
+            </button>
+          </div>
+
+          <!-- Completed Tab -->
+          <div id="completedTab" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-semibold text-gray-800">
+                <i class="fas fa-check-circle text-green-500 mr-2"></i> Completed Orders
+              </h2>
+              <span id="completedCount" class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded">0 orders</span>
+            </div>
+            <div id="completedOrdersList" class="space-y-4">
+              <!-- Orders will be loaded here -->
+            </div>
+            <div id="completedLoading" class="loading-spinner text-center py-8">
+              <i class="fas fa-spinner fa-spin text-2xl text-blue-500"></i>
+            </div>
+            <button id="loadMoreCompleted" class="mt-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 px-4 rounded-lg w-full hidden">
+              <i class="fas fa-plus-circle mr-1"></i> Load More
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Detail Modal -->
+  <div id="orderModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white rounded-lg w-full max-w-2xl mx-4 flex flex-col" style="max-height: 90vh;">
+      <!-- Modal Header -->
+      <div class="p-6 pb-0 flex-shrink-0">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold text-gray-800" id="modalOrderId"></h3>
+          <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Scrollable Content -->
+      <div class="px-6 pb-6 overflow-y-auto flex-grow">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <h4 class="font-semibold text-gray-700 flex items-center">
+              <i class="fas fa-user mr-2 text-blue-500"></i> Customer Information
+            </h4>
+            <div class="mt-2 space-y-1 pl-6">
+              <p id="modalCustomerName" class="text-gray-800"></p>
+              <p id="modalCustomerPhone" class="text-blue-600"></p>
+              <p id="modalCustomerGSTIN" class="text-blue-600"></p>
+              <p id="modalCustomerAddress" class="text-gray-600"></p>
+            </div>
+          </div>
+          <div>
+            <h4 class="font-semibold text-gray-700 flex items-center">
+              <i class="fas fa-info-circle mr-2 text-blue-500"></i> Order Details
+            </h4>
+            <div class="mt-2 space-y-1 pl-6">
+              <p id="modalOrderDate" class="text-gray-800"></p>
+              <p id="modalOrderStatus" class="text-gray-800"></p>
+              <p id="modalTrackingId" class="text-gray-800"></p>
+              <p id="modalOrderNotes" class="text-gray-800"></p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-6">
+          <h4 class="font-semibold text-gray-700 flex items-center">
+            <i class="fas fa-shopping-basket mr-2 text-blue-500"></i> Items
+          </h4>
+          <div id="modalOrderItems" class="mt-2 space-y-2 pl-6"></div>
+          <div class="mt-4 pt-2 border-t border-gray-200">
+            <p id="modalOrderTotal" class="font-semibold text-lg text-right"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fixed Footer with Action Buttons -->
+      <div id="statusUpdateSection" class="p-6 pt-0 border-t border-gray-200 flex-shrink-0">
+        <!-- Active Order Actions -->
+        <div id="activeStatusUpdate" class="hidden space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <button id="markProcessingBtn" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded transition duration-200 flex items-center justify-center">
+              <i class="fas fa-cog mr-2"></i> Mark as Processing
+            </button>
+            <button id="cancelOrderBtn" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded transition duration-200 flex items-center justify-center">
+              <i class="fas fa-times-circle mr-2"></i> Cancel Order
+            </button>
+          </div>
+        </div>
+        
+        <!-- Processing Order Actions -->
+        <div id="processingStatusUpdate" class="hidden space-y-3">
+          <div class="mb-3">
+            <label class="block text-gray-700 text-sm font-bold mb-1">Tracking ID</label>
+            <input type="text" id="trackingIdInput" class="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <button id="markin_transitBtn" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition duration-200 flex items-center justify-center">
+              <i class="fas fa-truck mr-2"></i> Mark as In Transit
+            </button>
+            <button id="markActiveBtn" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded transition duration-200 flex items-center justify-center">
+              <i class="fas fa-undo mr-2"></i> Revert to Active
+            </button>
+          </div>
+        </div>
+        
+        <div id="in_transitStatusUpdate" class="hidden">
+          <button id="markCompletedBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded transition duration-200 flex items-center justify-center">
+            <i class="fas fa-check-circle mr-2"></i> Mark as Completed
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const passwordSection = document.getElementById('passwordSection');
+    const ordersDashboard = document.getElementById('ordersDashboard');
+    const verifyPasswordBtn = document.getElementById('verifyPasswordBtn');
+    const passwordInput = document.getElementById('passwordInput');
+    const passwordError = document.getElementById('passwordError');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // Check session storage for auth
+    if (sessionStorage.getItem('adminAuthenticated') === 'true') {
+      passwordSection.classList.add('hidden');
+      ordersDashboard.classList.remove('hidden');
+      initializeOrdersDashboard();
+    }
+
+    // Password verification
+    verifyPasswordBtn.addEventListener('click', verifyPassword);
+    passwordInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') verifyPassword();
+    });
+
+      async function verifyPassword() {
+        try {
+            const response = await fetch('/api/verify-admin-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: passwordInput.value })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                sessionStorage.setItem('adminAuthenticated', 'true');
+                sessionStorage.setItem('adminAuthenticated', 'true');
+        passwordSection.classList.add('hidden');
+        ordersDashboard.classList.remove('hidden');
+        passwordError.classList.add('hidden');
+        initializeOrdersDashboard();
+            } else {
+              passwordError.classList.remove('hidden');
+              passwordInput.focus();
+            }
+        } catch (error) {
+          passwordError.classList.remove('hidden');
+          passwordInput.focus();
+        }
+    }
+
+    // Logout functionality
+    logoutBtn.addEventListener('click', () => {
+      sessionStorage.removeItem('adminAuthenticated');
+      ordersDashboard.classList.add('hidden');
+      passwordSection.classList.remove('hidden');
+      passwordInput.value = '';
+      passwordInput.focus();
+    });
+
+    function initializeOrdersDashboard() {
+      setupTabs();
+      setupSearch();
+      loadInitialData();
+    }
+
+    function setupTabs() {
+      document.querySelectorAll('.tab-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active', 'border-blue-500', 'text-blue-600');
+            btn.classList.add('border-transparent', 'text-gray-500');
+          });
+          this.classList.add('active', 'border-blue-500', 'text-blue-600');
+          this.classList.remove('border-transparent', 'text-gray-500');
+          
+          const tabId = this.getAttribute('data-tab');
+          document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+            if (content.id === `${tabId}Tab`) {
+              content.classList.add('active');
+              loadOrders(tabId, 1, true);
+            }
+          });
+        });
+      });
+    }
+
+    function setupSearch() {
+      const searchInput = document.getElementById('searchInput');
+      let searchTimeout;
+      
+      searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-tab');
+          loadOrders(activeTab, 1, true);
+        }, 500);
+      });
+    }
+
+    function loadInitialData() {
+      const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-tab');
+      loadOrders(activeTab, 1, true);
+    }
+
+    async function loadOrders(status, page = 1, reset = false) {
+    const searchTerm = document.getElementById('searchInput').value.trim();
+    const loadingElement = document.getElementById(`${status}Loading`);
+    const ordersListElement = document.getElementById(`${status}OrdersList`);
+    const loadMoreButton = document.getElementById(`loadMore${status.charAt(0).toUpperCase() + status.slice(1)}`);
+    
+        if (reset) ordersListElement.innerHTML = '';
+        
+        loadingElement.classList.add('active');
+        loadMoreButton.classList.add('hidden');
+        
+        try {
+          const apiStatus = status === 'processing' ? 'Processing' : status;
+
+            const response = await fetch(`/api/order/all?status=${apiStatus}&search=${searchTerm}&page=${page}`);
+            if (!response.ok) throw new Error(await response.text());
+            
+            const data = await response.json();
+            
+            if (data.success && data.data?.docs?.length > 0) {
+                data.data.docs.forEach(order => {
+                    ordersListElement.appendChild(createOrderCard(order, status));
+                });
+                
+                document.getElementById(`${status}Count`).textContent = 
+                    `${data.data.totalDocs} ${data.data.totalDocs === 1 ? 'order' : 'orders'}`;
+                
+                if (data.data.hasNextPage) {
+                    loadMoreButton.onclick = () => loadOrders(status, page + 1);
+                    loadMoreButton.classList.remove('hidden');
+                }
+            } else if (page === 1) {
+                ordersListElement.innerHTML = '<p class="text-gray-500 text-center py-8">No orders found</p>';
+                document.getElementById(`${status}Count`).textContent = '0 orders';
+            }
+        } catch (error) {
+            console.error('Error loading orders:', error);
+            ordersListElement.innerHTML = '<p class="text-red-500 text-center py-8">Error loading orders</p>';
+        } finally {
+            loadingElement.classList.remove('active');
+        }
+    }
+
+    function createOrderCard(order, status) {
+      const card = document.createElement('div');
+      card.className = 'order-card bg-white p-4 rounded-lg shadow border border-gray-100 cursor-pointer';
+      card.dataset.orderId = order.orderId;
+      
+      const statusColors = {
+        active: 'bg-blue-100 text-blue-800',
+        in_transit: 'bg-yellow-100 text-yellow-800',
+        completed: 'bg-green-100 text-green-800'
+      };
+      
+      card.innerHTML = `
+        <div class="flex justify-between items-start">
+          <div>
+            <h3 class="font-bold text-lg">${order.orderId}</h3>
+            <p class="text-gray-600">${order.customer.name}</p>
+            <p class="text-blue-500">${order.customer.phone}</p>
+          </div>
+          <span class="px-2 py-1 rounded-full text-xs font-semibold ${statusColors[status]}">
+            ${status.replace('_', ' ')}
+          </span>
+        </div>
+        <div class="mt-3 flex justify-between items-center">
+          <div>
+            <p class="text-sm text-gray-500">${new Date(order.date).toLocaleDateString()}</p>
+            ${order.trackingId ? `<p class="text-sm">Tracking: ${order.trackingId}</p>` : ''}
+          </div>
+          <button class="text-blue-600 hover:text-blue-800">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      `;
+      
+      card.addEventListener('click', () => showOrderDetails(order, status));
+      return card;
+    }
+
+    function showOrderDetails(order, currentStatus) {
+      console.log("Full Order Object:", order);
+      const modal = document.getElementById('orderModal');
+      document.getElementById('modalOrderId').textContent = order.orderId;
+      document.getElementById('modalCustomerName').textContent = order.customer.name;
+      document.getElementById('modalCustomerPhone').textContent = order.customer.phone;
+      document.getElementById('modalCustomerGSTIN').textContent = "GSTIN: "+order.customer.gstin;
+      // document.getElementById('modalCustomerAddress').textContent = 
+      //   `${order.customer.address?.houseFloor || ''} ${order.customer.address?.buildingBlock || ''}, ${order.customer.address?.city || ''}`;
+      
+        document.getElementById('modalCustomerAddress').textContent = [
+            order.customer.address?.houseFloor,
+            order.customer.address?.buildingBlock,
+            order.customer.address?.landmarkArea,
+            `${order.customer.address?.city || ''}${order.customer.address?.state ? `, ${order.customer.address.state}` : ''}`,
+            order.customer.address?.postalCode
+        ]
+        .filter(part => part) // Remove empty parts
+        .join(', ');
+
+      document.getElementById('modalOrderDate').textContent = `Placed on: ${new Date(order.date).toLocaleString()}`;
+      document.getElementById('modalOrderStatus').textContent = `Status: ${currentStatus.replace('_', ' ')}`;
+      document.getElementById('modalTrackingId').textContent = order.trackingId ? `Tracking: ${order.trackingId}` : '';
+      document.getElementById('modalOrderNotes').textContent = order.notes ? `Notes: ${order.notes}` : '';
+
+      document.getElementById('trackingIdInput').value = '';
+
+      const itemsContainer = document.getElementById('modalOrderItems');
+      itemsContainer.innerHTML = '';
+      order.products.forEach(item => {
+        const itemElement = document.createElement('div');
+        itemElement.className = 'flex justify-between';
+        itemElement.innerHTML = `
+          <span>${item.name} × ${item.quantity}</span>
+          <span>₹${item.price * item.quantity}</span>
+        `;
+        itemsContainer.appendChild(itemElement);
+      });
+      
+      document.getElementById('modalOrderTotal').textContent = `Total: ₹${order.totalAmount.toFixed(2)}`;
+      
+      document.getElementById('activeStatusUpdate').classList.add('hidden');
+      document.getElementById('processingStatusUpdate').classList.add('hidden');
+      document.getElementById('in_transitStatusUpdate').classList.add('hidden');
+      
+      if (currentStatus === 'active') {
+        document.getElementById('activeStatusUpdate').classList.remove('hidden');
+        document.getElementById('markProcessingBtn').onclick = () => updateOrderStatus(order.orderId, 'Processing');
+        document.getElementById('cancelOrderBtn').onclick = () => {
+          if (confirm('Are you sure you want to cancel this order?')) {
+            updateOrderStatus(order.orderId, 'Cancelled');
+          }
+        };
+      } else if (currentStatus === 'processing') {
+        document.getElementById('processingStatusUpdate').classList.remove('hidden');
+        document.getElementById('markin_transitBtn').onclick = () => updateOrderStatus(order.orderId, 'in_transit');
+        // Cancel Order button
+        document.getElementById('cancelOrderBtn').onclick = () => {
+              if (confirm('Are you sure you want to cancel this order?')) {
+                updateOrderStatus(order.orderId, 'Cancelled');
+              }
+        };
+        
+        document.getElementById('markActiveBtn').onclick = () => updateOrderStatus(order.orderId, 'active');
+      } else if (currentStatus === 'in_transit') {
+        document.getElementById('in_transitStatusUpdate').classList.remove('hidden');
+        document.getElementById('markCompletedBtn').onclick = () => updateOrderStatus(order.orderId, 'completed');
+      }
+      
+      modal.classList.remove('hidden');
+    }
+
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+      document.getElementById('orderModal').classList.add('hidden');
+    });
+
+    document.getElementById('couponsBtn').addEventListener('click', () => {
+      window.location.href = '/coupons';
+    });
+
+    document.getElementById('usersBtn').addEventListener('click', () => {
+      window.location.href = '/users';
+    });
+    async function updateOrderStatus(orderId, newStatus) {
+      const trackingId = newStatus === 'in_transit' 
+        ? document.getElementById('trackingIdInput').value.trim()
+        : null;
+      
+      if (newStatus === 'in_transit' && !trackingId) {
+        alert('Please enter tracking ID');
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/order/update-status/${orderId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            status: newStatus,
+            trackingId
+          })
+        });
+        
+        if (response.ok) {
+          const updatedOrder = await response.json();
+          document.getElementById('orderModal').classList.add('hidden');
+          
+          const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-tab');
+          loadOrders(activeTab, 1, true);
+          
+          if (activeTab === 'active' && newStatus === 'Processing') {
+            document.querySelector('[data-tab="processing"]').click();
+          } else if (activeTab === 'Processing' && newStatus === 'in_transit') {
+            document.querySelector('[data-tab="in_transit"]').click();
+          } else if (activeTab === 'in_transit' && newStatus === 'completed') {
+            document.querySelector('[data-tab="completed"]').click();
+          } else if (newStatus === 'active') {
+            document.querySelector('[data-tab="active"]').click();
+          }
+        } else {
+          const error = await response.json();
+          alert(`Error: ${error.message || 'Failed to update status'}`);
+        }
+      } catch (error) {
+        console.error('Error updating order:', error);
+        alert('Failed to update order status');
+      }
+    }
+  });
+  </script>
+</body>
+</html>
