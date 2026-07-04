@@ -77,6 +77,8 @@ exports.deleteUser = async (req, res) => {
 exports.importUsers = async (req, res) => {
   const fs = require('fs');
 
+  const filePath = req.file && req.file.path;
+
   function parseCsvLine(line) {
     const result = [];
     let current = '';
@@ -104,7 +106,12 @@ exports.importUsers = async (req, res) => {
   }
 
   function normalizeHeader(header) {
-    return String(header || '').trim().toLowerCase().replace(/\s+/g, '').replace(/_/g, '');
+    return String(header || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '')
+      .replace(/_/g, '')
+      .replace(/-/g, '');
   }
 
   function normalizePhone(phone) {
@@ -112,7 +119,30 @@ exports.importUsers = async (req, res) => {
     return String(phone).replace(/\D/g, '').slice(-10);
   }
 
-  const filePath = req.file && req.file.path;
+  function normalizeEmail(email) {
+    return String(email || '').trim().toLowerCase();
+  }
+
+  function parseDate(value) {
+    if (!value) return undefined;
+
+    const raw = String(value).trim();
+    const directDate = new Date(raw);
+    if (!isNaN(directDate.getTime())) return directDate;
+
+    const match = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
+    if (match) {
+      const day = Number(match[1]);
+      const month = Number(match[2]) - 1;
+      let year = Number(match[3]);
+      if (year < 100) year += 2000;
+
+      const parsed = new Date(year, month, day);
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+
+    return undefined;
+  }
 
   try {
     if (!filePath) {
@@ -120,64 +150,167 @@ exports.importUsers = async (req, res) => {
     }
 
     const csvText = fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '');
-    const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
+    const lines = csvText
+      .split(/\r?\n/)
+      .filter((line) => line.trim() !== '');
 
     if (lines.length < 2) {
       return res.status(400).json({ message: 'CSV file has no user rows' });
     }
 
     const headers = parseCsvLine(lines[0]).map(normalizeHeader);
-    const summary = { totalRows: lines.length - 1, inserted: 0, skipped: 0, failed: 0, errors: [] };
+    const rows = [];
+    const summary = {
+      totalRows: lines.length - 1,
+      inserted: 0,
+      skipped: 0,
+      failed: 0,
+      errors: []
+    };
 
     for (let i = 1; i < lines.length; i++) {
-      try {
-        const values = parseCsvLine(lines[i]);
-        const row = {};
+      const values = parseCsvLine(lines[i]);
+      const row = {};
 
-        headers.forEach((header, index) => {
-          row[header] = values[index] || '';
-        });
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
 
-        const username = row.name || row.username || row.fullname || '';
-        const email = (row.email || row.emailid || '').toLowerCase();
-        const mobile = normalizePhone(row.phone || row.mobile || row.mobileno || '');
+      const username =
+        row.name ||
+        row.username ||
+        row.fullname ||
+        row.customername ||
+        row.user ||
+        '';
 
-        if (!email && !mobile) {
-          summary.failed++;
-          summary.errors.push({ row: i + 1, reason: 'Missing email and mobile' });
-          continue;
-        }
+      const email = normalizeEmail(row.email || row.emailid || row.mail || '');
+      const mobile = normalizePhone(
+        row.phone ||
+        row.mobile ||
+        row.mobileno ||
+        row.phonenumber ||
+        row.contact ||
+        row.contactno ||
+        ''
+      );
 
-        const duplicateQuery = [];
-        if (email) duplicateQuery.push({ email });
-        if (mobile) duplicateQuery.push({ mobile });
+      const joiningDate = parseDate(
+        row.joiningdate ||
+        row.createdat ||
+        row.createddate ||
+        row.date ||
+        ''
+      );
 
-        let exists = null;
-        if (duplicateQuery.length > 0) {
-          exists = await WalletUser.findOne({ $or: duplicateQuery });
-        }
-        if (exists) {
-          summary.skipped++;
-          continue;
-        }
-
-        await WalletUser.create({
-          username: username || (email ? email.split('@')[0] : mobile),
-          email,
-          mobile,
-          wallet: { points: Number(row.points || row.wallet || 0) || 0 }
-        });
-
-        summary.inserted++;
-      } catch (rowError) {
+      if (!email && !mobile) {
         summary.failed++;
-        summary.errors.push({ row: i + 1, reason: rowError.message });
+        if (summary.errors.length < 25) {
+          summary.errors.push({ row: i + 1, reason: 'Missing email and mobile/phone' });
+        }
+        continue;
+      }
+
+      rows.push({
+        rowNumber: i + 1,
+        username: username || (email ? email.split('@')[0] : mobile),
+        email,
+        mobile,
+        wallet: {
+          points: Number(row.points || row.wallet || row.walletpoints || 0) || 0
+        },
+        ...(joiningDate ? { createdAt: joiningDate, updatedAt: joiningDate } : {})
+      });
+    }
+
+    if (rows.length === 0) {
+      return res.json({ message: 'No valid users found in CSV', ...summary });
+    }
+
+    // Remove duplicates inside the same CSV before checking database.
+    const seenEmails = new Set();
+    const seenMobiles = new Set();
+    const uniqueRows = [];
+
+    rows.forEach((user) => {
+      const duplicateInCsv =
+        (user.email && seenEmails.has(user.email)) ||
+        (user.mobile && seenMobiles.has(user.mobile));
+
+      if (duplicateInCsv) {
+        summary.skipped++;
+        return;
+      }
+
+      if (user.email) seenEmails.add(user.email);
+      if (user.mobile) seenMobiles.add(user.mobile);
+      uniqueRows.push(user);
+    });
+
+    const emailList = uniqueRows.map((u) => u.email).filter(Boolean);
+    const mobileList = uniqueRows.map((u) => u.mobile).filter(Boolean);
+
+    const existingUsers = await WalletUser.find({
+      $or: [
+        ...(emailList.length ? [{ email: { $in: emailList } }] : []),
+        ...(mobileList.length ? [{ mobile: { $in: mobileList } }] : [])
+      ]
+    }).select('email mobile');
+
+    const existingEmails = new Set(existingUsers.map((u) => normalizeEmail(u.email)).filter(Boolean));
+    const existingMobiles = new Set(existingUsers.map((u) => normalizePhone(u.mobile)).filter(Boolean));
+
+    const usersToInsert = uniqueRows.filter((user) => {
+      const exists =
+        (user.email && existingEmails.has(user.email)) ||
+        (user.mobile && existingMobiles.has(user.mobile));
+
+      if (exists) {
+        summary.skipped++;
+        return false;
+      }
+
+      return true;
+    });
+
+    if (usersToInsert.length > 0) {
+      const batchSize = 500;
+
+      for (let i = 0; i < usersToInsert.length; i += batchSize) {
+        const batch = usersToInsert.slice(i, i + batchSize);
+
+        try {
+          const inserted = await WalletUser.insertMany(batch, { ordered: false });
+          summary.inserted += inserted.length;
+        } catch (batchError) {
+          if (batchError.insertedDocs) {
+            summary.inserted += batchError.insertedDocs.length;
+          }
+
+          if (batchError.writeErrors && Array.isArray(batchError.writeErrors)) {
+            summary.failed += batchError.writeErrors.length;
+
+            batchError.writeErrors.slice(0, 25 - summary.errors.length).forEach((writeError) => {
+              summary.errors.push({
+                reason: writeError.errmsg || writeError.message || 'Insert failed'
+              });
+            });
+          } else {
+            summary.failed += batch.length;
+            if (summary.errors.length < 25) {
+              summary.errors.push({ reason: batchError.message });
+            }
+          }
+        }
       }
     }
 
-    res.json({ message: 'Wallet users import completed', ...summary });
+    return res.json({
+      message: 'Wallet users import completed',
+      ...summary
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Import failed', error: err.message });
+    return res.status(500).json({ message: 'Import failed', error: err.message });
   } finally {
     if (filePath && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
