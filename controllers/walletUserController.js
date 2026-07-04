@@ -1,5 +1,6 @@
 // controllers/walletUserController.js
 const WalletUser = require('../models/WalletUser');
+const User = require('../models/User');
 
 exports.createUser = async (req, res) => {
   try {
@@ -72,7 +73,6 @@ exports.deleteUser = async (req, res) => {
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json({ message: 'User deleted' });
 };
-
 
 exports.importUsers = async (req, res) => {
   const fs = require('fs');
@@ -159,7 +159,7 @@ exports.importUsers = async (req, res) => {
     }
 
     const headers = parseCsvLine(lines[0]).map(normalizeHeader);
-    const rows = [];
+
     const summary = {
       totalRows: lines.length - 1,
       inserted: 0,
@@ -167,6 +167,8 @@ exports.importUsers = async (req, res) => {
       failed: 0,
       errors: []
     };
+
+    const rows = [];
 
     for (let i = 1; i < lines.length; i++) {
       const values = parseCsvLine(lines[i]);
@@ -176,22 +178,24 @@ exports.importUsers = async (req, res) => {
         row[header] = values[index] || '';
       });
 
-      const username =
+      const name =
         row.name ||
         row.username ||
         row.fullname ||
         row.customername ||
         row.user ||
+        row.customer ||
         '';
 
       const email = normalizeEmail(row.email || row.emailid || row.mail || '');
-      const mobile = normalizePhone(
+      const phone = normalizePhone(
         row.phone ||
         row.mobile ||
         row.mobileno ||
         row.phonenumber ||
         row.contact ||
         row.contactno ||
+        row.mobilenumber ||
         ''
       );
 
@@ -200,25 +204,23 @@ exports.importUsers = async (req, res) => {
         row.createdat ||
         row.createddate ||
         row.date ||
+        row.registeredat ||
         ''
       );
 
-      if (!email && !mobile) {
+      if (!email && !phone) {
         summary.failed++;
         if (summary.errors.length < 25) {
-          summary.errors.push({ row: i + 1, reason: 'Missing email and mobile/phone' });
+          summary.errors.push({ row: i + 1, reason: 'Missing email and phone/mobile' });
         }
         continue;
       }
 
       rows.push({
         rowNumber: i + 1,
-        username: username || (email ? email.split('@')[0] : mobile),
+        name: name || (email ? email.split('@')[0] : phone),
         email,
-        mobile,
-        wallet: {
-          points: Number(row.points || row.wallet || row.walletpoints || 0) || 0
-        },
+        phone,
         ...(joiningDate ? { createdAt: joiningDate, updatedAt: joiningDate } : {})
       });
     }
@@ -227,15 +229,15 @@ exports.importUsers = async (req, res) => {
       return res.json({ message: 'No valid users found in CSV', ...summary });
     }
 
-    // Remove duplicates inside the same CSV before checking database.
+    // Remove duplicates inside uploaded CSV first.
     const seenEmails = new Set();
-    const seenMobiles = new Set();
+    const seenPhones = new Set();
     const uniqueRows = [];
 
     rows.forEach((user) => {
       const duplicateInCsv =
         (user.email && seenEmails.has(user.email)) ||
-        (user.mobile && seenMobiles.has(user.mobile));
+        (user.phone && seenPhones.has(user.phone));
 
       if (duplicateInCsv) {
         summary.skipped++;
@@ -243,27 +245,37 @@ exports.importUsers = async (req, res) => {
       }
 
       if (user.email) seenEmails.add(user.email);
-      if (user.mobile) seenMobiles.add(user.mobile);
+      if (user.phone) seenPhones.add(user.phone);
       uniqueRows.push(user);
     });
 
     const emailList = uniqueRows.map((u) => u.email).filter(Boolean);
-    const mobileList = uniqueRows.map((u) => u.mobile).filter(Boolean);
+    const phoneList = uniqueRows.map((u) => u.phone).filter(Boolean);
 
-    const existingUsers = await WalletUser.find({
-      $or: [
-        ...(emailList.length ? [{ email: { $in: emailList } }] : []),
-        ...(mobileList.length ? [{ mobile: { $in: mobileList } }] : [])
-      ]
-    }).select('email mobile');
+    // IMPORTANT:
+    // This import is for the dashboard Users page, which loads data from /api/users.
+    // /api/users uses the main User collection with fields: name, email, phone.
+    // Do not check WalletUser here; otherwise old app users can be skipped wrongly.
+    const existingQuery = [];
+    if (emailList.length) existingQuery.push({ email: { $in: emailList } });
+    if (phoneList.length) existingQuery.push({ phone: { $in: phoneList } });
 
-    const existingEmails = new Set(existingUsers.map((u) => normalizeEmail(u.email)).filter(Boolean));
-    const existingMobiles = new Set(existingUsers.map((u) => normalizePhone(u.mobile)).filter(Boolean));
+    let existingUsers = [];
+    if (existingQuery.length > 0) {
+      existingUsers = await User.find({ $or: existingQuery }).select('email phone');
+    }
+
+    const existingEmails = new Set(
+      existingUsers.map((u) => normalizeEmail(u.email)).filter(Boolean)
+    );
+    const existingPhones = new Set(
+      existingUsers.map((u) => normalizePhone(u.phone)).filter(Boolean)
+    );
 
     const usersToInsert = uniqueRows.filter((user) => {
       const exists =
         (user.email && existingEmails.has(user.email)) ||
-        (user.mobile && existingMobiles.has(user.mobile));
+        (user.phone && existingPhones.has(user.phone));
 
       if (exists) {
         summary.skipped++;
@@ -280,7 +292,7 @@ exports.importUsers = async (req, res) => {
         const batch = usersToInsert.slice(i, i + batchSize);
 
         try {
-          const inserted = await WalletUser.insertMany(batch, { ordered: false });
+          const inserted = await User.insertMany(batch, { ordered: false });
           summary.inserted += inserted.length;
         } catch (batchError) {
           if (batchError.insertedDocs) {
@@ -290,11 +302,13 @@ exports.importUsers = async (req, res) => {
           if (batchError.writeErrors && Array.isArray(batchError.writeErrors)) {
             summary.failed += batchError.writeErrors.length;
 
-            batchError.writeErrors.slice(0, 25 - summary.errors.length).forEach((writeError) => {
-              summary.errors.push({
-                reason: writeError.errmsg || writeError.message || 'Insert failed'
+            batchError.writeErrors
+              .slice(0, Math.max(0, 25 - summary.errors.length))
+              .forEach((writeError) => {
+                summary.errors.push({
+                  reason: writeError.errmsg || writeError.message || 'Insert failed'
+                });
               });
-            });
           } else {
             summary.failed += batch.length;
             if (summary.errors.length < 25) {
@@ -306,7 +320,7 @@ exports.importUsers = async (req, res) => {
     }
 
     return res.json({
-      message: 'Wallet users import completed',
+      message: 'Users import completed',
       ...summary
     });
   } catch (err) {
@@ -317,3 +331,4 @@ exports.importUsers = async (req, res) => {
     }
   }
 };
+
