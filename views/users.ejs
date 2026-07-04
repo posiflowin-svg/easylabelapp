@@ -45,6 +45,9 @@
                 </div>
             </div>
             <div class="col-md-6 text-end">
+                <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importUsersModal">
+                    <i class="bi bi-upload"></i> Import Users
+                </button>
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
                     <i class="bi bi-plus-circle"></i> Add New User
                 </button>
@@ -62,6 +65,38 @@
                         <!-- Pagination will be added here -->
                     </ul>
                 </nav>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Import Users Modal -->
+    <div class="modal fade" id="importUsersModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Import Users from CSV</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        Supported columns: <strong>Name, Email, Phone, Joining Date</strong><br>
+                        Duplicate users are skipped by Email or Phone.
+                    </div>
+                    <form id="importUsersForm">
+                        <div class="mb-3">
+                            <label for="importUsersFile" class="form-label">Select CSV File</label>
+                            <input type="file" class="form-control" id="importUsersFile" accept=".csv" required>
+                        </div>
+                    </form>
+                    <div id="importUsersResult" class="small"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" id="uploadUsersBtn">
+                        <i class="bi bi-upload"></i> Upload & Import
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -230,6 +265,52 @@
 
             // Submit points transaction
             document.getElementById('submitPointsBtn').addEventListener('click', submitPointsTransaction);
+
+            // Import users from CSV
+            document.getElementById('uploadUsersBtn').addEventListener('click', importUsersFromCsv);
+
+
+            async function importUsersFromCsv() {
+                const fileInput = document.getElementById('importUsersFile');
+                const resultBox = document.getElementById('importUsersResult');
+
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    alert('Please select CSV file');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                resultBox.innerHTML = '<div class="text-primary">Importing users, please wait...</div>';
+
+                try {
+                    const response = await axios.post('/api/auth/import-users', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+
+                    const data = response.data;
+                    resultBox.innerHTML = `
+                        <div class="alert alert-success mt-3">
+                            <strong>Import Completed</strong><br>
+                            Total Rows: ${data.totalRows}<br>
+                            Inserted: ${data.inserted}<br>
+                            Skipped: ${data.skipped}<br>
+                            Failed: ${data.failed}
+                        </div>
+                    `;
+
+                    fileInput.value = '';
+                    loadUsers();
+                } catch (error) {
+                    console.error('Import users error:', error);
+                    resultBox.innerHTML = `
+                        <div class="alert alert-danger mt-3">
+                            Import failed: ${error.response?.data?.message || error.message}
+                        </div>
+                    `;
+                }
+            }
 
             async function loadUsers(page = 1) {
                 try {

@@ -243,6 +243,86 @@
         color: #ffffff;
         font-weight: bold;
     }
+
+      .import-modal-overlay {
+        display: none;
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.45);
+        align-items: center;
+        justify-content: center;
+      }
+
+      .import-modal-box {
+        background: #ffffff;
+        width: 420px;
+        max-width: 90%;
+        padding: 24px;
+        border-radius: 10px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+      }
+
+      .import-modal-box h3 {
+        margin-bottom: 12px;
+        color: #333;
+      }
+
+      .import-modal-box p {
+        font-size: 14px;
+        color: #555;
+        line-height: 1.5;
+        margin-bottom: 12px;
+      }
+
+      .import-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .import-btn {
+        background-color: #28a745;
+      }
+
+      .import-btn:hover {
+        background-color: #218838;
+      }
+
+      .cancel-btn {
+        background-color: #6c757d;
+      }
+
+      .cancel-btn:hover {
+        background-color: #5a6268;
+      }
+
+      #import-result {
+        margin-top: 12px;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .success-msg {
+        color: #155724;
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        padding: 10px;
+        border-radius: 6px;
+      }
+
+      .error-msg {
+        color: #721c24;
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        padding: 10px;
+        border-radius: 6px;
+      }
+
     </style>
   </head>
   <body>
@@ -894,10 +974,29 @@ function renderTemplates(templates) {
         <label for="to-date">To:</label>
         <input type="date" id="to-date" />
         <button onclick="filterUsers()">Filter</button>
+        <button class="import-btn" onclick="showImportUsersModal()">Import Users</button>
         <button onclick="exportToExcel()">Export to Excel</button>
         </div>
         <div id="user-list"></div>
     </div>
+
+    <!-- Import Users Modal -->
+    <div id="import-users-modal" class="import-modal-overlay">
+      <div class="import-modal-box">
+        <h3>Import Users from CSV</h3>
+        <p>
+          Upload CSV file with columns like <strong>Name, Email, Phone</strong>.
+          Duplicate users will be skipped by Email or Phone.
+        </p>
+        <input type="file" id="import-users-file" accept=".csv" />
+        <div id="import-result"></div>
+        <div class="import-modal-actions">
+          <button type="button" class="cancel-btn" onclick="hideImportUsersModal()">Close</button>
+          <button type="button" class="import-btn" onclick="importUsersFromCsv()">Upload & Import</button>
+        </div>
+      </div>
+    </div>
+
   
     <script>
       function showTab(tabId) {
@@ -1002,6 +1101,84 @@ function renderTemplates(templates) {
             downloadLink.download = "users.csv";
             downloadLink.click();
         }
+
+        window.showImportUsersModal = function() {
+            const modal = document.getElementById("import-users-modal");
+            if (!modal) {
+                alert("Import modal not found. Please refresh the page after saving index.ejs.");
+                return;
+            }
+            modal.style.display = "flex";
+            modal.style.position = "fixed";
+            modal.style.left = "0";
+            modal.style.top = "0";
+            modal.style.width = "100%";
+            modal.style.height = "100%";
+            modal.style.zIndex = "99999";
+            document.getElementById("import-result").innerHTML = "";
+        };
+
+        window.hideImportUsersModal = function() {
+            const modal = document.getElementById("import-users-modal");
+            if (modal) modal.style.display = "none";
+            const fileInput = document.getElementById("import-users-file");
+            if (fileInput) fileInput.value = "";
+            const resultBox = document.getElementById("import-result");
+            if (resultBox) resultBox.innerHTML = "";
+        };
+
+        window.importUsersFromCsv = async function() {
+            const fileInput = document.getElementById("import-users-file");
+            const resultBox = document.getElementById("import-result");
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("Please select CSV file.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            resultBox.innerHTML = "<p>Importing users, please wait...</p>";
+
+            try {
+                const response = await fetch("/api/import-users", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const responseText = await response.text();
+                let data = {};
+                try {
+                    data = responseText ? JSON.parse(responseText) : {};
+                } catch (parseError) {
+                    throw new Error("Server returned HTML instead of JSON. Please check import API route.");
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.message || data.error || "Import failed");
+                }
+
+                resultBox.innerHTML = `
+                    <div class="success-msg">
+                        <strong>Import Completed</strong><br>
+                        Total Rows: ${data.totalRows || 0}<br>
+                        Inserted: ${data.inserted || 0}<br>
+                        Skipped: ${data.skipped || 0}<br>
+                        Failed: ${data.failed || 0}
+                    </div>
+                `;
+
+                fileInput.value = "";
+                fetchUsers();
+            } catch (error) {
+                resultBox.innerHTML = `
+                    <div class="error-msg">
+                        Import failed: ${error.message}
+                    </div>
+                `;
+            }
+        };
     </script>
   </body>
 </html>
