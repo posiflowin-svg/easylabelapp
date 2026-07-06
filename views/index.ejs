@@ -358,7 +358,10 @@
           <label for="isForce">Force Update:</label>
           <input type="checkbox" id="isForce" name="isForce" />
 
-          <!-- <button type="submit">Submit</button> -->
+          <br /><br />
+          <button type="submit" id="save-app-version-btn">
+            Save App Version
+          </button>
         </form>
       </div>
 
@@ -410,6 +413,11 @@
               .then((response) => response.json())
               .then((data) => {
                 if (data.message) {
+                  document.getElementById("latest-app-version").textContent = appVersion;
+                  document.getElementById("latest-force-update").textContent =
+                    isForce === "true"
+                      ? " (Force Update Enabled)"
+                      : " (No Force Update)";
                   alert(data.message); // Show response message in alert
                 } else {
                   alert("An error occurred while updating the app version.");
