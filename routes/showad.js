@@ -1,12 +1,13 @@
-const express = require('express')
-const r̥outer  = express.Router()
+'use strict';
 
-const ShowAdController = require('../controllers/ShowAdController')
+const express = require('express');
+const router = express.Router();
+const ShowAdController = require('../controllers/ShowAdController');
 
-r̥outer.get('/', ShowAdController.index)
-r̥outer.post('/show', ShowAdController.show)
-r̥outer.post('/store', ShowAdController.store)
-r̥outer.post('/update', ShowAdController.update)
-r̥outer.post('/delete', ShowAdController.destroy)
+router.get('/', ShowAdController.index);
+router.post('/show', ShowAdController.show);
+router.post('/store', ShowAdController.store);
+router.post('/update', ShowAdController.update);
+router.post('/delete', ShowAdController.destroy);
 
-module.exports = r̥outer
+module.exports = router;

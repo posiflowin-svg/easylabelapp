@@ -1,141 +1,130 @@
-const { error } = require('console')
-const ShowAd = require('../models/Showad')
-const fs = require('fs');
-const path = require('path');
-// Show the list of ShowAd
-const index = (req, res, next) => {
-    ShowAd.find()
-    .then(response => {
-        res.json({
-            response
-        })
-    })
-    .catch(error => {
-        res.json({
-            message: 'An error Occured!'
-        })
-    })
-}
-// get single ShowAd
-const show = (req, res, next) => {
-    let ShowAdID = req.body.ShowAdID
-    ShowAd.findById(ShowAdID)
-    .then(response => {
-        res.json({
-            response
-        })
-    })
-    .catch(error => {
-        res.json({
-            message: 'An error Occured!'
-        })
-    })
+'use strict';
+
+const mongoose = require('mongoose');
+const ShowAd = require('../models/Showad');
+
+function isValidId(id) {
+  return mongoose.Types.ObjectId.isValid(id);
 }
 
-// add new ShowAd
-const store = (req, res, next) => {
-  console.log("Received data:", req.body);
-
-  let showAd = new ShowAd({
-      image_url: req.body.image_url,
-      target_url: req.body.target_url
-  });
-
-  showAd.save()
-  .then(response => {
-      res.json({
-          message: 'ShowAd Added Successfully!',
-          data: response
-      });
-  })
-  .catch(error => {
-      console.error("Error saving ShowAd:", error);
-      res.json({
-          message: 'An error occurred!',
-          error: error.message
-      });
-  });
+// Return all ads. Keep both `response` and `ads` for backward compatibility.
+const index = async (req, res) => {
+  try {
+    const ads = await ShowAd.find().sort({ createdAt: -1 }).lean();
+    return res.status(200).json({
+      success: true,
+      response: ads,
+      ads
+    });
+  } catch (error) {
+    console.error('Failed to fetch Show Ads:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch ads.',
+      response: [],
+      ads: []
+    });
+  }
 };
 
-
-// update ShowAd
-const update = (req, res, next) => {
-    let ShowAdID = req.body.ShowAdID
-    let updateData = {
-        target_url: req.body.target_url,
-        image_url: req.body.image_url,
+const show = async (req, res) => {
+  try {
+    const ShowAdID = req.body.ShowAdID;
+    if (!isValidId(ShowAdID)) {
+      return res.status(400).json({ success: false, message: 'Valid ShowAdID is required.', response: null });
     }
-    ShowAd.findByIdAndUpdate(ShowAdID, {$set: updateData})
-    .then(response => {
-        res.json({
-            message: 'ShowAd Updated Successfully!'
-        })
-    })
-    .catch(error => {
-        res.json({
-            message: 'An error Occured!'
-        })
-    })
-}
 
-// delete ShowAd
-// const destroy = (req, res, next) => {
-//   let ShowAdID = req.body.ShowAdID;
+    const ad = await ShowAd.findById(ShowAdID).lean();
+    if (!ad) {
+      return res.status(404).json({ success: false, message: 'Ad not found.', response: null });
+    }
 
-//   ShowAd.findByIdAndDelete(ShowAdID)
-//     .then((response) => {
-//       if (response) {
-//         // Check if there is an image to delete
-//         if (response.image_url) {
-//           const imagePath = path.join(__dirname, '..', response.image_url);
+    return res.status(200).json({ success: true, response: ad, ad });
+  } catch (error) {
+    console.error('Failed to fetch Show Ad:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch ad.', response: null });
+  }
+};
 
-//           // Delete the image file
-//           fs.unlink(imagePath, (err) => {
-//             if (err) {
-//               console.error(`Failed to delete file: ${imagePath}`, err);
-//               return res.json({
-//                 message: "ShowAd deleted, but the image file could not be deleted.",
-//               });
-//             }
-//             res.json({
-//               message: "ShowAd and associated image deleted successfully!",
-//             });
-//           });
-//         } else {
-//           res.json({
-//             message: "ShowAd deleted successfully! No image associated with this ad.",
-//           });
-//         }
-//       } else {
-//         res.json({
-//           message: "ShowAd not found!",
-//         });
-//       }
-//     })
-//     .catch((error) => {
-//       res.json({
-//         message: "An error Occurred!",
-//         error: error.message,
-//       });
-//     });
-// };
+const store = async (req, res) => {
+  try {
+    const imageUrl = String(req.body.image_url || '').trim();
+    const targetUrl = String(req.body.target_url || '').trim();
 
+    if (!imageUrl || !targetUrl) {
+      return res.status(400).json({
+        success: false,
+        message: 'Image URL and target URL are required.'
+      });
+    }
 
-const destroy = (req, res, next) => {
-    let ShowAdID = req.body.ShowAdID
-    ShowAd.findByIdAndDelete(ShowAdID)
-    .then(response => {
-        res.json({
-            message: 'ShowAd Deleted Successfully!'
-        })
-    })
-    .catch(error => {
-        res.json({
-            message: 'An error Occured!'
-        })
-    })
-}
+    const ad = await ShowAd.create({ image_url: imageUrl, target_url: targetUrl });
+    return res.status(201).json({
+      success: true,
+      message: 'ShowAd Added Successfully!',
+      data: ad
+    });
+  } catch (error) {
+    console.error('Error saving ShowAd:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to save ad.',
+      error: error.message
+    });
+  }
+};
 
-module.exports = {
-    index, show, store, update, destroy
-}
+const update = async (req, res) => {
+  try {
+    const ShowAdID = req.body.ShowAdID;
+    if (!isValidId(ShowAdID)) {
+      return res.status(400).json({ success: false, message: 'Valid ShowAdID is required.' });
+    }
+
+    const imageUrl = String(req.body.image_url || '').trim();
+    const targetUrl = String(req.body.target_url || '').trim();
+    if (!imageUrl || !targetUrl) {
+      return res.status(400).json({ success: false, message: 'Image URL and target URL are required.' });
+    }
+
+    const ad = await ShowAd.findByIdAndUpdate(
+      ShowAdID,
+      { $set: { target_url: targetUrl, image_url: imageUrl } },
+      { new: true, runValidators: true }
+    );
+
+    if (!ad) {
+      return res.status(404).json({ success: false, message: 'Ad not found.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'ShowAd Updated Successfully!',
+      data: ad
+    });
+  } catch (error) {
+    console.error('Failed to update ShowAd:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update ad.', error: error.message });
+  }
+};
+
+const destroy = async (req, res) => {
+  try {
+    const ShowAdID = req.body.ShowAdID;
+    if (!isValidId(ShowAdID)) {
+      return res.status(400).json({ success: false, message: 'Valid ShowAdID is required.' });
+    }
+
+    const ad = await ShowAd.findByIdAndDelete(ShowAdID);
+    if (!ad) {
+      return res.status(404).json({ success: false, message: 'Ad not found.' });
+    }
+
+    return res.status(200).json({ success: true, message: 'ShowAd Deleted Successfully!' });
+  } catch (error) {
+    console.error('Failed to delete ShowAd:', error);
+    return res.status(500).json({ success: false, message: 'Failed to delete ad.', error: error.message });
+  }
+};
+
+module.exports = { index, show, store, update, destroy };

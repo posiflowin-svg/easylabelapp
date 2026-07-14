@@ -1,0 +1,32 @@
+const express = require('express');
+const router = express.Router();
+const premiumController = require('../controllers/PremiumController');
+
+router.get('/catalog', premiumController.catalog);
+router.get('/access/:userId', premiumController.access);
+router.get('/campaigns/active', premiumController.activeCampaigns);
+router.post('/features', premiumController.createFeature);
+router.put('/features/:id', premiumController.updateFeature);
+router.delete('/features/:id', premiumController.deleteFeature);
+router.post('/plans', premiumController.createPlan);
+router.put('/plans/:id', premiumController.updatePlan);
+router.delete('/plans/:id', premiumController.deletePlan);
+router.post('/subscriptions', premiumController.createSubscription);
+router.put('/subscriptions/:id/status', premiumController.updateSubscriptionStatus);
+router.put('/subscriptions/:id/extend', premiumController.extendSubscription);
+router.put('/subscriptions/:id/change-plan', premiumController.changeSubscriptionPlan);
+router.post('/subscriptions/:id/payments', premiumController.recordManualPayment);
+router.delete('/subscriptions/:id', premiumController.deleteSubscription);
+router.post('/campaigns', premiumController.createCampaign);
+router.put('/campaigns/:id', premiumController.updateCampaign);
+router.put('/campaigns/:id/toggle', premiumController.toggleCampaign);
+router.delete('/campaigns/:id', premiumController.deleteCampaign);
+router.post('/notifications', premiumController.createNotification);
+router.put('/notifications/:id', premiumController.updateNotification);
+router.put('/notifications/:id/status', premiumController.updateNotificationStatus);
+router.post('/notifications/:id/send', premiumController.sendNotification);
+router.delete('/notifications/:id', premiumController.deleteNotification);
+router.post('/ai-usage', premiumController.recordAIUsage);
+router.put('/settings', premiumController.updateSettings);
+
+module.exports = router;

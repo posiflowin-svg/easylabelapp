@@ -18,6 +18,11 @@ const colorRoutes = require('./routes/colorRoutes');
 const walletUserRoutes = require('./routes/walletUserRoutes');
 const walletTransactionRoutes = require('./routes/walletTransactionRoutes');
 const userTemplateRoutes = require('./routes/userTemplateRoutes');
+const PremiumRoute = require('./routes/premium');
+const BillingRoute = require('./routes/billing');
+const NotificationsApiRoute = require('./routes/notificationsApi');
+const AIRoute = require('./routes/ai');
+const PremiumController = require('./controllers/PremiumController');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 const walletUserController = require('./controllers/walletUserController');
@@ -70,6 +75,8 @@ app.get('/users', (req, res) => {
 app.get('/sells_users', (req, res) => {
     res.render('sells_users');
 });
+
+app.get('/premium-management', PremiumController.page);
 // Add the password verification route directly to app
 app.post('/api/verify-admin-password', (req, res) => {
     const { password } = req.body;
@@ -95,6 +102,10 @@ app.use('/api/colors', colorRoutes);
 app.use('/api/walletuser', walletUserRoutes);
 app.use('/api/wallettransaction', walletTransactionRoutes);
 app.use('/api/user-templates', userTemplateRoutes);
+app.use('/api/premium', PremiumRoute);
+app.use('/api/billing/google', BillingRoute);
+app.use('/api/notifications', NotificationsApiRoute);
+app.use('/api/ai', AIRoute);
 
 // Import users CSV route
 app.post('/api/import-users', upload.single('file'), walletUserController.importUsers);

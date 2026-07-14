@@ -334,6 +334,7 @@
         <a href="#" id="app-version-tab" onclick="showTab('app-version')">App Version</a>
         <a href="#" id="show-ad-tab" onclick="showTab('show-ad')">Show AD</a>
         <a href="#" id="templates-tab" onclick="showTab('templates')">Templates</a>
+        <a href="/premium-management" id="premium-tab"><i class="fas fa-crown"></i> Subscription Management</a>
         <a href="#" id="users-tab" onclick="showTab('users')">Users</a>
       </div>
     </div>
@@ -580,33 +581,90 @@
         `;
         document.head.appendChild(style);
 
-        // Fetch and display ads
-        function fetchAds() {
-            fetch("/api/showad")
-            .then((response) => response.json())
-            .then((data) => {
-                const adList = document.getElementById("adList");
-                adList.innerHTML = ""; // Clear previous content
+        // Fetch and display ads safely, including when the database is empty
+        async function fetchAds() {
+            const adList = document.getElementById("adList");
+            if (!adList) return;
 
-                data.response.forEach((ad) => {
-                const adDiv = document.createElement("div");
-                adDiv.classList.add("ad-item");
-                adDiv.innerHTML = `
-                    <div class="ad-details">
-                    <p>Image Link: <a href="${ad.image_url}" target="_blank">${ad.image_url}</a></p>
-                    <p>Ad Link: <a href="${ad.target_url}" target="_blank">${ad.target_url}</a></p>
-                    </div>
-                    <div>
-                    <button class="edit-btn" onclick="editAd('${ad._id}', '${ad.target_url}', '${ad.image_url}')">Edit</button>
-                    <button class="delete-btn" onclick="deleteAd('${ad._id}')">Delete</button>
-                    </div>
-                `;
-                adList.appendChild(adDiv);
+            adList.innerHTML = '<p style="color:#666;">Loading ads...</p>';
+
+            try {
+                const response = await fetch("/api/showad", {
+                    headers: { "Accept": "application/json" }
                 });
-            })
-            .catch((error) => {
-                alert("Failed to fetch ads: " + error.message);
-            });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.message || `Unable to fetch ads (${response.status})`);
+                }
+
+                const ads = Array.isArray(data)
+                    ? data
+                    : Array.isArray(data.response)
+                        ? data.response
+                        : Array.isArray(data.ads)
+                            ? data.ads
+                            : Array.isArray(data.data)
+                                ? data.data
+                                : [];
+
+                adList.innerHTML = "";
+
+                if (ads.length === 0) {
+                    adList.innerHTML = '<p style="color:#666; padding:12px 0;">No advertisements added yet.</p>';
+                    return;
+                }
+
+                ads.forEach((ad) => {
+                    if (!ad || !ad._id) return;
+
+                    const adDiv = document.createElement("div");
+                    adDiv.classList.add("ad-item");
+
+                    const details = document.createElement("div");
+                    details.classList.add("ad-details");
+
+                    const imageText = document.createElement("p");
+                    imageText.append("Image Link: ");
+                    const imageLink = document.createElement("a");
+                    imageLink.href = ad.image_url || "#";
+                    imageLink.target = "_blank";
+                    imageLink.rel = "noopener noreferrer";
+                    imageLink.textContent = ad.image_url || "Not available";
+                    imageText.appendChild(imageLink);
+
+                    const targetText = document.createElement("p");
+                    targetText.append("Ad Link: ");
+                    const targetLink = document.createElement("a");
+                    targetLink.href = ad.target_url || "#";
+                    targetLink.target = "_blank";
+                    targetLink.rel = "noopener noreferrer";
+                    targetLink.textContent = ad.target_url || "Not available";
+                    targetText.appendChild(targetLink);
+
+                    details.append(imageText, targetText);
+
+                    const actions = document.createElement("div");
+                    const editButton = document.createElement("button");
+                    editButton.type = "button";
+                    editButton.className = "edit-btn";
+                    editButton.textContent = "Edit";
+                    editButton.addEventListener("click", () => editAd(ad._id, ad.target_url || "", ad.image_url || ""));
+
+                    const deleteButton = document.createElement("button");
+                    deleteButton.type = "button";
+                    deleteButton.className = "delete-btn";
+                    deleteButton.textContent = "Delete";
+                    deleteButton.addEventListener("click", () => deleteAd(ad._id));
+
+                    actions.append(editButton, deleteButton);
+                    adDiv.append(details, actions);
+                    adList.appendChild(adDiv);
+                });
+            } catch (error) {
+                console.error("Failed to fetch ads:", error);
+                adList.innerHTML = '<p style="color:#c62828; padding:12px 0;">Unable to load advertisements. Please refresh and try again.</p>';
+            }
         }
 
         // Populate form for editing an ad
