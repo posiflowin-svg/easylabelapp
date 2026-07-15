@@ -7,7 +7,13 @@ function boolValue(value, fallback = false) {
 
 function publicBaseUrl(req) {
     const configured = String(process.env.PUBLIC_BASE_URL || '').trim().replace(/\/$/, '');
-    return configured || `${req.protocol}://${req.get('host')}`;
+    let base = configured || `${req.get('x-forwarded-proto') || req.protocol}://${req.get('host')}`;
+
+    // Render is served over HTTPS. Avoid returning an HTTP image URL to Android.
+    if (base.startsWith('http://') && base.includes('.onrender.com')) {
+        base = `https://${base.substring('http://'.length)}`;
+    }
+    return base;
 }
 
 // Dashboard datetime-local values are entered in India time, but Render runs in UTC.
@@ -21,8 +27,11 @@ function indiaWallClockNow() {
 function publicBanner(banner, req) {
     const base = publicBaseUrl(req);
     const hasStoredImage = Boolean(banner.imageContentType);
+    const version = banner.updatedAt
+        ? new Date(banner.updatedAt).getTime()
+        : Date.now();
     const url = hasStoredImage
-        ? `${base}/api/shopping/banners/${banner._id}/image`
+        ? `${base}/api/shopping/banners/${banner._id}/image?v=${version}`
         : banner.link;
 
     return {
@@ -162,7 +171,10 @@ exports.getBannerImage = async (req, res) => {
         const banner = await Banner.findById(req.params.id).select('+imageData imageContentType');
         if (!banner || !banner.imageData) return res.status(404).send('Banner image not found');
         res.set('Content-Type', banner.imageContentType || 'image/jpeg');
-        res.set('Cache-Control', 'public, max-age=3600');
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+        res.set('ETag', String(banner.updatedAt ? new Date(banner.updatedAt).getTime() : Date.now()));
         res.send(banner.imageData);
     } catch (error) {
         res.status(404).send('Banner image not found');
