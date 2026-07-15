@@ -10,6 +10,14 @@ function publicBaseUrl(req) {
     return configured || `${req.protocol}://${req.get('host')}`;
 }
 
+// Dashboard datetime-local values are entered in India time, but Render runs in UTC.
+// MongoDB currently stores those wall-clock values as UTC. Compare using the India
+// wall-clock equivalent so banners activate at the time selected in the dashboard.
+function indiaWallClockNow() {
+    const INDIA_OFFSET_MINUTES = 330;
+    return new Date(Date.now() + INDIA_OFFSET_MINUTES * 60 * 1000);
+}
+
 function publicBanner(banner, req) {
     const base = publicBaseUrl(req);
     const hasStoredImage = Boolean(banner.imageContentType);
@@ -109,17 +117,43 @@ exports.toggleBanner = async (req, res) => {
 // Android public API: maximum three active banners, ordered 1-3.
 exports.getBanners = async (req, res) => {
     try {
-        const now = new Date();
+        const now = indiaWallClockNow();
+
         const banners = await Banner.find({
             isActive: true,
             $and: [
-                { $or: [{ startDate: null }, { startDate: { $lte: now } }] },
-                { $or: [{ endDate: null }, { endDate: { $gte: now } }] }
+                {
+                    $or: [
+                        { startDate: null },
+                        { startDate: { $exists: false } },
+                        { startDate: { $lte: now } }
+                    ]
+                },
+                {
+                    $or: [
+                        { endDate: null },
+                        { endDate: { $exists: false } },
+                        { endDate: { $gte: now } }
+                    ]
+                }
             ]
-        }).sort({ position: 1, createdAt: -1 }).limit(3).lean();
-        res.json({ success: true, banners: banners.map(b => publicBanner(b, req)) });
+        })
+            .sort({ position: 1, createdAt: -1 })
+            .limit(3)
+            .lean();
+
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.json({
+            success: true,
+            banners: banners.map(banner => publicBanner(banner, req))
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message, banners: [] });
+        console.error('Home banner API error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message,
+            banners: []
+        });
     }
 };
 
