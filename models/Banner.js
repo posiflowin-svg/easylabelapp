@@ -1,22 +1,29 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-// Banner Model
 const bannerSchema = new Schema({
+    title: { type: String, trim: true, default: '' },
     type: {
         type: String,
-        enum: ['json', 'gif'],
-        required: true
+        enum: ['json', 'gif', 'image'],
+        default: 'image'
     },
-    link: {
+    // Backward-compatible external URL field.
+    link: { type: String, trim: true, default: '' },
+    imageData: { type: Buffer, select: false },
+    imageContentType: { type: String, default: '' },
+    position: { type: Number, min: 1, max: 3, default: 1 },
+    isActive: { type: Boolean, default: true },
+    clickType: {
         type: String,
-        required: true
+        enum: ['shop', 'url', 'none'],
+        default: 'shop'
     },
-    isActive: {
-        type: Boolean,
-        default: true // Default to true (on)
-    }
+    clickUrl: { type: String, trim: true, default: '' },
+    startDate: { type: Date, default: null },
+    endDate: { type: Date, default: null }
 }, { timestamps: true });
 
-const Banner = mongoose.model('Banner', bannerSchema);
-module.exports = Banner;
+bannerSchema.index({ position: 1, createdAt: -1 });
+
+module.exports = mongoose.models.Banner || mongoose.model('Banner', bannerSchema);
