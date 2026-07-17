@@ -765,6 +765,16 @@
           </select>
           <br /><br />
       
+          <label for="accessType">Template Access:</label>
+          <select id="accessType" name="accessType" required>
+              <option value="free">Free</option>
+              <option value="premium">Premium (₹99 / ₹299)</option>
+              <option value="business">Business Only (₹299)</option>
+          </select><br /><br />
+          <label><input type="checkbox" id="featuredOnHome" /> Featured in Home Premium Templates</label><br /><br />
+          <label><input type="checkbox" id="templateActive" checked /> Active in Android App</label><br /><br />
+          <label for="displayOrder">Display Order:</label>
+          <input type="number" id="displayOrder" min="0" value="0" /><br /><br />
           <label for="jsonData">JSON Data:</label>
           <textarea id="jsonData" name="jsonData" rows="8" placeholder="Enter JSON data" required></textarea>
           <input type="hidden" id="templateId" name="templateId" />
@@ -925,6 +935,9 @@ function renderTemplates(templates) {
                   <th style="border: 1px solid #ddd; padding: 8px;">Name</th>
                   <th style="border: 1px solid #ddd; padding: 8px;">Main Category</th>
                   <th style="border: 1px solid #ddd; padding: 8px;">Category</th>
+                  <th style="border: 1px solid #ddd; padding: 8px;">Access</th>
+                  <th style="border: 1px solid #ddd; padding: 8px;">Featured</th>
+                  <th style="border: 1px solid #ddd; padding: 8px;">Status</th>
                   <th style="border: 1px solid #ddd; padding: 8px;">JSON Data</th>
                   <th style="border: 1px solid #ddd; padding: 8px;">Actions</th>
               </tr>
@@ -940,11 +953,14 @@ function renderTemplates(templates) {
               <td style="border: 1px solid #ddd; padding: 8px;">${template.name}</td>
               <td style="border: 1px solid #ddd; padding: 8px;">${template.mainCategory}</td>
               <td style="border: 1px solid #ddd; padding: 8px;">${template.templateCategory}</td>
+              <td style="border: 1px solid #ddd; padding: 8px; font-weight:700;">${(template.accessType || 'free').toUpperCase()}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${template.featuredOnHome ? 'Yes' : 'No'}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${template.isActive === false ? 'Inactive' : 'Active'}</td>
               <td style="border: 1px solid #ddd; padding: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   ${template.jsonData}
               </td>
               <td style="border: 1px solid #ddd; padding: 8px;">
-                  <button class="edit-btn" onclick="editTemplate('${template._id}', '${template.name}', '${template.mainCategory}', '${template.templateCategory}', '${encodeURIComponent(template.jsonData)}')">Edit</button>
+                  <button class="edit-btn" onclick="editTemplate('${template._id}', '${template.name}', '${template.mainCategory}', '${template.templateCategory}', '${encodeURIComponent(template.jsonData)}', '${template.accessType || 'free'}', ${!!template.featuredOnHome}, ${template.isActive !== false}, ${template.displayOrder || 0})">Edit</button>
                   <button class="delete-btn" onclick="deleteTemplate('${template._id}')">Delete</button>
               </td>
               `;
@@ -981,12 +997,16 @@ function renderTemplates(templates) {
     }
 
       // Populate form for editing a template
-      function editTemplate(templateId, templateName, mainCategory, templateCategory, jsonData) {
+      function editTemplate(templateId, templateName, mainCategory, templateCategory, jsonData, accessType, featuredOnHome, isActive, displayOrder) {
           document.getElementById("templateId").value = templateId;
           document.getElementById("templateName").value = templateName;
           document.getElementById("mainCategory").value = mainCategory;
           document.getElementById("templateCategory").value = templateCategory;
-          document.getElementById("jsonData").value = jsonData;
+          document.getElementById("jsonData").value = decodeURIComponent(jsonData);
+          document.getElementById("accessType").value = accessType || "free";
+          document.getElementById("featuredOnHome").checked = !!featuredOnHome;
+          document.getElementById("templateActive").checked = isActive !== false;
+          document.getElementById("displayOrder").value = displayOrder || 0;
       }
 
       // Handle form submission for adding/updating templates
@@ -998,12 +1018,14 @@ function renderTemplates(templates) {
           const templateCategory = document.getElementById("templateCategory").value;
           const jsonData = document.getElementById("jsonData").value;
           const templateId = document.getElementById("templateId").value;
+          const accessType = document.getElementById("accessType").value;
+          const featuredOnHome = document.getElementById("featuredOnHome").checked;
+          const isActive = document.getElementById("templateActive").checked;
+          const displayOrder = Number(document.getElementById("displayOrder").value || 0);
 
           const formData = {
-              name: templateName,
-              mainCategory: mainCategory,
-              templateCategory: templateCategory,
-              jsonData: jsonData,
+              name: templateName, mainCategory: mainCategory, templateCategory: templateCategory,
+              jsonData: jsonData, accessType, featuredOnHome, isActive, displayOrder
           };
           if (templateId) formData.templateID = templateId;
 

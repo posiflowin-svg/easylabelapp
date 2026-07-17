@@ -1,15 +1,2 @@
-const express = require('express')
-const r̥outer  = express.Router()
-
-const TemplateController = require('../controllers/TemplateController')
-
-r̥outer.get('/', TemplateController.index)
-r̥outer.post('/show', TemplateController.show)
-r̥outer.post('/store', TemplateController.store)
-r̥outer.get('/getByMainCategory', TemplateController.getByMainCategory)
-r̥outer.post('/update', TemplateController.update)
-r̥outer.post('/delete', TemplateController.destroy)
-r̥outer.get('/categories', TemplateController.category)
-r̥outer.get('/getByTemplateCategory', TemplateController.getByTemplateCategory)
-
-module.exports = r̥outer
+const express=require('express');const router=express.Router();const C=require('../controllers/TemplateController');
+router.get('/',C.index);router.get('/free',C.getFree);router.get('/premium',C.getPremium);router.post('/show',C.show);router.post('/store',C.store);router.get('/getByMainCategory',C.getByMainCategory);router.post('/update',C.update);router.post('/delete',C.destroy);router.get('/categories',C.category);router.get('/getByTemplateCategory',C.getByTemplateCategory);module.exports=router;
