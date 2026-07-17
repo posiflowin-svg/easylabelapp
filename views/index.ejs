@@ -739,320 +739,686 @@
 
       </script>
 
-      <!-- Templates Tab Placeholder -->
-    <div id="templates" class="tab-content active">
-        <h2>Manage Templates</h2>
-        <br />
-        <!-- Form to Add or Update Templates -->
-        <form id="templateForm">
-          <label for="templateName">Template Name:</label>
-          <input type="text" id="templateName" name="templateName" placeholder="Enter template name" required />
-          <br /><br />
-      
-          <label for="mainCategory">Main Category:</label>
-          <select id="mainCategory" name="mainCategory" required>
-              <option value="" disabled selected>Select a Main Category</option>
-              <option value="Commercial Retail">Commercial Retail</option>
-              <option value="Work Scenarios">Work Scenarios</option>
-              <option value="Festive Theme">Festive Theme</option>
-              <option value="Home Storage">Home Storage</option>
-          </select>
-          <br /><br />
-      
-          <label for="templateCategory">Category:</label>
-          <select id="templateCategory" name="templateCategory" required>
-              <option value="" disabled selected>Select a Category</option>
-          </select>
-          <br /><br />
-      
-          <label for="accessType">Template Access:</label>
-          <select id="accessType" name="accessType" required>
-              <option value="free">Free</option>
-              <option value="premium">Premium (₹99 / ₹299)</option>
-              <option value="business">Business Only (₹299)</option>
-          </select><br /><br />
-          <label><input type="checkbox" id="featuredOnHome" /> Featured in Home Premium Templates</label><br /><br />
-          <label><input type="checkbox" id="templateActive" checked /> Active in Android App</label><br /><br />
-          <label for="displayOrder">Display Order:</label>
-          <input type="number" id="displayOrder" min="0" value="0" /><br /><br />
-          <label for="jsonData">JSON Data:</label>
-          <textarea id="jsonData" name="jsonData" rows="8" placeholder="Enter JSON data" required></textarea>
-          <input type="hidden" id="templateId" name="templateId" />
-          <br /><br />
-      
-          <button type="submit">Save Template</button>
-      </form>
-           
-        <!-- Section to Display Templates -->
-        <br/>
-        <h3>Current Templates</h3>
-        <br/>
-        <input type="text" id="searchInput" placeholder="Search by name or category" oninput="filterTemplates()" />
-        <br/><br/>
-        <div id="templateList"></div>
 
-    </div>
-
-          
-    <script>
-
-function renderTemplates(templates) {
-    const templateList = document.getElementById("templateList");
-    templateList.innerHTML = ""; // Clear previous templates
-
-    // Create a table element
-    const table = document.createElement("table");
-    table.style.width = "100%";
-    table.style.borderCollapse = "collapse";
-    table.classList.add("styled-table");
-    
-    table.innerHTML = `
-        <thead>
-        <tr>
-            <th style="border: 1px solid #ddd; padding: 8px;">Name</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Category</th>
-            <th style="border: 1px solid #ddd; padding: 8px; ">JSON Data</th>
-            <th style="border: 1px solid #ddd; padding: 8px;">Actions</th>
-        </tr>
-        </thead>
-        <tbody></tbody>
-    `;
-
-    const tbody = table.querySelector("tbody");
-
-    templates.forEach((template) => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-        <td style="border: 1px solid #ddd; padding: 8px;">${template.name}</td>
-        <td style="border: 1px solid #ddd; padding: 8px;">${template.templateCategory}</td>
-        <td style="border: 1px solid #ddd; padding: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${template.jsonData}
-        </td>
-        <td style="border: 1px solid #ddd; padding: 8px;">
-            <button class="edit-btn" onclick="editTemplate('${template._id}', '${template.name}', '${template.templateCategory}', '${encodeURIComponent(template.jsonData)}')">Edit</button>
-            <button class="delete-btn" onclick="deleteTemplate('${template._id}')">Delete</button>
-        </td>
-        `;
-
-        tbody.appendChild(row);
-    });
-
-    templateList.appendChild(table);
-    }
-
-    // Filter templates based on search input
-    function filterTemplates() {
-    const searchInput = document.getElementById("searchInput").value.toLowerCase();
-    const filteredTemplates = allTemplates.filter((template) => 
-        template.name.toLowerCase().includes(searchInput) || 
-        template.templateCategory.toLowerCase().includes(searchInput)
-    );
-    renderTemplates(filteredTemplates); // Re-render the filtered templates
-    }
-    
-      document.getElementById("mainCategory").addEventListener("change", function () {
-          const categoryMap = {
-              "Commercial Retail": [
-                  "Bakery", "Drinking", "Clothing", "Fresh Food/Seafood", "Grocery Store", 
-                  "Jewelry", "Gardening", "Digital Device", "Beauty & Personal Care", "Pet Supplies",
-                  "Contact Information", "Catering Service"
-              ],
-              "Work Scenarios": [
-                  "School", "Hospital", "Laboratory", "Asset Tag", "Name Tag", "Employee Activities"
-              ],
-              "Festive Theme": [
-                  "New Year", "Greeting & Wishes", "Thanking Wishes", "Valentine Day", 
-                  "Christmas", "Diwali"
-              ],
-              "Home Storage": [
-                  "Kitchen Storage", "Other Storage", "Laundry"
-              ]
-          };
-  
-          const mainCategory = this.value;
-          const templateCategory = document.getElementById("templateCategory");
-  
-          // Clear previous options
-          templateCategory.innerHTML = '<option value="" disabled selected>Select a Category</option>';
-  
-          if (mainCategory in categoryMap) {
-              categoryMap[mainCategory].forEach(category => {
-                  const option = document.createElement("option");
-                  option.value = category;
-                  option.textContent = category;
-                  templateCategory.appendChild(option);
-              });
+      <!-- Manual EasyLabel Template Manager -->
+      <div id="templates" class="tab-content active">
+        <style>
+          .template-panel {
+            background:#fff;
+            border:1px solid #e5e7eb;
+            border-radius:16px;
+            padding:24px;
+            box-shadow:0 8px 24px rgba(15,23,42,.06);
+            margin-bottom:22px;
           }
-      });
-  </script>
-  
-    <script>
-    let allTemplates = []; // Store all fetched templates
+          .template-grid {
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:18px;
+          }
+          .template-field {
+            display:flex;
+            flex-direction:column;
+            gap:7px;
+          }
+          .template-field.full { grid-column:1/-1; }
+          .template-field label {
+            font-weight:700;
+            color:#172033;
+          }
+          .template-field input,
+          .template-field select,
+          .template-field textarea {
+            width:100%;
+            box-sizing:border-box;
+            border:1px solid #cfd6e2;
+            border-radius:10px;
+            padding:12px 13px;
+            font:inherit;
+            background:#fff;
+          }
+          .template-field textarea {
+            min-height:160px;
+            resize:vertical;
+            font-family:Consolas,monospace;
+            font-size:13px;
+          }
+          .template-actions {
+            display:flex;
+            flex-wrap:wrap;
+            gap:10px;
+            align-items:center;
+            margin-top:18px;
+          }
+          .template-btn {
+            border:0;
+            border-radius:10px;
+            padding:11px 18px;
+            font-weight:700;
+            cursor:pointer;
+          }
+          .template-btn.primary { background:#1267e8;color:white; }
+          .template-btn.secondary { background:#e8edf5;color:#172033; }
+          .template-btn.danger { background:#dc2626;color:white; }
+          .template-note {
+            padding:12px 14px;
+            background:#f8fafc;
+            border:1px solid #e2e8f0;
+            border-radius:10px;
+            color:#526075;
+            line-height:1.5;
+          }
+          .template-status {
+            display:none;
+            margin-top:14px;
+            padding:12px 14px;
+            border-radius:10px;
+          }
+          .template-status.ok {
+            display:block;
+            background:#ecfdf3;
+            color:#067647;
+            border:1px solid #abefc6;
+          }
+          .template-status.error {
+            display:block;
+            background:#fef3f2;
+            color:#b42318;
+            border:1px solid #fecdca;
+          }
+          .template-toolbar {
+            display:flex;
+            gap:12px;
+            align-items:center;
+            justify-content:space-between;
+            flex-wrap:wrap;
+            margin-bottom:14px;
+          }
+          .template-toolbar input,
+          .template-toolbar select {
+            min-height:42px;
+            border:1px solid #cfd6e2;
+            border-radius:9px;
+            padding:9px 12px;
+          }
+          .template-table-wrap {
+            overflow:auto;
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+          }
+          .template-table {
+            width:100%;
+            border-collapse:collapse;
+            min-width:1050px;
+          }
+          .template-table th,
+          .template-table td {
+            border-bottom:1px solid #e5e7eb;
+            padding:12px;
+            text-align:left;
+            vertical-align:middle;
+          }
+          .template-table th {
+            background:#f8fafc;
+            position:sticky;
+            top:0;
+            z-index:1;
+          }
+          .access-pill {
+            display:inline-block;
+            padding:5px 9px;
+            border-radius:999px;
+            font-size:12px;
+            font-weight:800;
+          }
+          .access-free { background:#dcfce7;color:#166534; }
+          .access-premium { background:#ffedd5;color:#9a3412; }
+          .access-business { background:#ede9fe;color:#5b21b6; }
+          @media(max-width:800px) {
+            .template-grid { grid-template-columns:1fr; }
+            .template-field.full { grid-column:auto; }
+          }
+        </style>
 
-      function fetchTemplates() {
-          const templateList = document.getElementById("templateList");
+        <h2>Manual Template Manager</h2>
+        <p class="template-note">
+          Design the label inside the EasyLabel app, export it as a TXT/JSON
+          file, then upload that exact exported file here. Select the business
+          category, label category, size and plan manually.
+        </p>
 
-          // Show loading message while fetching templates
-          templateList.innerHTML = "<p>Loading templates...</p>";
+        <div class="template-panel">
+          <form id="templateForm">
+            <input type="hidden" id="templateId">
 
-          fetch("/api/template")
-              .then((response) => {
-                  if (!response.ok) {
-                      throw new Error(`HTTP error! Status: ${response.status}`);
-                  }
-                  return response.json();
-              })
-              .then((data) => {
-                  templateList.innerHTML = ""; // Clear the loading message
+            <div class="template-grid">
+              <div class="template-field">
+                <label for="templateName">Template Name</label>
+                <input id="templateName" required
+                       placeholder="Example: Premium MRP Label">
+              </div>
 
-                  allTemplates = data.data || []; // Store all templates
+              <div class="template-field">
+                <label for="mainCategory">Business Category</label>
+                <input id="mainCategory" list="businessCategoryList" required
+                       placeholder="Example: Grocery Store">
+                <datalist id="businessCategoryList">
+                  <option value="Commercial Retail">
+                  <option value="Grocery Store">
+                  <option value="Bakery">
+                  <option value="Restaurant & Food">
+                  <option value="Clothing">
+                  <option value="Jewelry">
+                  <option value="Beauty & Personal Care">
+                  <option value="School & Education">
+                  <option value="Medical & Pharmacy">
+                  <option value="Home Storage">
+                  <option value="Office & Work">
+                  <option value="Shipping & Warehouse">
+                  <option value="Digital Devices">
+                  <option value="Gardening">
+                  <option value="Festive Theme">
+                  <option value="Other">
+                </datalist>
+              </div>
 
-                  if (allTemplates.length === 0) {
-                      templateList.innerHTML = "<p>No templates found.</p>";
-                      return;
-                  }
+              <div class="template-field">
+                <label for="templateCategory">Label Category</label>
+                <input id="templateCategory" list="labelCategoryList" required
+                       placeholder="Example: Price Tag">
+                <datalist id="labelCategoryList">
+                  <option value="Price Tag">
+                  <option value="MRP Label">
+                  <option value="Barcode">
+                  <option value="QR Code">
+                  <option value="Name Tag">
+                  <option value="Expiry Date">
+                  <option value="Food Label">
+                  <option value="Bakery Label">
+                  <option value="Wash Care">
+                  <option value="Jewelry Tag">
+                  <option value="Shipping Label">
+                  <option value="Asset Tag">
+                  <option value="Storage Label">
+                  <option value="Thank You">
+                  <option value="Contact Information">
+                  <option value="Festival">
+                  <option value="Other">
+                </datalist>
+              </div>
 
-                  renderTemplates(allTemplates); // Render the initial template list
-              })
-              .catch((error) => {
-                  templateList.innerHTML = `<p class="error">Failed to fetch templates: ${error.message}</p>`;
-              });
-      }
+              <div class="template-field">
+                <label for="labelSize">Label Size</label>
+                <select id="labelSize" required>
+                  <option value="">Select label size</option>
+                  <option value="38x38">38 × 38 mm</option>
+                  <option value="38x25">38 × 25 mm</option>
+                  <option value="38x15">38 × 15 mm</option>
+                  <option value="50x25">50 × 25 mm</option>
+                  <option value="50x30">50 × 30 mm</option>
+                  <option value="50x50">50 × 50 mm</option>
+                  <option value="50x12">50 × 12 mm</option>
+                  <option value="75x25">75 × 25 mm</option>
+                  <option value="75x50">75 × 50 mm</option>
+                  <option value="100x50">100 × 50 mm</option>
+                  <option value="100x150">100 × 150 mm</option>
+                  <option value="100x15">100 × 15 mm</option>
+                </select>
+              </div>
 
-      function renderTemplates(templates) {
-          const templateList = document.getElementById("templateList");
-          templateList.innerHTML = ""; // Clear previous templates
+              <div class="template-field">
+                <label for="accessType">Template Access</label>
+                <select id="accessType">
+                  <option value="free">Free</option>
+                  <option value="premium">Premium — ₹99 and ₹299</option>
+                  <option value="business">Business Only — ₹299</option>
+                </select>
+              </div>
 
-          // Create a table element
-          const table = document.createElement("table");
-          table.style.width = "100%";
-          table.style.borderCollapse = "collapse";
-          table.classList.add("styled-table");
-          
-          table.innerHTML = `
-              <thead>
-              <tr>
-                  <th style="border: 1px solid #ddd; padding: 8px;">Name</th>
-                  <th style="border: 1px solid #ddd; padding: 8px;">Main Category</th>
-                  <th style="border: 1px solid #ddd; padding: 8px;">Category</th>
-                  <th style="border: 1px solid #ddd; padding: 8px;">Access</th>
-                  <th style="border: 1px solid #ddd; padding: 8px;">Featured</th>
-                  <th style="border: 1px solid #ddd; padding: 8px;">Status</th>
-                  <th style="border: 1px solid #ddd; padding: 8px;">JSON Data</th>
-                  <th style="border: 1px solid #ddd; padding: 8px;">Actions</th>
-              </tr>
-              </thead>
-              <tbody></tbody>
-          `;
+              <div class="template-field">
+                <label for="displayOrder">Display Order</label>
+                <input id="displayOrder" type="number" min="0" value="0">
+              </div>
 
-          const tbody = table.querySelector("tbody");
+              <div class="template-field full">
+                <label for="templateFile">
+                  EasyLabel Exported File (.txt or .json)
+                </label>
+                <input id="templateFile" type="file"
+                       accept=".txt,.json,application/json,text/plain">
+              </div>
 
-          templates.forEach((template) => {
-              const row = document.createElement("tr");
-              row.innerHTML = `
-              <td style="border: 1px solid #ddd; padding: 8px;">${template.name}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${template.mainCategory}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${template.templateCategory}</td>
-              <td style="border: 1px solid #ddd; padding: 8px; font-weight:700;">${(template.accessType || 'free').toUpperCase()}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${template.featuredOnHome ? 'Yes' : 'No'}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${template.isActive === false ? 'Inactive' : 'Active'}</td>
-              <td style="border: 1px solid #ddd; padding: 8px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                  ${template.jsonData}
-              </td>
-              <td style="border: 1px solid #ddd; padding: 8px;">
-                  <button class="edit-btn" onclick="editTemplate('${template._id}', '${template.name}', '${template.mainCategory}', '${template.templateCategory}', '${encodeURIComponent(template.jsonData)}', '${template.accessType || 'free'}', ${!!template.featuredOnHome}, ${template.isActive !== false}, ${template.displayOrder || 0})">Edit</button>
-                  <button class="delete-btn" onclick="deleteTemplate('${template._id}')">Delete</button>
-              </td>
-              `;
+              <div class="template-field full">
+                <label for="jsonData">Exported JSON Data</label>
+                <textarea id="jsonData" required
+                  placeholder='{"dataFormat":"EPL","dataEncryption":1,"dataBase64":"..."}'></textarea>
+              </div>
 
-              tbody.appendChild(row);
-          });
+              <div class="template-field">
+                <label>
+                  <input type="checkbox" id="featuredOnHome">
+                  Featured in Home Premium Templates
+                </label>
+              </div>
 
-          templateList.appendChild(table);
-      }
+              <div class="template-field">
+                <label>
+                  <input type="checkbox" id="templateActive" checked>
+                  Active in Android App
+                </label>
+              </div>
+            </div>
 
-// Delete a template
-    function deleteTemplate(templateId) {
-        fetch(`/api/template/delete`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ templateID: templateId }) // Using 'templateID' as per your format
-        })
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+            <div id="templateStatus" class="template-status"></div>
+
+            <div class="template-actions">
+              <button class="template-btn primary" type="submit">
+                Save Template
+              </button>
+              <button class="template-btn secondary" type="button"
+                      onclick="resetTemplateForm()">
+                Clear Form
+              </button>
+              <button class="template-btn secondary" type="button"
+                      onclick="validateTemplateJson()">
+                Validate Export File
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="template-panel">
+          <div class="template-toolbar">
+            <div>
+              <h3 style="margin:0 0 6px">Current Templates</h3>
+              <span id="templateCount">0 templates</span>
+            </div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <input id="searchInput"
+                     placeholder="Search name, category or size">
+              <select id="accessFilter">
+                <option value="">All Access</option>
+                <option value="free">Free</option>
+                <option value="premium">Premium</option>
+                <option value="business">Business</option>
+              </select>
+              <button class="template-btn danger" type="button"
+                      onclick="deleteAllTemplates()">
+                Delete All Templates
+              </button>
+            </div>
+          </div>
+
+          <div id="templateList"></div>
+        </div>
+      </div>
+
+      <script>
+        let allTemplates = [];
+
+        function escapeHtml(value) {
+          return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+        }
+
+        function setTemplateStatus(message, type) {
+          const box = document.getElementById('templateStatus');
+          box.textContent = message;
+          box.className = `template-status ${type}`;
+        }
+
+        function parseAndValidateExportedJson(raw) {
+          let parsed;
+
+          try {
+            parsed = JSON.parse(raw);
+          } catch (error) {
+            throw new Error('This file does not contain valid JSON.');
+          }
+
+          if (parsed.dataFormat !== 'EPL') {
+            throw new Error(
+              'Only files exported from EasyLabel in EPL format are allowed.'
+            );
+          }
+
+          if (
+            typeof parsed.dataBase64 !== 'string' ||
+            parsed.dataBase64.length < 20
+          ) {
+            throw new Error(
+              'The exported file does not contain valid dataBase64.'
+            );
+          }
+
+          return parsed;
+        }
+
+        function validateTemplateJson() {
+          try {
+            const parsed = parseAndValidateExportedJson(
+              document.getElementById('jsonData').value.trim()
+            );
+
+            setTemplateStatus(
+              `Valid EasyLabel export. Format: ${parsed.dataFormat}; ` +
+              `encrypted data length: ${parsed.dataBase64.length}.`,
+              'ok'
+            );
+
+            return true;
+          } catch (error) {
+            setTemplateStatus(error.message, 'error');
+            return false;
+          }
+        }
+
+        document
+          .getElementById('templateFile')
+          .addEventListener('change', async event => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+              const text = (await file.text()).replace(/^\uFEFF/, '').trim();
+              const parsed = parseAndValidateExportedJson(text);
+
+              document.getElementById('jsonData').value =
+                JSON.stringify(parsed);
+
+              if (!document.getElementById('templateName').value) {
+                document.getElementById('templateName').value =
+                  file.name.replace(/\.(txt|json)$/i, '');
+              }
+
+              setTemplateStatus(
+                'Exported label file loaded successfully.',
+                'ok'
+              );
+            } catch (error) {
+              event.target.value = '';
+              setTemplateStatus(error.message, 'error');
             }
-            return response.json();
-        })
-        .then((data) => {
-            alert(data.message || "Template deleted successfully!");
-            fetchTemplates(); // Refresh the template list
-        })
-        .catch((error) => {
-            console.error("Error response:", error);
-            alert("Failed to delete template: " + error.message);
-        });
-    }
-
-      // Populate form for editing a template
-      function editTemplate(templateId, templateName, mainCategory, templateCategory, jsonData, accessType, featuredOnHome, isActive, displayOrder) {
-          document.getElementById("templateId").value = templateId;
-          document.getElementById("templateName").value = templateName;
-          document.getElementById("mainCategory").value = mainCategory;
-          document.getElementById("templateCategory").value = templateCategory;
-          document.getElementById("jsonData").value = decodeURIComponent(jsonData);
-          document.getElementById("accessType").value = accessType || "free";
-          document.getElementById("featuredOnHome").checked = !!featuredOnHome;
-          document.getElementById("templateActive").checked = isActive !== false;
-          document.getElementById("displayOrder").value = displayOrder || 0;
-      }
-
-      // Handle form submission for adding/updating templates
-      document.getElementById("templateForm").addEventListener("submit", (event) => {
-          event.preventDefault();
-
-          const templateName = document.getElementById("templateName").value;
-          const mainCategory = document.getElementById("mainCategory").value;
-          const templateCategory = document.getElementById("templateCategory").value;
-          const jsonData = document.getElementById("jsonData").value;
-          const templateId = document.getElementById("templateId").value;
-          const accessType = document.getElementById("accessType").value;
-          const featuredOnHome = document.getElementById("featuredOnHome").checked;
-          const isActive = document.getElementById("templateActive").checked;
-          const displayOrder = Number(document.getElementById("displayOrder").value || 0);
-
-          const formData = {
-              name: templateName, mainCategory: mainCategory, templateCategory: templateCategory,
-              jsonData: jsonData, accessType, featuredOnHome, isActive, displayOrder
-          };
-          if (templateId) formData.templateID = templateId;
-
-          const endpoint = templateId ? "/api/template/update" : "/api/template/store";
-
-          fetch(endpoint, {
-              method: "POST",
-              headers: {
-                  "Content-Type": "application/json",
-              },
-              body: JSON.stringify(formData),
-          })
-          .then((response) => response.json())
-          .then((data) => {
-              alert(data.message || "Template saved successfully!");
-              document.getElementById("templateForm").reset(); // Clear form
-              fetchTemplates(); // Refresh the template list
-          })
-          .catch((error) => {
-              alert("An error occurred: " + error.message);
           });
-      });
 
-      // Initial fetch of templates
-      fetchTemplates();
+        async function fetchTemplates() {
+          const list = document.getElementById('templateList');
+          list.innerHTML = '<p>Loading templates...</p>';
 
-    </script>
+          try {
+            const response = await fetch('/api/template');
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+              throw new Error(result.message || 'Unable to load templates.');
+            }
+
+            allTemplates = result.data || [];
+            applyTemplateFilters();
+          } catch (error) {
+            list.innerHTML =
+              `<p style="color:#b42318">${escapeHtml(error.message)}</p>`;
+          }
+        }
+
+        function applyTemplateFilters() {
+          const query = document
+            .getElementById('searchInput')
+            .value
+            .trim()
+            .toLowerCase();
+
+          const access = document.getElementById('accessFilter').value;
+
+          const filtered = allTemplates.filter(template => {
+            const size =
+              `${template.labelWidthMm || ''}x` +
+              `${template.labelHeightMm || ''}`;
+
+            const searchable = [
+              template.name,
+              template.mainCategory,
+              template.templateCategory,
+              size
+            ].join(' ').toLowerCase();
+
+            return (
+              (!query || searchable.includes(query)) &&
+              (!access || template.accessType === access)
+            );
+          });
+
+          renderTemplates(filtered);
+        }
+
+        function renderTemplates(templates) {
+          document.getElementById('templateCount').textContent =
+            `${templates.length} template${templates.length === 1 ? '' : 's'}`;
+
+          const list = document.getElementById('templateList');
+
+          if (!templates.length) {
+            list.innerHTML = '<p>No templates found.</p>';
+            return;
+          }
+
+          const rows = templates.map(template => {
+            const encoded = encodeURIComponent(JSON.stringify(template));
+            const access = template.accessType || 'free';
+
+            return `
+              <tr>
+                <td>${escapeHtml(template.name)}</td>
+                <td>${escapeHtml(template.mainCategory)}</td>
+                <td>${escapeHtml(template.templateCategory)}</td>
+                <td>
+                  ${escapeHtml(template.labelWidthMm)} ×
+                  ${escapeHtml(template.labelHeightMm)} mm
+                </td>
+                <td>
+                  <span class="access-pill access-${access}">
+                    ${escapeHtml(access.toUpperCase())}
+                  </span>
+                </td>
+                <td>${template.featuredOnHome ? 'Yes' : 'No'}</td>
+                <td>${template.isActive === false ? 'Inactive' : 'Active'}</td>
+                <td>${escapeHtml(template.displayOrder || 0)}</td>
+                <td>
+                  <button class="edit-btn"
+                    onclick="editTemplate('${encoded}')">Edit</button>
+                  <button class="delete-btn"
+                    onclick="deleteTemplate('${template._id}')">
+                    Delete
+                  </button>
+                </td>
+              </tr>`;
+          }).join('');
+
+          list.innerHTML = `
+            <div class="template-table-wrap">
+              <table class="template-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Business Category</th>
+                    <th>Label Category</th>
+                    <th>Size</th>
+                    <th>Access</th>
+                    <th>Home</th>
+                    <th>Status</th>
+                    <th>Order</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>`;
+        }
+
+        function editTemplate(encoded) {
+          const template = JSON.parse(decodeURIComponent(encoded));
+
+          document.getElementById('templateId').value = template._id || '';
+          document.getElementById('templateName').value = template.name || '';
+          document.getElementById('mainCategory').value =
+            template.mainCategory || '';
+          document.getElementById('templateCategory').value =
+            template.templateCategory || '';
+          document.getElementById('labelSize').value =
+            `${template.labelWidthMm}x${template.labelHeightMm}`;
+          document.getElementById('accessType').value =
+            template.accessType || 'free';
+          document.getElementById('featuredOnHome').checked =
+            Boolean(template.featuredOnHome);
+          document.getElementById('templateActive').checked =
+            template.isActive !== false;
+          document.getElementById('displayOrder').value =
+            template.displayOrder || 0;
+          document.getElementById('jsonData').value =
+            template.jsonData || '';
+
+          setTemplateStatus('Editing existing template.', 'ok');
+          document
+            .getElementById('templateForm')
+            .scrollIntoView({ behavior:'smooth' });
+        }
+
+        function resetTemplateForm() {
+          document.getElementById('templateForm').reset();
+          document.getElementById('templateId').value = '';
+          document.getElementById('templateActive').checked = true;
+          document.getElementById('displayOrder').value = 0;
+          document.getElementById('templateStatus').className =
+            'template-status';
+        }
+
+        async function deleteTemplate(templateId) {
+          if (!confirm('Delete this template permanently?')) return;
+
+          const response = await fetch('/api/template/delete', {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json' },
+            body:JSON.stringify({ templateID:templateId })
+          });
+
+          const result = await response.json();
+          alert(result.message || 'Done');
+
+          if (response.ok && result.success) {
+            fetchTemplates();
+          }
+        }
+
+        async function deleteAllTemplates() {
+          const confirmation = prompt(
+            'This permanently deletes every template.\\n\\n' +
+            'Type exactly: DELETE ALL TEMPLATES'
+          );
+
+          if (confirmation !== 'DELETE ALL TEMPLATES') {
+            alert('Delete cancelled.');
+            return;
+          }
+
+          const secondCheck = confirm(
+            'Final confirmation: delete every template from MongoDB?'
+          );
+
+          if (!secondCheck) return;
+
+          const response = await fetch('/api/template/delete-all', {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json' },
+            body:JSON.stringify({ confirmation })
+          });
+
+          const result = await response.json();
+          alert(result.message || 'Done');
+
+          if (response.ok && result.success) {
+            resetTemplateForm();
+            fetchTemplates();
+          }
+        }
+
+        document
+          .getElementById('templateForm')
+          .addEventListener('submit', async event => {
+            event.preventDefault();
+
+            if (!validateTemplateJson()) return;
+
+            const size = document
+              .getElementById('labelSize')
+              .value
+              .split('x');
+
+            const templateId =
+              document.getElementById('templateId').value;
+
+            const payload = {
+              name:document.getElementById('templateName').value.trim(),
+              mainCategory:
+                document.getElementById('mainCategory').value.trim(),
+              templateCategory:
+                document.getElementById('templateCategory').value.trim(),
+              labelWidthMm:Number(size[0]),
+              labelHeightMm:Number(size[1]),
+              accessType:document.getElementById('accessType').value,
+              featuredOnHome:
+                document.getElementById('featuredOnHome').checked,
+              isActive:
+                document.getElementById('templateActive').checked,
+              displayOrder:Number(
+                document.getElementById('displayOrder').value || 0
+              ),
+              jsonData:document.getElementById('jsonData').value.trim()
+            };
+
+            if (templateId) {
+              payload.templateID = templateId;
+            }
+
+            const endpoint = templateId
+              ? '/api/template/update'
+              : '/api/template/store';
+
+            try {
+              const response = await fetch(endpoint, {
+                method:'POST',
+                headers:{ 'Content-Type':'application/json' },
+                body:JSON.stringify(payload)
+              });
+
+              const result = await response.json();
+
+              if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Unable to save template.');
+              }
+
+              setTemplateStatus(result.message, 'ok');
+              resetTemplateForm();
+              fetchTemplates();
+            } catch (error) {
+              setTemplateStatus(error.message, 'error');
+            }
+          });
+
+        document
+          .getElementById('searchInput')
+          .addEventListener('input', applyTemplateFilters);
+
+        document
+          .getElementById('accessFilter')
+          .addEventListener('change', applyTemplateFilters);
+
+        fetchTemplates();
+      </script>
 
     <div id="users" class="tab-content">
         <h2>User List</h2>
