@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="304" height="120" viewBox="0 0 304 120"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="299.6" height="115.6" rx="4.8" fill="none" stroke="#000" stroke-width="2.2"/><rect x="0" y="42.0" width="304" height="33.6" fill="#000"/>
+        <text x="152.0" y="63.6" text-anchor="middle" fill="#fff" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="15.600000000000001">CHRISTMAS</text>
+        <path d="M 24.8 12.427199999999997 L 26.984 18.9792 L 33.536 18.9792 L 28.294400000000003 22.9104 L 30.26 29.4624 L 24.8 25.5312 L 19.34 29.4624 L 21.3056 22.9104 L 16.064 18.9792 L 22.616 18.9792 Z" fill="none" stroke="#000" stroke-width="1.6380000000000001"/>
+        <text x="296" y="21.599999999999998" text-anchor="end" font-family="Arial,sans-serif" font-size="8">FESTIVE THEME</text>
+        <text x="8" y="93.60000000000001" font-family="Arial,sans-serif" font-size="10.14">WITH BEST WISHES</text>
+        <text x="8" y="109.2" font-family="Arial,sans-serif" font-size="8">FROM: EASYLABEL • THANK YOU</text>
+        <g opacity="1">
+          <path d="M 8 18 H 66.9" stroke="#000" stroke-width="2"/>
+          <path d="M 296.0 102.0 H 237.1" stroke="#000" stroke-width="2"/>
+          <circle cx="291.0" cy="13" r="3" fill="#000"/>
+          <circle cx="13" cy="107.0" r="3" fill="#000"/>
+        </g></svg>

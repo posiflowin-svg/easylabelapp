@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="120" viewBox="0 0 800 120"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="795.6" height="115.6" rx="4.8" fill="none" stroke="#000" stroke-width="2.2"/><rect x="13.040000000000003" y="16.400000000000006" width="26.880000000000003" height="20.16" rx="2.688" fill="none" stroke="#000" stroke-width="2.52"/><circle cx="19.760000000000005" cy="24.800000000000004" r="3.024" fill="none" stroke="#000" stroke-width="2.016"/><line x1="24.800000000000004" y1="23.792000000000005" x2="34.88" y2="23.792000000000005" stroke="#000" stroke-width="2.016"/><line x1="24.800000000000004" y1="29.168000000000003" x2="34.88" y2="29.168000000000003" stroke="#000" stroke-width="2.016"/>
+        <text x="46.4" y="23.6" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="15.600000000000001">INVENTORY TAG</text>
+        <text x="46.4" y="38.303000000000004" font-family="Arial,sans-serif" font-size="10.14">ASSET ID: 24017</text>
+        <text x="8" y="99.2" font-family="Arial,sans-serif" font-size="8">DEPT: OPERATIONS</text>
+        <text x="8" y="116.4" font-family="Arial,sans-serif" font-size="8">NEXT CHECK: 01-08-26</text>
+        <g opacity="1">
+          <path d="M 8 18 H 72.0" stroke="#000" stroke-width="2"/>
+          <path d="M 792.0 102.0 H 728.0" stroke="#000" stroke-width="2"/>
+          <circle cx="787.0" cy="13" r="3" fill="#000"/>
+          <circle cx="13" cy="107.0" r="3" fill="#000"/>
+        </g></svg>

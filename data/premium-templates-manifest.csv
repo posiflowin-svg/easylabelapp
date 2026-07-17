@@ -1,0 +1,101 @@
+﻿No.,Name,Main Category,Template Category,Access,Featured on Home,Display Order,Verified Base Layout
+1,Modern MRP,Retail & MRP,Price Labels,premium,True,1,Shared Bill
+2,Offer Price,Retail & MRP,Price Labels,premium,True,2,Shared Candy 1
+3,Best Seller,Retail & MRP,Price Labels,premium,True,3,Shared CoCo 2
+4,New Arrival,Retail & MRP,Price Labels,premium,True,4,Shared KK_PRIME 2
+5,Sale Tag,Retail & MRP,Price Labels,premium,True,5,Shared Logo 2
+6,Product Barcode,Retail & MRP,Price Labels,premium,True,6,Shared Piggy 1
+7,Premium Price,Retail & MRP,Price Labels,premium,True,7,Shared Shampoo 2
+8,Discount Label,Retail & MRP,Price Labels,premium,True,8,Shared Bill
+9,Stock Label,Retail & MRP,Price Labels,premium,True,9,Shared Candy 1
+10,Shelf Price,Retail & MRP,Price Labels,premium,True,10,Shared CoCo 2
+11,Rice Pack,Grocery,Food Labels,premium,True,11,Shared KK_PRIME 2
+12,Wheat Pack,Grocery,Food Labels,premium,True,12,Shared Logo 2
+13,Sugar Pack,Grocery,Food Labels,premium,True,13,Shared Piggy 1
+14,Tea Pack,Grocery,Food Labels,premium,True,14,Shared Shampoo 2
+15,Coffee Pack,Grocery,Food Labels,premium,True,15,Shared Bill
+16,Dal Pack,Grocery,Food Labels,premium,True,16,Shared Candy 1
+17,Spice Pack,Grocery,Food Labels,premium,True,17,Shared CoCo 2
+18,Dry Fruit,Grocery,Food Labels,premium,True,18,Shared KK_PRIME 2
+19,Fresh Grocery,Grocery,Food Labels,premium,True,19,Shared Logo 2
+20,Organic Food,Grocery,Food Labels,premium,True,20,Shared Piggy 1
+21,Cake Box,Bakery,Bakery Labels,premium,True,21,Shared Shampoo 2
+22,Cookie Pack,Bakery,Bakery Labels,premium,True,22,Shared Bill
+23,Bread Pack,Bakery,Bakery Labels,premium,True,23,Shared Candy 1
+24,Donut Box,Bakery,Bakery Labels,premium,True,24,Shared CoCo 2
+25,Chocolate Box,Bakery,Bakery Labels,premium,False,25,Shared KK_PRIME 2
+26,Dessert Pack,Bakery,Bakery Labels,premium,False,26,Shared Logo 2
+27,Muffin Label,Bakery,Bakery Labels,premium,False,27,Shared Piggy 1
+28,Freshly Baked,Bakery,Bakery Labels,premium,False,28,Shared Shampoo 2
+29,Best Before,Bakery,Bakery Labels,premium,False,29,Shared Bill
+30,Gift Pack,Bakery,Bakery Labels,premium,False,30,Shared Candy 1
+31,Packed On,Restaurant,Kitchen Labels,premium,False,31,Shared CoCo 2
+32,Use Before,Restaurant,Kitchen Labels,premium,False,32,Shared KK_PRIME 2
+33,Take Away,Restaurant,Kitchen Labels,premium,False,33,Shared Logo 2
+34,Today's Special,Restaurant,Kitchen Labels,premium,False,34,Shared Piggy 1
+35,Fresh Today,Restaurant,Kitchen Labels,premium,False,35,Shared Shampoo 2
+36,Veg Food,Restaurant,Kitchen Labels,premium,False,36,Shared Bill
+37,Non Veg Food,Restaurant,Kitchen Labels,premium,False,37,Shared Candy 1
+38,Sauce Bottle,Restaurant,Kitchen Labels,premium,False,38,Shared CoCo 2
+39,Juice Bottle,Restaurant,Kitchen Labels,premium,False,39,Shared KK_PRIME 2
+40,Meal Box,Restaurant,Kitchen Labels,premium,False,40,Shared Logo 2
+41,Size Tag,Clothing,Fashion Labels,premium,False,41,Shared Piggy 1
+42,Wash Care,Clothing,Fashion Labels,premium,False,42,Shared Shampoo 2
+43,Cotton Wear,Clothing,Fashion Labels,premium,False,43,Shared Bill
+44,Kids Wear,Clothing,Fashion Labels,premium,False,44,Shared Candy 1
+45,Premium Fashion,Clothing,Fashion Labels,premium,False,45,Shared CoCo 2
+46,Jeans Label,Clothing,Fashion Labels,premium,False,46,Shared KK_PRIME 2
+47,Brand Tag,Clothing,Fashion Labels,premium,False,47,Shared Logo 2
+48,Garment Barcode,Clothing,Fashion Labels,premium,False,48,Shared Piggy 1
+49,New Collection,Clothing,Fashion Labels,premium,False,49,Shared Shampoo 2
+50,Fabric Care,Clothing,Fashion Labels,premium,False,50,Shared Bill
+51,Kitchen Jar,Home Storage,Storage Labels,premium,False,51,Shared Candy 1
+52,Laundry Tag,Home Storage,Storage Labels,premium,False,52,Shared CoCo 2
+53,Bathroom Tag,Home Storage,Storage Labels,premium,False,53,Shared KK_PRIME 2
+54,Medicine Box,Home Storage,Storage Labels,premium,False,54,Shared Logo 2
+55,Toy Box,Home Storage,Storage Labels,premium,False,55,Shared Piggy 1
+56,Office Box,Home Storage,Storage Labels,premium,False,56,Shared Shampoo 2
+57,Pantry Label,Home Storage,Storage Labels,premium,False,57,Shared Bill
+58,Cleaning Item,Home Storage,Storage Labels,premium,False,58,Shared Candy 1
+59,Storage Bin,Home Storage,Storage Labels,premium,False,59,Shared CoCo 2
+60,Home Organiser,Home Storage,Storage Labels,premium,False,60,Shared KK_PRIME 2
+61,School Name Boy,School,School Labels,premium,False,61,Shared Logo 2
+62,School Name Girl,School,School Labels,premium,False,62,Shared Piggy 1
+63,Notebook Label,School,School Labels,premium,False,63,Shared Shampoo 2
+64,Water Bottle,School,School Labels,premium,False,64,Shared Bill
+65,Pencil Box,School,School Labels,premium,False,65,Shared Candy 1
+66,School Bag,School,School Labels,premium,False,66,Shared CoCo 2
+67,Uniform Label,School,School Labels,premium,False,67,Shared KK_PRIME 2
+68,Book Label,School,School Labels,premium,False,68,Shared Logo 2
+69,Class Label,School,School Labels,premium,False,69,Shared Piggy 1
+70,Subject Label,School,School Labels,premium,False,70,Shared Shampoo 2
+71,Tablet Label,Medical,Medical Labels,premium,False,71,Shared Bill
+72,Syrup Label,Medical,Medical Labels,premium,False,72,Shared Candy 1
+73,Patient Name,Medical,Medical Labels,premium,False,73,Shared CoCo 2
+74,Expiry Label,Medical,Medical Labels,premium,False,74,Shared KK_PRIME 2
+75,Sample Label,Medical,Medical Labels,premium,False,75,Shared Logo 2
+76,Medicine Dose,Medical,Medical Labels,premium,False,76,Shared Piggy 1
+77,Laboratory Tag,Medical,Medical Labels,premium,False,77,Shared Shampoo 2
+78,Prescription Tag,Medical,Medical Labels,premium,False,78,Shared Bill
+79,Batch Label,Medical,Medical Labels,premium,False,79,Shared Candy 1
+80,Clinic Label,Medical,Medical Labels,premium,False,80,Shared CoCo 2
+81,Fragile,Shipping,Courier Labels,premium,False,81,Shared KK_PRIME 2
+82,Handle With Care,Shipping,Courier Labels,premium,False,82,Shared Logo 2
+83,This Side Up,Shipping,Courier Labels,premium,False,83,Shared Piggy 1
+84,COD Parcel,Shipping,Courier Labels,premium,False,84,Shared Shampoo 2
+85,Prepaid Parcel,Shipping,Courier Labels,premium,False,85,Shared Bill
+86,Return Parcel,Shipping,Courier Labels,premium,False,86,Shared Candy 1
+87,Warehouse Tag,Shipping,Courier Labels,premium,False,87,Shared CoCo 2
+88,Dispatch Label,Shipping,Courier Labels,premium,False,88,Shared KK_PRIME 2
+89,Package ID,Shipping,Courier Labels,premium,False,89,Shared Logo 2
+90,Delivery Note,Shipping,Courier Labels,premium,False,90,Shared Piggy 1
+91,WhatsApp QR,QR & Business,Business Labels,premium,False,91,Shared Shampoo 2
+92,Website QR,QR & Business,Business Labels,premium,False,92,Shared Bill
+93,UPI Payment,QR & Business,Business Labels,premium,False,93,Shared Candy 1
+94,Instagram QR,QR & Business,Business Labels,premium,False,94,Shared CoCo 2
+95,Feedback QR,QR & Business,Business Labels,premium,False,95,Shared KK_PRIME 2
+96,Business Card,QR & Business,Business Labels,premium,False,96,Shared Logo 2
+97,Thank You,QR & Business,Business Labels,premium,False,97,Shared Piggy 1
+98,Customer Care,QR & Business,Business Labels,premium,False,98,Shared Shampoo 2
+99,Follow Us,QR & Business,Business Labels,premium,False,99,Shared Bill
+100,Scan To Order,QR & Business,Business Labels,premium,False,100,Shared Candy 1

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="395.6" height="235.6" rx="9.6" fill="none" stroke="#000" stroke-width="2.2"/><path d="M 32.544000000000004 71.52000000000001 Q 24.480000000000004 51.36000000000001 39.26400000000001 36.57600000000001 Q 51.36000000000001 23.136000000000006 63.456 36.57600000000001 Q 78.24000000000001 51.36000000000001 70.17600000000002 71.52000000000001 Z" fill="none" stroke="#000" stroke-width="5.04"/><line x1="31.200000000000006" y1="56.736000000000004" x2="71.52000000000001" y2="56.736000000000004" stroke="#000" stroke-width="4.032"/>
+        <text x="90.24" y="45.6" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="31.200000000000003">BEAUTY SIGNATURE</text>
+        <text x="90.24" y="75.006" font-family="Arial,sans-serif" font-size="20.28">FRESHLY BAKED</text>
+        <text x="14.399999999999999" y="201.6384" font-family="Arial,sans-serif" font-size="14.976">Best Before: 3 Days</text>
+        <text x="14.399999999999999" y="233.52" font-family="Arial,sans-serif" font-size="14.976">Net Wt. 250g</text>
+        <g opacity="1">
+          <path d="M 8 18 H 72.0" stroke="#000" stroke-width="2"/>
+          <path d="M 392.0 222.0 H 328.0" stroke="#000" stroke-width="2"/>
+          <circle cx="387.0" cy="13" r="3" fill="#000"/>
+          <circle cx="13" cy="227.0" r="3" fill="#000"/>
+        </g></svg>

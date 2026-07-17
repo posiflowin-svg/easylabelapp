@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="304" height="304" viewBox="0 0 304 304"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="299.6" height="299.6" rx="12.16" fill="none" stroke="#000" stroke-width="2.2"/><rect x="18.24" y="18.24" width="267.52" height="267.52" fill="none" stroke="#000" stroke-width="1"/>
+        <text x="152.0" y="57.760000000000005" text-anchor="middle" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="39.52">PACKED &amp; EXPIRY</text>
+        <rect x="122.208" y="111.26400000000001" width="59.583999999999996" height="52.7744" rx="4.256" fill="none" stroke="#000" stroke-width="6.384"/><line x1="122.208" y1="126.58560000000001" x2="181.792" y2="126.58560000000001" stroke="#000" stroke-width="5.107200000000001"/><line x1="136.6784" y1="102.75200000000001" x2="136.6784" y2="118.07360000000001" stroke="#000" stroke-width="5.107200000000001"/><line x1="167.3216" y1="102.75200000000001" x2="167.3216" y2="118.07360000000001" stroke="#000" stroke-width="5.107200000000001"/>
+        <text x="152.0" y="218.88" text-anchor="middle" font-family="Arial,sans-serif" font-size="25.688000000000002">PKD: 17-07-2026</text>
+        <text x="152.0" y="261.44" text-anchor="middle" font-family="Arial,sans-serif" font-size="18.9696">EXP: 17-01-2027 • BATCH: EL1024</text>
+        <g opacity="1">
+          <path d="M 8 18 H 66.9" stroke="#000" stroke-width="2"/>
+          <path d="M 296.0 286.0 H 237.1" stroke="#000" stroke-width="2"/>
+          <circle cx="291.0" cy="13" r="3" fill="#000"/>
+          <circle cx="13" cy="291.0" r="3" fill="#000"/>
+        </g></svg>

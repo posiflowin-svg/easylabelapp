@@ -1,0 +1,101 @@
+﻿id,name,mainCategory,templateCategory,sizeWidthMm,sizeHeightMm,accessType,requiredPlan,featuredOnHome,isActive,displayOrder,previewImageUrl,svgImageUrl,designFormat,previewOnly,version
+1,Classic MRP,Price Tag,Price Tag,38,38,free,free,False,True,1,/template-assets-v2/001_price_tag_classic_mrp_38x38.png,/template-assets-v2/001_price_tag_classic_mrp_38x38.svg,svg,True,2
+2,Offer Price,Price Tag,Price Tag,38,25,free,free,False,True,2,/template-assets-v2/002_price_tag_offer_price_38x25.png,/template-assets-v2/002_price_tag_offer_price_38x25.svg,svg,True,2
+3,Premium Price,Price Tag,Price Tag,38,15,free,free,False,True,3,/template-assets-v2/003_price_tag_premium_price_38x15.png,/template-assets-v2/003_price_tag_premium_price_38x15.svg,svg,True,2
+4,Best Seller,Price Tag,Price Tag,50,25,free,free,False,True,4,/template-assets-v2/004_price_tag_best_seller_50x25.png,/template-assets-v2/004_price_tag_best_seller_50x25.svg,svg,True,2
+5,Business Contact,Brand & Contact,Brand & Contact,50,30,free,free,False,True,5,/template-assets-v2/005_brand_contact_business_contact_50x30.png,/template-assets-v2/005_brand_contact_business_contact_50x30.svg,svg,True,2
+6,WhatsApp Contact,Brand & Contact,Brand & Contact,50,50,free,free,False,True,6,/template-assets-v2/006_brand_contact_whatsapp_contact_50x50.png,/template-assets-v2/006_brand_contact_whatsapp_contact_50x50.svg,svg,True,2
+7,Store Identity,Brand & Contact,Brand & Contact,50,12,free,free,False,True,7,/template-assets-v2/007_brand_contact_store_identity_50x12.png,/template-assets-v2/007_brand_contact_store_identity_50x12.svg,svg,True,2
+8,Customer Care,Brand & Contact,Brand & Contact,75,25,free,free,False,True,8,/template-assets-v2/008_brand_contact_customer_care_75x25.png,/template-assets-v2/008_brand_contact_customer_care_75x25.svg,svg,True,2
+9,School Name,Name Tag,Name Tag,75,50,free,free,False,True,9,/template-assets-v2/009_name_tag_school_name_75x50.png,/template-assets-v2/009_name_tag_school_name_75x50.svg,svg,True,2
+10,Employee Name,Name Tag,Name Tag,100,50,free,free,False,True,10,/template-assets-v2/010_name_tag_employee_name_100x50.png,/template-assets-v2/010_name_tag_employee_name_100x50.svg,svg,True,2
+11,Kids Name,Name Tag,Name Tag,100,150,free,free,False,True,11,/template-assets-v2/011_name_tag_kids_name_100x150.png,/template-assets-v2/011_name_tag_kids_name_100x150.svg,svg,True,2
+12,Visitor Name,Name Tag,Name Tag,100,15,free,free,False,True,12,/template-assets-v2/012_name_tag_visitor_name_100x15.png,/template-assets-v2/012_name_tag_visitor_name_100x15.svg,svg,True,2
+13,Packed & Expiry,Expiry Date,Expiry Date,38,38,free,free,False,True,13,/template-assets-v2/013_expiry_date_packed_expiry_38x38.png,/template-assets-v2/013_expiry_date_packed_expiry_38x38.svg,svg,True,2
+14,Best Before,Expiry Date,Expiry Date,38,25,free,free,False,True,14,/template-assets-v2/014_expiry_date_best_before_38x25.png,/template-assets-v2/014_expiry_date_best_before_38x25.svg,svg,True,2
+15,Batch Date,Expiry Date,Expiry Date,38,15,free,free,False,True,15,/template-assets-v2/015_expiry_date_batch_date_38x15.png,/template-assets-v2/015_expiry_date_batch_date_38x15.svg,svg,True,2
+16,Use By,Expiry Date,Expiry Date,50,25,free,free,False,True,16,/template-assets-v2/016_expiry_date_use_by_50x25.png,/template-assets-v2/016_expiry_date_use_by_50x25.svg,svg,True,2
+17,Fresh Bakery,Bakery,Bakery,50,30,free,free,False,True,17,/template-assets-v2/017_bakery_fresh_bakery_50x30.png,/template-assets-v2/017_bakery_fresh_bakery_50x30.svg,svg,True,2
+18,Cake Box,Bakery,Bakery,50,50,free,free,False,True,18,/template-assets-v2/018_bakery_cake_box_50x50.png,/template-assets-v2/018_bakery_cake_box_50x50.svg,svg,True,2
+19,Cookie Pack,Bakery,Bakery,50,12,free,free,False,True,19,/template-assets-v2/019_bakery_cookie_pack_50x12.png,/template-assets-v2/019_bakery_cookie_pack_50x12.svg,svg,True,2
+20,Bread Label,Bakery,Bakery,75,25,free,free,False,True,20,/template-assets-v2/020_bakery_bread_label_75x25.png,/template-assets-v2/020_bakery_bread_label_75x25.svg,svg,True,2
+21,Grocery Pack,Grocery Store,Grocery Store,75,50,premium,premium,True,True,21,/template-assets-v2/021_grocery_store_grocery_pack_75x50.png,/template-assets-v2/021_grocery_store_grocery_pack_75x50.svg,svg,True,2
+22,Spice Pack,Grocery Store,Grocery Store,100,50,premium,premium,True,True,22,/template-assets-v2/022_grocery_store_spice_pack_100x50.png,/template-assets-v2/022_grocery_store_spice_pack_100x50.svg,svg,True,2
+23,Dry Fruit,Grocery Store,Grocery Store,100,150,premium,premium,True,True,23,/template-assets-v2/023_grocery_store_dry_fruit_100x150.png,/template-assets-v2/023_grocery_store_dry_fruit_100x150.svg,svg,True,2
+24,Organic Food,Grocery Store,Grocery Store,100,15,premium,premium,True,True,24,/template-assets-v2/024_grocery_store_organic_food_100x15.png,/template-assets-v2/024_grocery_store_organic_food_100x15.svg,svg,True,2
+25,Product Label,Commercial Retail,Commercial Retail,38,38,premium,premium,True,True,25,/template-assets-v2/025_commercial_retail_product_label_38x38.png,/template-assets-v2/025_commercial_retail_product_label_38x38.svg,svg,True,2
+26,Shelf Label,Commercial Retail,Commercial Retail,38,25,premium,premium,True,True,26,/template-assets-v2/026_commercial_retail_shelf_label_38x25.png,/template-assets-v2/026_commercial_retail_shelf_label_38x25.svg,svg,True,2
+27,Sale Label,Commercial Retail,Commercial Retail,38,15,premium,premium,True,True,27,/template-assets-v2/027_commercial_retail_sale_label_38x15.png,/template-assets-v2/027_commercial_retail_sale_label_38x15.svg,svg,True,2
+28,New Arrival,Commercial Retail,Commercial Retail,50,25,premium,premium,True,True,28,/template-assets-v2/028_commercial_retail_new_arrival_50x25.png,/template-assets-v2/028_commercial_retail_new_arrival_50x25.svg,svg,True,2
+29,Water Bottle,Drinking,Drinking,50,30,premium,premium,True,True,29,/template-assets-v2/029_drinking_water_bottle_50x30.png,/template-assets-v2/029_drinking_water_bottle_50x30.svg,svg,True,2
+30,Juice Bottle,Drinking,Drinking,50,50,premium,premium,True,True,30,/template-assets-v2/030_drinking_juice_bottle_50x50.png,/template-assets-v2/030_drinking_juice_bottle_50x50.svg,svg,True,2
+31,Coffee Cup,Drinking,Drinking,50,12,premium,premium,True,True,31,/template-assets-v2/031_drinking_coffee_cup_50x12.png,/template-assets-v2/031_drinking_coffee_cup_50x12.svg,svg,True,2
+32,Tea Pack,Drinking,Drinking,75,25,premium,premium,True,True,32,/template-assets-v2/032_drinking_tea_pack_75x25.png,/template-assets-v2/032_drinking_tea_pack_75x25.svg,svg,True,2
+33,Asset Tag,Work Scenarios,Work Scenarios,75,50,premium,premium,True,True,33,/template-assets-v2/033_work_scenarios_asset_tag_75x50.png,/template-assets-v2/033_work_scenarios_asset_tag_75x50.svg,svg,True,2
+34,Inspection Tag,Work Scenarios,Work Scenarios,100,50,premium,premium,True,True,34,/template-assets-v2/034_work_scenarios_inspection_tag_100x50.png,/template-assets-v2/034_work_scenarios_inspection_tag_100x50.svg,svg,True,2
+35,Maintenance Due,Work Scenarios,Work Scenarios,100,150,premium,premium,True,True,35,/template-assets-v2/035_work_scenarios_maintenance_due_100x150.png,/template-assets-v2/035_work_scenarios_maintenance_due_100x150.svg,svg,True,2
+36,Inventory Tag,Work Scenarios,Work Scenarios,100,15,premium,premium,True,True,36,/template-assets-v2/036_work_scenarios_inventory_tag_100x15.png,/template-assets-v2/036_work_scenarios_inventory_tag_100x15.svg,svg,True,2
+37,Size & Price,Clothing,Clothing,38,38,premium,premium,False,True,37,/template-assets-v2/037_clothing_size_price_38x38.png,/template-assets-v2/037_clothing_size_price_38x38.svg,svg,True,2
+38,Wash Care,Clothing,Clothing,38,25,premium,premium,True,True,38,/template-assets-v2/038_clothing_wash_care_38x25.png,/template-assets-v2/038_clothing_wash_care_38x25.svg,svg,True,2
+39,Fashion Tag,Clothing,Clothing,38,15,premium,premium,False,True,39,/template-assets-v2/039_clothing_fashion_tag_38x15.png,/template-assets-v2/039_clothing_fashion_tag_38x15.svg,svg,True,2
+40,Fabric Details,Clothing,Clothing,50,25,premium,premium,False,True,40,/template-assets-v2/040_clothing_fabric_details_50x25.png,/template-assets-v2/040_clothing_fabric_details_50x25.svg,svg,True,2
+41,Fresh Today,Fresh Food,Fresh Food,50,30,premium,premium,False,True,41,/template-assets-v2/041_fresh_food_fresh_today_50x30.png,/template-assets-v2/041_fresh_food_fresh_today_50x30.svg,svg,True,2
+42,Packed Food,Fresh Food,Fresh Food,50,50,premium,premium,True,True,42,/template-assets-v2/042_fresh_food_packed_food_50x50.png,/template-assets-v2/042_fresh_food_packed_food_50x50.svg,svg,True,2
+43,Meal Box,Fresh Food,Fresh Food,50,12,premium,premium,False,True,43,/template-assets-v2/043_fresh_food_meal_box_50x12.png,/template-assets-v2/043_fresh_food_meal_box_50x12.svg,svg,True,2
+44,Kitchen Label,Fresh Food,Fresh Food,75,25,premium,premium,False,True,44,/template-assets-v2/044_fresh_food_kitchen_label_75x25.png,/template-assets-v2/044_fresh_food_kitchen_label_75x25.svg,svg,True,2
+45,Storage Box,Home Scenarios,Home Scenarios,75,50,premium,premium,False,True,45,/template-assets-v2/045_home_scenarios_storage_box_75x50.png,/template-assets-v2/045_home_scenarios_storage_box_75x50.svg,svg,True,2
+46,Kitchen Jar,Home Scenarios,Home Scenarios,100,50,premium,premium,True,True,46,/template-assets-v2/046_home_scenarios_kitchen_jar_100x50.png,/template-assets-v2/046_home_scenarios_kitchen_jar_100x50.svg,svg,True,2
+47,Laundry Label,Home Scenarios,Home Scenarios,100,150,premium,premium,False,True,47,/template-assets-v2/047_home_scenarios_laundry_label_100x150.png,/template-assets-v2/047_home_scenarios_laundry_label_100x150.svg,svg,True,2
+48,Medicine Box,Home Scenarios,Home Scenarios,100,15,premium,premium,False,True,48,/template-assets-v2/048_home_scenarios_medicine_box_100x15.png,/template-assets-v2/048_home_scenarios_medicine_box_100x15.svg,svg,True,2
+49,Notebook Label,School,School,38,38,premium,premium,False,True,49,/template-assets-v2/049_school_notebook_label_38x38.png,/template-assets-v2/049_school_notebook_label_38x38.svg,svg,True,2
+50,Book Label,School,School,38,25,premium,premium,True,True,50,/template-assets-v2/050_school_book_label_38x25.png,/template-assets-v2/050_school_book_label_38x25.svg,svg,True,2
+51,Subject Label,School,School,38,15,premium,premium,False,True,51,/template-assets-v2/051_school_subject_label_38x15.png,/template-assets-v2/051_school_subject_label_38x15.svg,svg,True,2
+52,School Bag,School,School,50,25,premium,premium,False,True,52,/template-assets-v2/052_school_school_bag_50x25.png,/template-assets-v2/052_school_school_bag_50x25.svg,svg,True,2
+53,Jewelry Price,Jewelry,Jewelry,50,30,premium,premium,False,True,53,/template-assets-v2/053_jewelry_jewelry_price_50x30.png,/template-assets-v2/053_jewelry_jewelry_price_50x30.svg,svg,True,2
+54,Ring Tag,Jewelry,Jewelry,50,50,premium,premium,True,True,54,/template-assets-v2/054_jewelry_ring_tag_50x50.png,/template-assets-v2/054_jewelry_ring_tag_50x50.svg,svg,True,2
+55,Gold Weight,Jewelry,Jewelry,50,12,premium,premium,False,True,55,/template-assets-v2/055_jewelry_gold_weight_50x12.png,/template-assets-v2/055_jewelry_gold_weight_50x12.svg,svg,True,2
+56,Item Code,Jewelry,Jewelry,75,25,premium,premium,False,True,56,/template-assets-v2/056_jewelry_item_code_75x25.png,/template-assets-v2/056_jewelry_item_code_75x25.svg,svg,True,2
+57,Beauty Product,Cosmetics,Cosmetics,75,50,premium,premium,False,True,57,/template-assets-v2/057_cosmetics_beauty_product_75x50.png,/template-assets-v2/057_cosmetics_beauty_product_75x50.svg,svg,True,2
+58,Shade Label,Cosmetics,Cosmetics,100,50,premium,premium,True,True,58,/template-assets-v2/058_cosmetics_shade_label_100x50.png,/template-assets-v2/058_cosmetics_shade_label_100x50.svg,svg,True,2
+59,Batch & MRP,Cosmetics,Cosmetics,100,150,premium,premium,False,True,59,/template-assets-v2/059_cosmetics_batch_mrp_100x150.png,/template-assets-v2/059_cosmetics_batch_mrp_100x150.svg,svg,True,2
+60,Skin Care,Cosmetics,Cosmetics,100,15,premium,premium,False,True,60,/template-assets-v2/060_cosmetics_skin_care_100x15.png,/template-assets-v2/060_cosmetics_skin_care_100x15.svg,svg,True,2
+61,Plant Name,Gardening,Gardening,38,38,premium,premium,False,True,61,/template-assets-v2/061_gardening_plant_name_38x38.png,/template-assets-v2/061_gardening_plant_name_38x38.svg,svg,True,2
+62,Watering Guide,Gardening,Gardening,38,25,premium,premium,True,True,62,/template-assets-v2/062_gardening_watering_guide_38x25.png,/template-assets-v2/062_gardening_watering_guide_38x25.svg,svg,True,2
+63,Seed Pack,Gardening,Gardening,38,15,premium,premium,False,True,63,/template-assets-v2/063_gardening_seed_pack_38x15.png,/template-assets-v2/063_gardening_seed_pack_38x15.svg,svg,True,2
+64,Garden Tag,Gardening,Gardening,50,25,premium,premium,False,True,64,/template-assets-v2/064_gardening_garden_tag_50x25.png,/template-assets-v2/064_gardening_garden_tag_50x25.svg,svg,True,2
+65,Device Asset,Digital Devices,Digital Devices,50,30,premium,premium,False,True,65,/template-assets-v2/065_digital_devices_device_asset_50x30.png,/template-assets-v2/065_digital_devices_device_asset_50x30.svg,svg,True,2
+66,Serial Number,Digital Devices,Digital Devices,50,50,premium,premium,True,True,66,/template-assets-v2/066_digital_devices_serial_number_50x50.png,/template-assets-v2/066_digital_devices_serial_number_50x50.svg,svg,True,2
+67,Warranty Tag,Digital Devices,Digital Devices,50,12,premium,premium,False,True,67,/template-assets-v2/067_digital_devices_warranty_tag_50x12.png,/template-assets-v2/067_digital_devices_warranty_tag_50x12.svg,svg,True,2
+68,Service Label,Digital Devices,Digital Devices,75,25,premium,premium,False,True,68,/template-assets-v2/068_digital_devices_service_label_75x25.png,/template-assets-v2/068_digital_devices_service_label_75x25.svg,svg,True,2
+69,Fragile,Shipping,Shipping,75,50,premium,premium,False,True,69,/template-assets-v2/069_shipping_fragile_75x50.png,/template-assets-v2/069_shipping_fragile_75x50.svg,svg,True,2
+70,Handle With Care,Shipping,Shipping,100,50,premium,premium,True,True,70,/template-assets-v2/070_shipping_handle_with_care_100x50.png,/template-assets-v2/070_shipping_handle_with_care_100x50.svg,svg,True,2
+71,COD Parcel,Shipping,Shipping,100,150,premium,premium,False,True,71,/template-assets-v2/071_shipping_cod_parcel_100x150.png,/template-assets-v2/071_shipping_cod_parcel_100x150.svg,svg,True,2
+72,Dispatch Label,Shipping,Shipping,100,15,premium,premium,False,True,72,/template-assets-v2/072_shipping_dispatch_label_100x15.png,/template-assets-v2/072_shipping_dispatch_label_100x15.svg,svg,True,2
+73,Birthday,Festive Theme,Festive Theme,38,38,premium,premium,False,True,73,/template-assets-v2/073_festive_theme_birthday_38x38.png,/template-assets-v2/073_festive_theme_birthday_38x38.svg,svg,True,2
+74,Thank You,Festive Theme,Festive Theme,38,25,premium,premium,True,True,74,/template-assets-v2/074_festive_theme_thank_you_38x25.png,/template-assets-v2/074_festive_theme_thank_you_38x25.svg,svg,True,2
+75,Christmas,Festive Theme,Festive Theme,38,15,premium,premium,False,True,75,/template-assets-v2/075_festive_theme_christmas_38x15.png,/template-assets-v2/075_festive_theme_christmas_38x15.svg,svg,True,2
+76,Festival Gift,Festive Theme,Festive Theme,50,25,premium,premium,False,True,76,/template-assets-v2/076_festive_theme_festival_gift_50x25.png,/template-assets-v2/076_festive_theme_festival_gift_50x25.svg,svg,True,2
+77,Scan To Order,QR & Social,QR & Social,50,30,premium,premium,False,True,77,/template-assets-v2/077_qr_social_scan_to_order_50x30.png,/template-assets-v2/077_qr_social_scan_to_order_50x30.svg,svg,True,2
+78,Payment QR,QR & Social,QR & Social,50,50,premium,premium,True,True,78,/template-assets-v2/078_qr_social_payment_qr_50x50.png,/template-assets-v2/078_qr_social_payment_qr_50x50.svg,svg,True,2
+79,Follow Us,QR & Social,QR & Social,50,12,premium,premium,False,True,79,/template-assets-v2/079_qr_social_follow_us_50x12.png,/template-assets-v2/079_qr_social_follow_us_50x12.svg,svg,True,2
+80,Feedback QR,QR & Social,QR & Social,75,25,premium,premium,False,True,80,/template-assets-v2/080_qr_social_feedback_qr_75x25.png,/template-assets-v2/080_qr_social_feedback_qr_75x25.svg,svg,True,2
+81,Luxury MRP,Price Tag,Price Tag,50,25,premium,premium,True,True,81,/template-assets-v2/081_luxury_mrp_50x25.png,/template-assets-v2/081_luxury_mrp_50x25.svg,svg,True,2
+82,Festival Offer,Festive Theme,Festive Theme,50,30,premium,premium,True,True,82,/template-assets-v2/082_festival_offer_50x30.png,/template-assets-v2/082_festival_offer_50x30.svg,svg,True,2
+83,Premium Product,Commercial Retail,Commercial Retail,50,50,premium,premium,True,True,83,/template-assets-v2/083_premium_product_50x50.png,/template-assets-v2/083_premium_product_50x50.svg,svg,True,2
+84,Organic Select,Grocery Store,Grocery Store,75,25,premium,premium,True,True,84,/template-assets-v2/084_organic_select_75x25.png,/template-assets-v2/084_organic_select_75x25.svg,svg,True,2
+85,Artisan Bakery,Bakery,Bakery,75,50,premium,premium,True,True,85,/template-assets-v2/085_artisan_bakery_75x50.png,/template-assets-v2/085_artisan_bakery_75x50.svg,svg,True,2
+86,Chef Special,Fresh Food,Fresh Food,100,50,premium,premium,True,True,86,/template-assets-v2/086_chef_special_100x50.png,/template-assets-v2/086_chef_special_100x50.svg,svg,True,2
+87,Boutique Fashion,Clothing,Clothing,100,150,premium,premium,True,True,87,/template-assets-v2/087_boutique_fashion_100x150.png,/template-assets-v2/087_boutique_fashion_100x150.svg,svg,True,2
+88,Fine Jewelry,Jewelry,Jewelry,50,25,premium,premium,True,True,88,/template-assets-v2/088_fine_jewelry_50x25.png,/template-assets-v2/088_fine_jewelry_50x25.svg,svg,True,2
+89,Beauty Signature,Cosmetics,Cosmetics,50,30,premium,premium,True,True,89,/template-assets-v2/089_beauty_signature_50x30.png,/template-assets-v2/089_beauty_signature_50x30.svg,svg,True,2
+90,School Star,School,School,50,50,premium,premium,True,True,90,/template-assets-v2/090_school_star_50x50.png,/template-assets-v2/090_school_star_50x50.svg,svg,True,2
+91,Professional ID,Name Tag,Name Tag,75,25,premium,premium,True,True,91,/template-assets-v2/091_professional_id_75x25.png,/template-assets-v2/091_professional_id_75x25.svg,svg,True,2
+92,Smart Asset,Work Scenarios,Work Scenarios,75,50,premium,premium,True,True,92,/template-assets-v2/092_smart_asset_75x50.png,/template-assets-v2/092_smart_asset_75x50.svg,svg,True,2
+93,Device Certified,Digital Devices,Digital Devices,100,50,premium,premium,False,True,93,/template-assets-v2/093_device_certified_100x50.png,/template-assets-v2/093_device_certified_100x50.svg,svg,True,2
+94,Priority Shipping,Shipping,Shipping,100,150,premium,premium,False,True,94,/template-assets-v2/094_priority_shipping_100x150.png,/template-assets-v2/094_priority_shipping_100x150.svg,svg,True,2
+95,Social Connect,QR & Social,QR & Social,50,25,premium,premium,False,True,95,/template-assets-v2/095_social_connect_50x25.png,/template-assets-v2/095_social_connect_50x25.svg,svg,True,2
+96,Plant Care Pro,Gardening,Gardening,50,30,premium,premium,False,True,96,/template-assets-v2/096_plant_care_pro_50x30.png,/template-assets-v2/096_plant_care_pro_50x30.svg,svg,True,2
+97,Home Organised,Home Scenarios,Home Scenarios,50,50,premium,premium,False,True,97,/template-assets-v2/097_home_organised_50x50.png,/template-assets-v2/097_home_organised_50x50.svg,svg,True,2
+98,Beverage Select,Drinking,Drinking,75,25,premium,premium,False,True,98,/template-assets-v2/098_beverage_select_75x25.png,/template-assets-v2/098_beverage_select_75x25.svg,svg,True,2
+99,Expiry Control,Expiry Date,Expiry Date,75,50,premium,premium,False,True,99,/template-assets-v2/099_expiry_control_75x50.png,/template-assets-v2/099_expiry_control_75x50.svg,svg,True,2
+100,Business Elite,Brand & Contact,Brand & Contact,100,50,premium,premium,False,True,100,/template-assets-v2/100_business_elite_100x50.png,/template-assets-v2/100_business_elite_100x50.svg,svg,True,2

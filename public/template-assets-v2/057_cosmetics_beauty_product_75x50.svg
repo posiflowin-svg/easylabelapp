@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="595.6" height="395.6" rx="16.0" fill="none" stroke="#000" stroke-width="2.2"/><rect x="65.44000000000003" y="54.240000000000016" width="40.32" height="61.600000000000016" rx="5.600000000000001" fill="none" stroke="#000" stroke-width="8.4"/><rect x="74.40000000000002" y="38.56000000000002" width="22.400000000000006" height="15.680000000000003" fill="none" stroke="#000" stroke-width="6.720000000000001"/>
+        <text x="150.4" y="76.0" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="52.0">BEAUTY PRODUCT</text>
+        <text x="150.4" y="125.01" font-family="Arial,sans-serif" font-size="33.800000000000004">SHADE: NATURAL 02</text>
+        <text x="24.0" y="336.06399999999996" font-family="Arial,sans-serif" font-size="24.96">BATCH: C2407</text>
+        <text x="24.0" y="389.2" font-family="Arial,sans-serif" font-size="24.96">MRP ₹349</text>
+        <g opacity="1">
+          <path d="M 8 18 H 72.0" stroke="#000" stroke-width="2"/>
+          <path d="M 592.0 382.0 H 528.0" stroke="#000" stroke-width="2"/>
+          <circle cx="587.0" cy="13" r="3" fill="#000"/>
+          <circle cx="13" cy="387.0" r="3" fill="#000"/>
+        </g></svg>

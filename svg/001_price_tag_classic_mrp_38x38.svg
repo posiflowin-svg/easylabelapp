@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="304" height="304" viewBox="0 0 304 304"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="299.6" height="299.6" rx="12.16" fill="none" stroke="#000" stroke-width="2.2"/><path d="M 26.75200000000001 48.03200000000001 L 73.56800000000001 26.75200000000001 L 103.36000000000001 56.54400000000001 L 77.82400000000001 99.10400000000001 L 31.00800000000001 77.82400000000001 Z" fill="none" stroke="#000" stroke-width="6.384"/><circle cx="71.86560000000001" cy="48.03200000000001" r="5.958400000000001" fill="#000"/>
+        <text x="114.304" y="57.760000000000005" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="39.52">CLASSIC MRP</text>
+        <text x="114.304" y="95.00760000000001" font-family="Arial,sans-serif" font-size="25.688000000000002">MRP ₹299.00</text>
+        <text x="18.24" y="255.40864" font-family="Arial,sans-serif" font-size="18.9696">SKU 123456</text>
+        <text x="18.24" y="295.792" font-family="Arial,sans-serif" font-size="18.9696">Incl. all taxes</text></svg>

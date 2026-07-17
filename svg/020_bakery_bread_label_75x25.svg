@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200" viewBox="0 0 600 200"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="595.6" height="195.6" rx="8.0" fill="none" stroke="#000" stroke-width="2.2"/><line x1="12.0" y1="124.0" x2="588.0" y2="124.0" stroke="#000" stroke-width="1.5" stroke-dasharray="6 5"/>
+        <text x="12.0" y="38.0" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="26.0">BREAD LABEL</text>
+        <path d="M 547.456 50.64000000000001 Q 542.08 37.2 551.936 27.344 Q 560.0 18.384 568.064 27.344 Q 577.92 37.2 572.544 50.64000000000001 Z" fill="none" stroke="#000" stroke-width="3.3600000000000008"/><line x1="546.56" y1="40.784000000000006" x2="573.44" y2="40.784000000000006" stroke="#000" stroke-width="2.6880000000000006"/>
+        <text x="12.0" y="92.0" font-family="Arial,sans-serif" font-size="16.900000000000002">FRESHLY BAKED</text>
+        <text x="12.0" y="156.0" font-family="Arial,sans-serif" font-size="12.48">Best Before: 3 Days</text>
+        <text x="588.0" y="156.0" text-anchor="end" font-family="Arial,sans-serif" font-size="12.48">Net Wt. 250g</text></svg>

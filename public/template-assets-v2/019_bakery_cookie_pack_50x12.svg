@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="96" viewBox="0 0 400 96"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="395.6" height="91.6" rx="3.84" fill="none" stroke="#000" stroke-width="2.2"/><rect x="0" y="33.599999999999994" width="400" height="26.880000000000003" fill="#000"/>
+        <text x="200.0" y="50.88" text-anchor="middle" fill="#fff" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="13">COOKIE PACK</text>
+        <path d="M 16.54784 22.5216 Q 14.4512 17.28 18.29504 13.436160000000001 Q 21.44 9.941760000000002 24.584960000000002 13.436160000000001 Q 28.428800000000003 17.28 26.332160000000002 22.5216 Z" fill="none" stroke="#000" stroke-width="1.5"/><line x1="16.1984" y1="18.677760000000003" x2="26.681600000000003" y2="18.677760000000003" stroke="#000" stroke-width="1.2000000000000002"/>
+        <text x="392" y="17.28" text-anchor="end" font-family="Arial,sans-serif" font-size="8">BAKERY</text>
+        <text x="8" y="74.88" font-family="Arial,sans-serif" font-size="10">FRESHLY BAKED</text>
+        <text x="8" y="87.36" font-family="Arial,sans-serif" font-size="8">Best Before: 3 Days • Net Wt. 250g</text>
+        <g opacity="1">
+          <path d="M 8 18 H 72.0" stroke="#000" stroke-width="2"/>
+          <path d="M 392.0 78.0 H 328.0" stroke="#000" stroke-width="2"/>
+          <circle cx="387.0" cy="13" r="3" fill="#000"/>
+          <circle cx="13" cy="83.0" r="3" fill="#000"/>
+        </g></svg>

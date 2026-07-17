@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="395.6" height="235.6" rx="9.6" fill="none" stroke="#000" stroke-width="2.2"/><rect x="14.399999999999999" y="14.399999999999999" width="371.2" height="211.2" fill="none" stroke="#000" stroke-width="1"/>
+        <text x="200.0" y="45.6" text-anchor="middle" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="31.200000000000003">SCAN TO ORDER</text>
+        <circle cx="200.0" cy="108.0" r="23.52" fill="none" stroke="#000" stroke-width="5.04"/><path d="M 187.904 121.44 Q 200.0 132.192 212.096 121.44 M 191.936 102.624 Q 200.0 113.376 208.064 102.624" fill="none" stroke="#000" stroke-width="4.032"/>
+        <text x="200.0" y="172.79999999999998" text-anchor="middle" font-family="Arial,sans-serif" font-size="20.28">SCAN ME</text>
+        <text x="200.0" y="206.4" text-anchor="middle" font-family="Arial,sans-serif" font-size="14.976">Order • Pay • Follow • @easylabel</text>
+        <g opacity="1">
+          <path d="M 8 18 H 72.0" stroke="#000" stroke-width="2"/>
+          <path d="M 392.0 222.0 H 328.0" stroke="#000" stroke-width="2"/>
+          <circle cx="387.0" cy="13" r="3" fill="#000"/>
+          <circle cx="13" cy="227.0" r="3" fill="#000"/>
+        </g></svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="395.6" height="235.6" rx="9.6" fill="none" stroke="#000" stroke-width="2.2"/><rect x="25.824000000000005" y="32.544000000000004" width="51.072" height="33.6" rx="3.3600000000000003" fill="none" stroke="#000" stroke-width="5.04"/><line x1="41.952000000000005" y1="74.20800000000001" x2="60.76800000000001" y2="74.20800000000001" stroke="#000" stroke-width="4.032"/><line x1="51.36000000000001" y1="66.144" x2="51.36000000000001" y2="74.20800000000001" stroke="#000" stroke-width="4.032"/>
+        <text x="90.24" y="45.6" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="31.200000000000003">DEVICE ASSET</text>
+        <text x="90.24" y="75.006" font-family="Arial,sans-serif" font-size="20.28">SERIAL: EL240017</text>
+        <text x="14.399999999999999" y="201.6384" font-family="Arial,sans-serif" font-size="14.976">WARRANTY: 12 MONTHS</text>
+        <text x="14.399999999999999" y="233.52" font-family="Arial,sans-serif" font-size="14.976">SERVICE: 1800-000-000</text>
+        <g opacity="1">
+          <path d="M 8 18 H 72.0" stroke="#000" stroke-width="2"/>
+          <path d="M 392.0 222.0 H 328.0" stroke="#000" stroke-width="2"/>
+          <circle cx="387.0" cy="13" r="3" fill="#000"/>
+          <circle cx="13" cy="227.0" r="3" fill="#000"/>
+        </g></svg>

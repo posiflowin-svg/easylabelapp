@@ -49,7 +49,9 @@ app.use(session({
 
 app.use(morgan('dev'));
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use('/template-assets-v2', express.static(path.join(__dirname, 'public', 'template-assets-v2')));
+
 
 // Set the view engine
 app.set('view engine', 'ejs');

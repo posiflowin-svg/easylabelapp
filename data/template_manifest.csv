@@ -1,0 +1,81 @@
+﻿id,name,mainCategory,templateCategory,sizeWidthMm,sizeHeightMm,accessType,requiredPlan,featuredOnHome,isActive,displayOrder,style,svgFile,previewFile,thermalMode
+1,Classic MRP,Price Tag,Price Tag,38,38,free,free,False,True,1,minimal,svg/001_price_tag_classic_mrp_38x38.svg,preview_png/001_price_tag_classic_mrp_38x38.png,1-color black and white
+2,Offer Price,Price Tag,Price Tag,38,25,premium,premium,True,True,2,split,svg/002_price_tag_offer_price_38x25.svg,preview_png/002_price_tag_offer_price_38x25.png,1-color black and white
+3,Premium Price,Price Tag,Price Tag,38,15,premium,premium,False,True,3,band,svg/003_price_tag_premium_price_38x15.svg,preview_png/003_price_tag_premium_price_38x15.png,1-color black and white
+4,Best Seller,Price Tag,Price Tag,50,25,premium,premium,False,True,4,ticket,svg/004_price_tag_best_seller_50x25.svg,preview_png/004_price_tag_best_seller_50x25.png,1-color black and white
+5,Business Contact,Brand & Contact,Brand & Contact,50,30,free,free,False,True,5,frame,svg/005_brand_contact_business_contact_50x30.svg,preview_png/005_brand_contact_business_contact_50x30.png,1-color black and white
+6,WhatsApp Contact,Brand & Contact,Brand & Contact,50,50,premium,premium,True,True,6,band,svg/006_brand_contact_whatsapp_contact_50x50.svg,preview_png/006_brand_contact_whatsapp_contact_50x50.png,1-color black and white
+7,Store Identity,Brand & Contact,Brand & Contact,50,12,premium,premium,False,True,7,band,svg/007_brand_contact_store_identity_50x12.svg,preview_png/007_brand_contact_store_identity_50x12.png,1-color black and white
+8,Customer Care,Brand & Contact,Brand & Contact,75,25,premium,premium,False,True,8,corner,svg/008_brand_contact_customer_care_75x25.svg,preview_png/008_brand_contact_customer_care_75x25.png,1-color black and white
+9,School Name,Name Tag,Name Tag,75,50,free,free,False,True,9,minimal,svg/009_name_tag_school_name_75x50.svg,preview_png/009_name_tag_school_name_75x50.png,1-color black and white
+10,Employee Name,Name Tag,Name Tag,100,50,premium,premium,True,True,10,split,svg/010_name_tag_employee_name_100x50.svg,preview_png/010_name_tag_employee_name_100x50.png,1-color black and white
+11,Kids Name,Name Tag,Name Tag,100,150,premium,premium,False,True,11,badge,svg/011_name_tag_kids_name_100x150.svg,preview_png/011_name_tag_kids_name_100x150.png,1-color black and white
+12,Visitor Name,Name Tag,Name Tag,100,15,premium,premium,False,True,12,minimal,svg/012_name_tag_visitor_name_100x15.svg,preview_png/012_name_tag_visitor_name_100x15.png,1-color black and white
+13,Packed & Expiry,Expiry Date,Expiry Date,38,38,free,free,False,True,13,frame,svg/013_expiry_date_packed_expiry_38x38.svg,preview_png/013_expiry_date_packed_expiry_38x38.png,1-color black and white
+14,Best Before,Expiry Date,Expiry Date,38,25,premium,premium,True,True,14,band,svg/014_expiry_date_best_before_38x25.svg,preview_png/014_expiry_date_best_before_38x25.png,1-color black and white
+15,Batch Date,Expiry Date,Expiry Date,38,15,premium,premium,False,True,15,band,svg/015_expiry_date_batch_date_38x15.svg,preview_png/015_expiry_date_batch_date_38x15.png,1-color black and white
+16,Use By,Expiry Date,Expiry Date,50,25,premium,premium,False,True,16,corner,svg/016_expiry_date_use_by_50x25.svg,preview_png/016_expiry_date_use_by_50x25.png,1-color black and white
+17,Fresh Bakery,Bakery,Bakery,50,30,free,free,False,True,17,minimal,svg/017_bakery_fresh_bakery_50x30.svg,preview_png/017_bakery_fresh_bakery_50x30.png,1-color black and white
+18,Cake Box,Bakery,Bakery,50,50,premium,premium,True,True,18,split,svg/018_bakery_cake_box_50x50.svg,preview_png/018_bakery_cake_box_50x50.png,1-color black and white
+19,Cookie Pack,Bakery,Bakery,50,12,premium,premium,False,True,19,band,svg/019_bakery_cookie_pack_50x12.svg,preview_png/019_bakery_cookie_pack_50x12.png,1-color black and white
+20,Bread Label,Bakery,Bakery,75,25,premium,premium,False,True,20,ticket,svg/020_bakery_bread_label_75x25.svg,preview_png/020_bakery_bread_label_75x25.png,1-color black and white
+21,Grocery Pack,Grocery Store,Grocery Store,75,50,free,free,False,True,21,frame,svg/021_grocery_store_grocery_pack_75x50.svg,preview_png/021_grocery_store_grocery_pack_75x50.png,1-color black and white
+22,Spice Pack,Grocery Store,Grocery Store,100,50,premium,premium,True,True,22,band,svg/022_grocery_store_spice_pack_100x50.svg,preview_png/022_grocery_store_spice_pack_100x50.png,1-color black and white
+23,Dry Fruit,Grocery Store,Grocery Store,100,150,premium,premium,False,True,23,grid,svg/023_grocery_store_dry_fruit_100x150.svg,preview_png/023_grocery_store_dry_fruit_100x150.png,1-color black and white
+24,Organic Food,Grocery Store,Grocery Store,100,15,premium,premium,False,True,24,minimal,svg/024_grocery_store_organic_food_100x15.svg,preview_png/024_grocery_store_organic_food_100x15.png,1-color black and white
+25,Product Label,Commercial Retail,Commercial Retail,38,38,free,free,False,True,25,minimal,svg/025_commercial_retail_product_label_38x38.svg,preview_png/025_commercial_retail_product_label_38x38.png,1-color black and white
+26,Shelf Label,Commercial Retail,Commercial Retail,38,25,premium,premium,True,True,26,split,svg/026_commercial_retail_shelf_label_38x25.svg,preview_png/026_commercial_retail_shelf_label_38x25.png,1-color black and white
+27,Sale Label,Commercial Retail,Commercial Retail,38,15,premium,premium,False,True,27,band,svg/027_commercial_retail_sale_label_38x15.svg,preview_png/027_commercial_retail_sale_label_38x15.png,1-color black and white
+28,New Arrival,Commercial Retail,Commercial Retail,50,25,premium,premium,False,True,28,ticket,svg/028_commercial_retail_new_arrival_50x25.svg,preview_png/028_commercial_retail_new_arrival_50x25.png,1-color black and white
+29,Water Bottle,Drinking,Drinking,50,30,free,free,False,True,29,frame,svg/029_drinking_water_bottle_50x30.svg,preview_png/029_drinking_water_bottle_50x30.png,1-color black and white
+30,Juice Bottle,Drinking,Drinking,50,50,premium,premium,True,True,30,band,svg/030_drinking_juice_bottle_50x50.svg,preview_png/030_drinking_juice_bottle_50x50.png,1-color black and white
+31,Coffee Cup,Drinking,Drinking,50,12,premium,premium,False,True,31,band,svg/031_drinking_coffee_cup_50x12.svg,preview_png/031_drinking_coffee_cup_50x12.png,1-color black and white
+32,Tea Pack,Drinking,Drinking,75,25,premium,premium,False,True,32,corner,svg/032_drinking_tea_pack_75x25.svg,preview_png/032_drinking_tea_pack_75x25.png,1-color black and white
+33,Asset Tag,Work Scenarios,Work Scenarios,75,50,free,free,False,True,33,minimal,svg/033_work_scenarios_asset_tag_75x50.svg,preview_png/033_work_scenarios_asset_tag_75x50.png,1-color black and white
+34,Inspection Tag,Work Scenarios,Work Scenarios,100,50,premium,premium,True,True,34,split,svg/034_work_scenarios_inspection_tag_100x50.svg,preview_png/034_work_scenarios_inspection_tag_100x50.png,1-color black and white
+35,Maintenance Due,Work Scenarios,Work Scenarios,100,150,premium,premium,False,True,35,badge,svg/035_work_scenarios_maintenance_due_100x150.svg,preview_png/035_work_scenarios_maintenance_due_100x150.png,1-color black and white
+36,Inventory Tag,Work Scenarios,Work Scenarios,100,15,premium,premium,False,True,36,minimal,svg/036_work_scenarios_inventory_tag_100x15.svg,preview_png/036_work_scenarios_inventory_tag_100x15.png,1-color black and white
+37,Size & Price,Clothing,Clothing,38,38,free,free,False,True,37,frame,svg/037_clothing_size_price_38x38.svg,preview_png/037_clothing_size_price_38x38.png,1-color black and white
+38,Wash Care,Clothing,Clothing,38,25,premium,premium,True,True,38,band,svg/038_clothing_wash_care_38x25.svg,preview_png/038_clothing_wash_care_38x25.png,1-color black and white
+39,Fashion Tag,Clothing,Clothing,38,15,premium,premium,False,True,39,band,svg/039_clothing_fashion_tag_38x15.svg,preview_png/039_clothing_fashion_tag_38x15.png,1-color black and white
+40,Fabric Details,Clothing,Clothing,50,25,premium,premium,False,True,40,corner,svg/040_clothing_fabric_details_50x25.svg,preview_png/040_clothing_fabric_details_50x25.png,1-color black and white
+41,Fresh Today,Fresh Food,Fresh Food,50,30,free,free,False,True,41,minimal,svg/041_fresh_food_fresh_today_50x30.svg,preview_png/041_fresh_food_fresh_today_50x30.png,1-color black and white
+42,Packed Food,Fresh Food,Fresh Food,50,50,premium,premium,True,True,42,split,svg/042_fresh_food_packed_food_50x50.svg,preview_png/042_fresh_food_packed_food_50x50.png,1-color black and white
+43,Meal Box,Fresh Food,Fresh Food,50,12,premium,premium,False,True,43,band,svg/043_fresh_food_meal_box_50x12.svg,preview_png/043_fresh_food_meal_box_50x12.png,1-color black and white
+44,Kitchen Label,Fresh Food,Fresh Food,75,25,premium,premium,False,True,44,ticket,svg/044_fresh_food_kitchen_label_75x25.svg,preview_png/044_fresh_food_kitchen_label_75x25.png,1-color black and white
+45,Storage Box,Home Scenarios,Home Scenarios,75,50,free,free,False,True,45,frame,svg/045_home_scenarios_storage_box_75x50.svg,preview_png/045_home_scenarios_storage_box_75x50.png,1-color black and white
+46,Kitchen Jar,Home Scenarios,Home Scenarios,100,50,premium,premium,True,True,46,band,svg/046_home_scenarios_kitchen_jar_100x50.svg,preview_png/046_home_scenarios_kitchen_jar_100x50.png,1-color black and white
+47,Laundry Label,Home Scenarios,Home Scenarios,100,150,premium,premium,False,True,47,grid,svg/047_home_scenarios_laundry_label_100x150.svg,preview_png/047_home_scenarios_laundry_label_100x150.png,1-color black and white
+48,Medicine Box,Home Scenarios,Home Scenarios,100,15,premium,premium,False,True,48,minimal,svg/048_home_scenarios_medicine_box_100x15.svg,preview_png/048_home_scenarios_medicine_box_100x15.png,1-color black and white
+49,Notebook Label,School,School,38,38,free,free,False,True,49,minimal,svg/049_school_notebook_label_38x38.svg,preview_png/049_school_notebook_label_38x38.png,1-color black and white
+50,Book Label,School,School,38,25,premium,premium,True,True,50,split,svg/050_school_book_label_38x25.svg,preview_png/050_school_book_label_38x25.png,1-color black and white
+51,Subject Label,School,School,38,15,premium,premium,False,True,51,band,svg/051_school_subject_label_38x15.svg,preview_png/051_school_subject_label_38x15.png,1-color black and white
+52,School Bag,School,School,50,25,premium,premium,False,True,52,ticket,svg/052_school_school_bag_50x25.svg,preview_png/052_school_school_bag_50x25.png,1-color black and white
+53,Jewelry Price,Jewelry,Jewelry,50,30,free,free,False,True,53,frame,svg/053_jewelry_jewelry_price_50x30.svg,preview_png/053_jewelry_jewelry_price_50x30.png,1-color black and white
+54,Ring Tag,Jewelry,Jewelry,50,50,premium,premium,True,True,54,band,svg/054_jewelry_ring_tag_50x50.svg,preview_png/054_jewelry_ring_tag_50x50.png,1-color black and white
+55,Gold Weight,Jewelry,Jewelry,50,12,premium,premium,False,True,55,band,svg/055_jewelry_gold_weight_50x12.svg,preview_png/055_jewelry_gold_weight_50x12.png,1-color black and white
+56,Item Code,Jewelry,Jewelry,75,25,premium,premium,False,True,56,corner,svg/056_jewelry_item_code_75x25.svg,preview_png/056_jewelry_item_code_75x25.png,1-color black and white
+57,Beauty Product,Cosmetics,Cosmetics,75,50,free,free,False,True,57,minimal,svg/057_cosmetics_beauty_product_75x50.svg,preview_png/057_cosmetics_beauty_product_75x50.png,1-color black and white
+58,Shade Label,Cosmetics,Cosmetics,100,50,premium,premium,True,True,58,split,svg/058_cosmetics_shade_label_100x50.svg,preview_png/058_cosmetics_shade_label_100x50.png,1-color black and white
+59,Batch & MRP,Cosmetics,Cosmetics,100,150,premium,premium,False,True,59,badge,svg/059_cosmetics_batch_mrp_100x150.svg,preview_png/059_cosmetics_batch_mrp_100x150.png,1-color black and white
+60,Skin Care,Cosmetics,Cosmetics,100,15,premium,premium,False,True,60,minimal,svg/060_cosmetics_skin_care_100x15.svg,preview_png/060_cosmetics_skin_care_100x15.png,1-color black and white
+61,Plant Name,Gardening,Gardening,38,38,free,free,False,True,61,frame,svg/061_gardening_plant_name_38x38.svg,preview_png/061_gardening_plant_name_38x38.png,1-color black and white
+62,Watering Guide,Gardening,Gardening,38,25,premium,premium,True,True,62,band,svg/062_gardening_watering_guide_38x25.svg,preview_png/062_gardening_watering_guide_38x25.png,1-color black and white
+63,Seed Pack,Gardening,Gardening,38,15,premium,premium,False,True,63,band,svg/063_gardening_seed_pack_38x15.svg,preview_png/063_gardening_seed_pack_38x15.png,1-color black and white
+64,Garden Tag,Gardening,Gardening,50,25,premium,premium,False,True,64,corner,svg/064_gardening_garden_tag_50x25.svg,preview_png/064_gardening_garden_tag_50x25.png,1-color black and white
+65,Device Asset,Digital Devices,Digital Devices,50,30,free,free,False,True,65,minimal,svg/065_digital_devices_device_asset_50x30.svg,preview_png/065_digital_devices_device_asset_50x30.png,1-color black and white
+66,Serial Number,Digital Devices,Digital Devices,50,50,premium,premium,True,True,66,split,svg/066_digital_devices_serial_number_50x50.svg,preview_png/066_digital_devices_serial_number_50x50.png,1-color black and white
+67,Warranty Tag,Digital Devices,Digital Devices,50,12,premium,premium,False,True,67,band,svg/067_digital_devices_warranty_tag_50x12.svg,preview_png/067_digital_devices_warranty_tag_50x12.png,1-color black and white
+68,Service Label,Digital Devices,Digital Devices,75,25,premium,premium,False,True,68,ticket,svg/068_digital_devices_service_label_75x25.svg,preview_png/068_digital_devices_service_label_75x25.png,1-color black and white
+69,Fragile,Shipping,Shipping,75,50,free,free,False,True,69,frame,svg/069_shipping_fragile_75x50.svg,preview_png/069_shipping_fragile_75x50.png,1-color black and white
+70,Handle With Care,Shipping,Shipping,100,50,premium,premium,True,True,70,band,svg/070_shipping_handle_with_care_100x50.svg,preview_png/070_shipping_handle_with_care_100x50.png,1-color black and white
+71,COD Parcel,Shipping,Shipping,100,150,premium,premium,False,True,71,grid,svg/071_shipping_cod_parcel_100x150.svg,preview_png/071_shipping_cod_parcel_100x150.png,1-color black and white
+72,Dispatch Label,Shipping,Shipping,100,15,premium,premium,False,True,72,minimal,svg/072_shipping_dispatch_label_100x15.svg,preview_png/072_shipping_dispatch_label_100x15.png,1-color black and white
+73,Birthday,Festive Theme,Festive Theme,38,38,free,free,False,True,73,minimal,svg/073_festive_theme_birthday_38x38.svg,preview_png/073_festive_theme_birthday_38x38.png,1-color black and white
+74,Thank You,Festive Theme,Festive Theme,38,25,premium,premium,True,True,74,split,svg/074_festive_theme_thank_you_38x25.svg,preview_png/074_festive_theme_thank_you_38x25.png,1-color black and white
+75,Christmas,Festive Theme,Festive Theme,38,15,premium,premium,False,True,75,band,svg/075_festive_theme_christmas_38x15.svg,preview_png/075_festive_theme_christmas_38x15.png,1-color black and white
+76,Festival Gift,Festive Theme,Festive Theme,50,25,premium,premium,False,True,76,ticket,svg/076_festive_theme_festival_gift_50x25.svg,preview_png/076_festive_theme_festival_gift_50x25.png,1-color black and white
+77,Scan To Order,QR & Social,QR & Social,50,30,free,free,False,True,77,frame,svg/077_qr_social_scan_to_order_50x30.svg,preview_png/077_qr_social_scan_to_order_50x30.png,1-color black and white
+78,Payment QR,QR & Social,QR & Social,50,50,premium,premium,True,True,78,band,svg/078_qr_social_payment_qr_50x50.svg,preview_png/078_qr_social_payment_qr_50x50.png,1-color black and white
+79,Follow Us,QR & Social,QR & Social,50,12,premium,premium,False,True,79,band,svg/079_qr_social_follow_us_50x12.svg,preview_png/079_qr_social_follow_us_50x12.png,1-color black and white
+80,Feedback QR,QR & Social,QR & Social,75,25,premium,premium,False,True,80,corner,svg/080_qr_social_feedback_qr_75x25.svg,preview_png/080_qr_social_feedback_qr_75x25.png,1-color black and white

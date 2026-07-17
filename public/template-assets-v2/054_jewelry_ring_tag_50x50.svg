@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="395.6" height="395.6" rx="16.0" fill="none" stroke="#000" stroke-width="2.2"/><rect x="0" y="140.0" width="400" height="112.00000000000001" fill="#000"/>
+        <text x="200.0" y="212.0" text-anchor="middle" fill="#fff" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="52.0">RING TAG</text>
+        <path d="M 47.239999999999995 57.44 L 87.28 39.239999999999995 L 112.76 64.72 L 90.92 101.12 L 50.879999999999995 82.92 Z" fill="none" stroke="#000" stroke-width="5.460000000000001"/><circle cx="85.824" cy="57.44" r="5.096000000000001" fill="#000"/>
+        <text x="376.0" y="72.0" text-anchor="end" font-family="Arial,sans-serif" font-size="24.96">JEWELRY</text>
+        <text x="24.0" y="312.0" font-family="Arial,sans-serif" font-size="33.800000000000004">GROSS WT: 8.25g</text>
+        <text x="24.0" y="364.0" font-family="Arial,sans-serif" font-size="24.96">NET WT: 7.90g • ITEM: RG102</text>
+        <g opacity="1">
+          <path d="M 8 18 H 72.0" stroke="#000" stroke-width="2"/>
+          <path d="M 392.0 382.0 H 328.0" stroke="#000" stroke-width="2"/>
+          <circle cx="387.0" cy="13" r="3" fill="#000"/>
+          <circle cx="13" cy="387.0" r="3" fill="#000"/>
+        </g></svg>

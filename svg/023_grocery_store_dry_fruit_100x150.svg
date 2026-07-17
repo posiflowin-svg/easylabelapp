@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="795.6" height="1195.6" rx="32.0" fill="none" stroke="#000" stroke-width="2.2"/><rect x="48.0" y="48.0" width="272.0" height="1104.0" fill="none" stroke="#000" stroke-width="1.5"/>
+        <path d="M 121.27999999999999 523.2 Q 94.39999999999998 456.0 143.68 406.71999999999997 Q 184.0 361.91999999999996 224.32 406.71999999999997 Q 273.6 456.0 246.72000000000003 523.2 Z" fill="none" stroke="#000" stroke-width="16.8"/><line x1="116.8" y1="473.92" x2="251.2" y2="473.92" stroke="#000" stroke-width="13.440000000000001"/>
+        <text x="184.0" y="936.0" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="49.92">GROCERY STORE</text>
+        <text x="320.0" y="152.0" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="104.0">DRY FRUIT</text>
+        <line x1="320.0" y1="504.0" x2="752.0" y2="504.0" stroke="#000"/>
+        <text x="320.0" y="696.0" font-family="Arial,sans-serif" font-size="67.60000000000001">PREMIUM QUALITY</text>
+        <text x="320.0" y="876.0" font-family="Arial,sans-serif" font-size="49.92">Net Wt. 500g</text>
+        <text x="320.0" y="1044.0" font-family="Arial,sans-serif" font-size="49.92">MRP ₹120</text></svg>

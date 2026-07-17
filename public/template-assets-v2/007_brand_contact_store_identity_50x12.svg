@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="96" viewBox="0 0 400 96"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="395.6" height="91.6" rx="3.84" fill="none" stroke="#000" stroke-width="2.2"/><rect x="0" y="33.599999999999994" width="400" height="26.880000000000003" fill="#000"/>
+        <text x="200.0" y="50.88" text-anchor="middle" fill="#fff" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="13">STORE IDENTITY</text>
+        <circle cx="21.44" cy="17.28" r="6.1152" fill="none" stroke="#000" stroke-width="1.5"/><path d="M 18.29504 20.7744 Q 21.44 23.569920000000003 24.584960000000002 20.7744 M 19.34336 15.882240000000001 Q 21.44 18.677760000000003 23.536640000000002 15.882240000000001" fill="none" stroke="#000" stroke-width="1.2000000000000002"/>
+        <text x="392" y="17.28" text-anchor="end" font-family="Arial,sans-serif" font-size="8">BRAND &amp; CONTACT</text>
+        <text x="8" y="74.88" font-family="Arial,sans-serif" font-size="10">YOUR BUSINESS NAME</text>
+        <text x="8" y="87.36" font-family="Arial,sans-serif" font-size="8">+91 98765 43210 • www.yourstore.in</text>
+        <g opacity="1">
+          <path d="M 8 18 H 72.0" stroke="#000" stroke-width="2"/>
+          <path d="M 392.0 78.0 H 328.0" stroke="#000" stroke-width="2"/>
+          <circle cx="387.0" cy="13" r="3" fill="#000"/>
+          <circle cx="13" cy="83.0" r="3" fill="#000"/>
+        </g></svg>

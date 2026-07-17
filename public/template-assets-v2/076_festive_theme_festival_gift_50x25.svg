@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="395.6" height="195.6" rx="8.0" fill="none" stroke="#000" stroke-width="2.2"/><line x1="12.0" y1="124.0" x2="388.0" y2="124.0" stroke="#000" stroke-width="1.5" stroke-dasharray="6 5"/>
+        <text x="12.0" y="38.0" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="26.0">FESTIVAL GIFT</text>
+        <path d="M 360.0 18.384 L 364.48 31.824 L 377.92 31.824 L 367.168 39.888000000000005 L 371.2 53.328 L 360.0 45.264 L 348.8 53.328 L 352.832 39.888000000000005 L 342.08 31.824 L 355.52 31.824 Z" fill="none" stroke="#000" stroke-width="3.3600000000000008"/>
+        <text x="12.0" y="92.0" font-family="Arial,sans-serif" font-size="16.900000000000002">WITH BEST WISHES</text>
+        <text x="12.0" y="156.0" font-family="Arial,sans-serif" font-size="12.48">FROM: EASYLABEL</text>
+        <text x="388.0" y="156.0" text-anchor="end" font-family="Arial,sans-serif" font-size="12.48">THANK YOU</text>
+        <g opacity="1">
+          <path d="M 8 18 H 72.0" stroke="#000" stroke-width="2"/>
+          <path d="M 392.0 182.0 H 328.0" stroke="#000" stroke-width="2"/>
+          <circle cx="387.0" cy="13" r="3" fill="#000"/>
+          <circle cx="13" cy="187.0" r="3" fill="#000"/>
+        </g></svg>

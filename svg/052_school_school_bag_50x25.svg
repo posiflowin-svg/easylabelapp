@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="395.6" height="195.6" rx="8.0" fill="none" stroke="#000" stroke-width="2.2"/><line x1="12.0" y1="124.0" x2="388.0" y2="124.0" stroke="#000" stroke-width="1.5" stroke-dasharray="6 5"/>
+        <text x="12.0" y="38.0" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="26.0">SCHOOL BAG</text>
+        <rect x="342.08" y="23.759999999999998" width="35.84000000000001" height="26.880000000000006" rx="3.584000000000001" fill="none" stroke="#000" stroke-width="3.3600000000000008"/><circle cx="351.04" cy="34.96" r="4.032000000000001" fill="none" stroke="#000" stroke-width="2.6880000000000006"/><line x1="357.76" y1="33.616" x2="371.2" y2="33.616" stroke="#000" stroke-width="2.6880000000000006"/><line x1="357.76" y1="40.784000000000006" x2="371.2" y2="40.784000000000006" stroke="#000" stroke-width="2.6880000000000006"/>
+        <text x="12.0" y="92.0" font-family="Arial,sans-serif" font-size="16.900000000000002">NAME: AARAV</text>
+        <text x="12.0" y="156.0" font-family="Arial,sans-serif" font-size="12.48">CLASS: 5-A</text>
+        <text x="388.0" y="156.0" text-anchor="end" font-family="Arial,sans-serif" font-size="12.48">SUBJECT: SCIENCE</text></svg>

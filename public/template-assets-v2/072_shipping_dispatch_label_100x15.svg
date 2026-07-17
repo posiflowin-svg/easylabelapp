@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="120" viewBox="0 0 800 120"><rect width="100%" height="100%" fill="#fff"/><rect x="2.2" y="2.2" width="795.6" height="115.6" rx="4.8" fill="none" stroke="#000" stroke-width="2.2"/><rect x="13.712000000000003" y="19.088000000000005" width="16.8" height="15.120000000000001" fill="none" stroke="#000" stroke-width="2.52"/><path d="M 30.512000000000004 22.448000000000004 L 37.232000000000006 22.448000000000004 L 40.592000000000006 27.152000000000005 L 40.592000000000006 34.208000000000006 L 30.512000000000004 34.208000000000006 Z" fill="none" stroke="#000" stroke-width="2.52"/><circle cx="19.760000000000005" cy="35.888000000000005" r="2.3520000000000003" fill="#000"/><circle cx="36.56" cy="35.888000000000005" r="2.3520000000000003" fill="#000"/>
+        <text x="46.4" y="23.6" font-family="Poppins,Arial,sans-serif" font-weight="700" font-size="15.600000000000001">DISPATCH LABEL</text>
+        <text x="46.4" y="38.303000000000004" font-family="Arial,sans-serif" font-size="10.14">HANDLE WITH CARE</text>
+        <text x="8" y="99.2" font-family="Arial,sans-serif" font-size="8">ORDER #10234</text>
+        <text x="8" y="116.4" font-family="Arial,sans-serif" font-size="8">COD ₹1,250</text>
+        <g opacity="1">
+          <path d="M 8 18 H 72.0" stroke="#000" stroke-width="2"/>
+          <path d="M 792.0 102.0 H 728.0" stroke="#000" stroke-width="2"/>
+          <circle cx="787.0" cy="13" r="3" fill="#000"/>
+          <circle cx="13" cy="107.0" r="3" fill="#000"/>
+        </g></svg>
