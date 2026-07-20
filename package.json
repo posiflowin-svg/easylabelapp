@@ -1,14 +1,20 @@
 {
   "name": "nodejsapp",
   "version": "1.0.0",
+  "private": true,
   "main": "server.js",
+  "engines": {
+    "node": ">=20 <23",
+    "npm": ">=10"
+  },
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "check": "node --check server.js && node --check routes/ai.js && node --check controllers/AIController.js && node --check services/aiStudioService.js"
   },
   "author": "Rahul Waghmare",
   "license": "ISC",
-  "description": "",
+  "description": "EasyLabel backend with AI Studio and AI credit management",
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "body-parser": "^1.20.3",
@@ -17,14 +23,13 @@
     "exceljs": "^4.4.0",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
+    "firebase-admin": "^13.4.0",
+    "google-auth-library": "^10.2.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.2",
     "mongoose-paginate-v2": "^1.9.0",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
-    "nodemon": "^3.1.9",
-    "firebase-admin": "^13.4.0",
-    "google-auth-library": "^10.2.1",
-    "sharp": "^0.34.3"
+    "nodemon": "^3.1.9"
   }
 }

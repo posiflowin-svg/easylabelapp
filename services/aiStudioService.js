@@ -1,173 +1,172 @@
-const sharp = require('sharp');
 const provider = require('./aiProviderService');
 
 const ALLOWED_TYPES = new Set(['text', 'barcode', 'qrcode', 'line', 'rectangle', 'image']);
+const ALLOWED_ALIGNMENTS = new Set(['left', 'center', 'right']);
 
-function clamp(value, min, max, fallback = min) {
+function clamp(value, min, max) {
   const n = Number(value);
-  if (!Number.isFinite(n)) return fallback;
+  if (!Number.isFinite(n)) return min;
   return Math.min(max, Math.max(min, n));
 }
 
 function cleanBase64(value) {
-  if (!value) return '';
-  return String(value).replace(/^data:[^;]+;base64,/, '').replace(/\s/g, '');
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const comma = text.indexOf(',');
+  return comma >= 0 ? text.slice(comma + 1) : text;
 }
 
-function validateImage(base64) {
-  const clean = cleanBase64(base64);
-  if (!clean) return '';
-  const bytes = Buffer.byteLength(clean, 'base64');
-  const max = Number(process.env.AI_MAX_IMAGE_BYTES || 8 * 1024 * 1024);
-  if (bytes > max) {
-    const error = new Error(`Image is too large. Maximum allowed is ${Math.round(max / 1024 / 1024)} MB.`);
+function inferMimeType(value, fallback = 'image/jpeg') {
+  const match = String(value || '').match(/^data:([^;,]+)[;,]/i);
+  return match ? match[1] : fallback;
+}
+
+function validateImageInput(input) {
+  const raw = input.imageBase64 || input.image || input.dataUrl;
+  const imageBase64 = cleanBase64(raw);
+  if (!imageBase64) {
+    const error = new Error('imageBase64 or dataUrl is required.');
+    error.statusCode = 400;
+    error.code = 'IMAGE_REQUIRED';
+    throw error;
+  }
+  const approximateBytes = Math.floor(imageBase64.length * 0.75);
+  const maxBytes = Number(process.env.AI_MAX_IMAGE_BYTES || 8 * 1024 * 1024);
+  if (approximateBytes > maxBytes) {
+    const error = new Error(`Image is too large. Maximum allowed size is ${Math.floor(maxBytes / 1024 / 1024)} MB.`);
     error.statusCode = 413;
-    error.code = 'AI_IMAGE_TOO_LARGE';
+    error.code = 'IMAGE_TOO_LARGE';
     throw error;
   }
-  return clean;
+  return { imageBase64, mimeType: input.mimeType || inferMimeType(raw) };
 }
 
-function normalizeLayout(layout, widthMm, heightMm) {
-  const width = clamp(widthMm, 20, 110, 50);
-  const height = clamp(heightMm, 10, 160, 30);
-  const raw = Array.isArray(layout?.elements) ? layout.elements : [];
-  const elements = raw.slice(0, 40).filter(item => ALLOWED_TYPES.has(String(item?.type || '').toLowerCase())).map(item => {
-    const type = String(item.type).toLowerCase();
-    const x = clamp(item.x, 0, width, 0);
-    const y = clamp(item.y, 0, height, 0);
-    const maxW = Math.max(1, width - x);
-    const maxH = Math.max(1, height - y);
-    return {
-      type,
-      value: String(item.value || '').slice(0, 1000),
-      x,
-      y,
-      width: clamp(item.width, 1, maxW, Math.min(10, maxW)),
-      height: clamp(item.height, 1, maxH, Math.min(5, maxH)),
-      fontKey: String(item.fontKey || 'default').slice(0, 60),
-      fontSize: clamp(item.fontSize, 6, 72, 12),
-      alignment: ['left', 'center', 'right'].includes(item.alignment) ? item.alignment : 'left',
-      bold: Boolean(item.bold),
-      rotation: [0, 90, 180, 270].includes(Number(item.rotation)) ? Number(item.rotation) : 0,
-      strokeWidth: clamp(item.strokeWidth, 1, 6, 1)
-    };
-  });
-  return { widthMm: width, heightMm: height, background: 'white', colorMode: 'black_white', elements };
-}
-
-function schemaPrompt(width, height) {
-  return `Return JSON only. Canvas is ${width}mm x ${height}mm. Use black on white only and optimize for 203 DPI thermal printing. No gradients, shadows, grey backgrounds, tiny text or decorative clutter. Keep every object within the canvas. Schema: {"elements":[{"type":"text|barcode|qrcode|line|rectangle","value":"","x":0,"y":0,"width":10,"height":5,"fontKey":"default","fontSize":12,"alignment":"left|center|right","bold":false,"rotation":0,"strokeWidth":1}]}. Coordinates and sizes are millimetres.`;
-}
-
-async function layoutFromPrompt({ feature, prompt, widthMm, heightMm, imageBase64, mimeType }) {
-  const width = clamp(widthMm, 20, 110, 50);
-  const height = clamp(heightMm, 10, 160, 30);
-  const result = await provider.generateJson({
-    prompt: `${schemaPrompt(width, height)}\nTask: ${feature}.\nUser request: ${String(prompt || '').slice(0, 5000)}`,
-    imageBase64: imageBase64 ? validateImage(imageBase64) : '',
-    mimeType
-  });
-  return { ...result, layout: normalizeLayout(result.data, width, height) };
-}
-
-async function scan(input) {
-  if (!input.imageBase64) {
-    const error = new Error('imageBase64 is required for AI Scan.');
-    error.statusCode = 400;
-    throw error;
+function normalizeElement(element, widthMm, heightMm) {
+  const type = String(element?.type || '').toLowerCase();
+  if (!ALLOWED_TYPES.has(type)) return null;
+  const normalized = {
+    type,
+    value: String(element.value || '').slice(0, 2000),
+    x: clamp(element.x, 0, widthMm),
+    y: clamp(element.y, 0, heightMm),
+    width: clamp(element.width, 0.5, widthMm),
+    height: clamp(element.height, 0.5, heightMm),
+    rotation: clamp(element.rotation || 0, -180, 180),
+    fontKey: String(element.fontKey || 'default').slice(0, 80),
+    fontSize: clamp(element.fontSize || 12, 5, 72),
+    alignment: ALLOWED_ALIGNMENTS.has(element.alignment) ? element.alignment : 'left',
+    bold: Boolean(element.bold),
+    invert: Boolean(element.invert)
+  };
+  if (type === 'image') {
+    normalized.dataUrl = String(element.dataUrl || '').slice(0, 2_000_000);
+    normalized.fit = ['contain', 'cover', 'stretch'].includes(element.fit) ? element.fit : 'contain';
   }
-  return layoutFromPrompt({
-    feature: 'Reconstruct the uploaded label as editable objects. Preserve visible text, hierarchy, barcode/QR values when readable, borders and approximate positions. Do not invent legal or product data.',
-    prompt: input.prompt || 'Recreate this label accurately.',
-    widthMm: input.widthMm,
-    heightMm: input.heightMm,
-    imageBase64: input.imageBase64,
-    mimeType: input.mimeType || 'image/jpeg'
-  });
+  return normalized;
 }
 
-async function design(input) {
-  if (!input.prompt) {
-    const error = new Error('prompt is required for AI Design.');
-    error.statusCode = 400;
-    throw error;
-  }
-  return layoutFromPrompt({ feature: 'Create a professional editable thermal label.', ...input });
-}
-
-async function voice(input) {
-  const transcript = input.transcript || input.prompt;
-  if (!transcript) {
-    const error = new Error('transcript is required for Voice to Label.');
-    error.statusCode = 400;
-    throw error;
-  }
-  return layoutFromPrompt({ feature: 'Create a label from this voice transcript.', ...input, prompt: transcript });
-}
-
-async function product(input) {
-  const details = input.prompt || JSON.stringify(input.product || {});
-  return layoutFromPrompt({
-    feature: 'Create a retail product label. Prioritize product name, variant, quantity/weight, MRP, barcode and required identifiers supplied by the user. Never invent compliance numbers.',
-    ...input,
-    prompt: details
-  });
-}
-
-async function shipping(input) {
-  if (!input.prompt && !input.imageBase64) {
-    const error = new Error('prompt or imageBase64 is required for Shipping Label AI.');
-    error.statusCode = 400;
-    throw error;
-  }
-  return layoutFromPrompt({
-    feature: 'Create a shipping label. Extract only visible/provided sender, receiver, phone, address, order number, tracking number, barcode and COD amount. Never invent missing values.',
-    ...input,
-    prompt: input.prompt || 'Extract this document and create a clear shipping label.'
-  });
-}
-
-async function thermal(input) {
-  const clean = validateImage(input.imageBase64);
-  if (!clean) {
-    const error = new Error('imageBase64 is required for Image to Thermal.');
-    error.statusCode = 400;
-    throw error;
-  }
-  const threshold = clamp(input.threshold, 0, 255, 160);
-  const maxWidth = Math.round(clamp(input.maxWidthPx, 128, 1600, 800));
-  const output = await sharp(Buffer.from(clean, 'base64'))
-    .rotate()
-    .resize({ width: maxWidth, withoutEnlargement: true })
-    .flatten({ background: '#ffffff' })
-    .grayscale()
-    .normalize()
-    .threshold(threshold)
-    .png({ colors: 2, compressionLevel: 9 })
-    .toBuffer();
+function normalizeLayout(raw, input = {}) {
+  const widthMm = clamp(raw?.widthMm || input.widthMm || 50, 20, 110);
+  const heightMm = clamp(raw?.heightMm || input.heightMm || 30, 10, 160);
+  const elements = (Array.isArray(raw?.elements) ? raw.elements : [])
+    .slice(0, 40)
+    .map(item => normalizeElement(item, widthMm, heightMm))
+    .filter(Boolean);
   return {
-    provider: 'server-thermal-engine',
-    model: 'sharp-monochrome-v1',
-    image: { mimeType: 'image/png', base64: output.toString('base64') },
-    usage: {}
+    version: 2,
+    widthMm,
+    heightMm,
+    dpi: Number(input.dpi || 203),
+    background: 'white',
+    printMode: 'monochrome',
+    elements
   };
 }
 
-async function logo(input) {
-  if (!input.prompt) {
-    const error = new Error('prompt is required for AI Logo Generator.');
-    error.statusCode = 400;
-    throw error;
-  }
-  const generated = await provider.generateImage({
-    prompt: `Create one simple professional logo for thermal label printing. Subject: ${String(input.prompt).slice(0, 1500)}. Pure black artwork on pure white background. Flat vector-like silhouette, thick clean strokes, no gradients, no shadows, no grey, no mockup, no photograph, no tiny details and no surrounding text unless explicitly requested.`
-  });
-  return thermal({
-    imageBase64: generated.image.base64,
-    threshold: input.threshold || 170,
-    maxWidthPx: input.maxWidthPx || 800
-  }).then(result => ({ ...result, provider: generated.provider, model: generated.model, usage: generated.usage }));
+function layoutSchemaPrompt(input) {
+  return `Return JSON only. Create an editable black-and-white thermal label.
+Canvas: ${input.widthMm || 50}mm × ${input.heightMm || 30}mm, ${input.dpi || 203} DPI.
+Allowed element types only: text, barcode, qrcode, line, rectangle, image.
+Schema: {"widthMm":50,"heightMm":30,"elements":[{"type":"text","value":"TEXT","x":0,"y":0,"width":20,"height":5,"fontKey":"default","fontSize":12,"alignment":"left","bold":false,"rotation":0,"invert":false}]}.
+Coordinates and sizes are millimetres. Keep every element inside the canvas. Use strong contrast, no colours, no gradients, no shadows, no grey backgrounds, and readable spacing. Prefer native text/barcode/QR objects instead of a flattened image.`;
 }
 
-module.exports = { scan, design, voice, thermal, logo, shipping, product, normalizeLayout };
+async function design(input) {
+  const prompt = `${layoutSchemaPrompt(input)}\nUser request: ${String(input.prompt || '').slice(0, 4000)}\nProduct name: ${input.productName || ''}\nIndustry: ${input.industry || ''}\nMRP: ${input.mrp || ''}\nBarcode: ${input.barcode || ''}\nQR value: ${input.qrValue || ''}\nStyle: ${input.style || 'clean professional'}.`;
+  const result = await provider.generateJson({ prompt });
+  return { ...result, layout: normalizeLayout(result.json, input) };
+}
+
+async function product(input) {
+  const prompt = `${layoutSchemaPrompt(input)}\nCreate a retail product label from these details:\n${JSON.stringify({ productName: input.productName, brand: input.brand, mrp: input.mrp, salePrice: input.salePrice, weight: input.weight, barcode: input.barcode, qrValue: input.qrValue, sku: input.sku, batch: input.batch, expiry: input.expiry, extraText: input.extraText, style: input.style })}`;
+  const result = await provider.generateJson({ prompt });
+  return { ...result, layout: normalizeLayout(result.json, input) };
+}
+
+async function shipping(input) {
+  const prompt = `${layoutSchemaPrompt({ ...input, widthMm: input.widthMm || 100, heightMm: input.heightMm || 150 })}\nCreate a courier shipping label. Include sender, receiver, phone, address, PIN, order number, tracking barcode/QR, COD/prepaid status and amount when provided. Prioritize address and tracking readability. Details:\n${JSON.stringify(input.details || input)}`;
+  const result = await provider.generateJson({ prompt });
+  return { ...result, layout: normalizeLayout(result.json, { ...input, widthMm: input.widthMm || 100, heightMm: input.heightMm || 150 }) };
+}
+
+async function voice(input) {
+  if (!String(input.transcript || input.prompt || '').trim()) {
+    const error = new Error('Voice transcript is required. Convert speech to text in Android and send transcript.');
+    error.statusCode = 400;
+    error.code = 'TRANSCRIPT_REQUIRED';
+    throw error;
+  }
+  return design({ ...input, prompt: input.transcript || input.prompt });
+}
+
+async function scan(input) {
+  const image = validateImageInput(input);
+  const prompt = `${layoutSchemaPrompt(input)}\nAnalyze the attached label photo. Reconstruct its visible text, barcode, QR code, lines and boxes as editable objects. Correct perspective conceptually, preserve reading order and approximate positions. Do not invent text. If a value is unreadable use an empty value and add it to warnings. Also return "confidence" from 0 to 1 and "warnings" array.`;
+  const result = await provider.generateJson({ prompt, ...image });
+  return {
+    ...result,
+    layout: normalizeLayout(result.json, input),
+    confidence: clamp(result.json?.confidence ?? 0.7, 0, 1),
+    warnings: Array.isArray(result.json?.warnings) ? result.json.warnings.slice(0, 20).map(String) : []
+  };
+}
+
+function sanitizeSvg(svg) {
+  let value = String(svg || '').trim();
+  value = value.replace(/^```(?:svg|xml)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  const start = value.indexOf('<svg');
+  const end = value.lastIndexOf('</svg>');
+  if (start < 0 || end < start) throw Object.assign(new Error('AI returned invalid SVG.'), { statusCode: 502, code: 'AI_INVALID_SVG' });
+  value = value.slice(start, end + 6);
+  value = value.replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/\son\w+\s*=\s*(["']).*?\1/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/https?:\/\/[^"'\s)]+/gi, '');
+  if (Buffer.byteLength(value, 'utf8') > 500000) throw Object.assign(new Error('Generated SVG is too large.'), { statusCode: 502, code: 'AI_SVG_TOO_LARGE' });
+  return value;
+}
+
+async function logo(input) {
+  const prompt = `Create a simple one-colour black logo for a thermal label printer. Prompt: ${String(input.prompt || input.brand || '').slice(0, 2000)}. Return SVG only. Transparent background. Use only black fills/strokes and white/transparent negative space. No gradients, filters, shadows, external images, scripts, text fonts, URLs or colour. Use viewBox="0 0 512 512" and bold shapes that remain clear at 203 DPI.`;
+  const result = await provider.generateText({ prompt });
+  const svg = sanitizeSvg(result.text);
+  return {
+    ...result,
+    svg,
+    dataUrl: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+  };
+}
+
+async function thermal(input) {
+  const image = validateImageInput(input);
+  const prompt = `Convert the attached image/logo into a simple pure black-and-white SVG suitable for a 203 DPI thermal printer. Preserve the recognizable subject, remove background, simplify tiny details, increase line thickness, and use only black and transparent/white. Return SVG only with viewBox="0 0 512 512". No gradients, filters, scripts, URLs or external assets.`;
+  const result = await provider.generateText({ prompt, ...image });
+  const svg = sanitizeSvg(result.text);
+  return {
+    ...result,
+    svg,
+    dataUrl: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+  };
+}
+
+module.exports = { design, product, shipping, voice, scan, logo, thermal, normalizeLayout };
