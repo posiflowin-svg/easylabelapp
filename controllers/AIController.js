@@ -2,8 +2,59 @@ const mongoose = require('mongoose');
 const AIUsage = require('../models/AIUsage');
 const AITransaction = require('../models/AITransaction');
 const AICredit = require('../models/AICredit');
+const User = require('../models/User');
 const aiLabelService = require('../services/aiLabelService');
 const creditService = require('../services/aiCreditService');
+
+
+async function resolveUserId(rawIdentity) {
+  const identity = String(rawIdentity || '').trim();
+  if (!identity) {
+    const error = new Error('Valid userId, phone or email is required.');
+    error.statusCode = 400;
+    error.code = 'USER_ID_REQUIRED';
+    throw error;
+  }
+  if (mongoose.Types.ObjectId.isValid(identity)) return identity;
+
+  const normalizedPhone = identity.replace(/\D/g, '');
+  const queries = [];
+  if (identity.includes('@')) queries.push({ email: identity.toLowerCase() });
+  if (normalizedPhone.length >= 10) {
+    queries.push({ phone: identity });
+    queries.push({ phone: normalizedPhone });
+    queries.push({ phone: normalizedPhone.slice(-10) });
+  }
+  if (!queries.length) {
+    const error = new Error('Unable to identify this account. Please sign out and sign in again.');
+    error.statusCode = 400;
+    error.code = 'INVALID_USER_ID';
+    throw error;
+  }
+
+  let user = null;
+  if (identity.includes('@')) {
+    user = await User.findOne({ email: { $regex: `^${identity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }).select('_id').lean();
+  }
+  if (!user && normalizedPhone.length >= 10) {
+    const last10 = normalizedPhone.slice(-10);
+    user = await User.findOne({
+      $or: [
+        { phone: identity },
+        { phone: normalizedPhone },
+        { phone: last10 },
+        { phone: { $regex: `${last10}$` } }
+      ]
+    }).select('_id').lean();
+  }
+  if (!user) {
+    const error = new Error('User account was not found. Please sign out and sign in again.');
+    error.statusCode = 404;
+    error.code = 'USER_NOT_FOUND';
+    throw error;
+  }
+  return String(user._id);
+}
 
 function apiError(res, error) {
   return res.status(error.statusCode || 500).json({
@@ -16,7 +67,7 @@ function apiError(res, error) {
 
 exports.getCredits = async (req, res) => {
   try {
-    const userId = req.params.userId || req.query.userId;
+    const userId = await resolveUserId(req.params.userId || req.query.userId);
     const { account, subscription, plan } = await creditService.ensureAccount(userId);
     return res.json({
       success: true,
@@ -131,9 +182,11 @@ exports.adminDashboard = async (req, res) => {
 async function executeStudioFeature(req, res, feature, handler) {
   const started = Date.now();
   let debit = null;
-  const userId = req.body.userId;
+  let userId = req.body.userId;
   const requestId = req.body.requestId || '';
   try {
+    userId = await resolveUserId(userId);
+    req.body.userId = userId;
     debit = await creditService.consumeCredit({
       userId,
       feature,
