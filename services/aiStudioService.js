@@ -121,11 +121,35 @@ async function voice(input) {
 
 async function scan(input) {
   const image = validateImageInput(input);
-  const prompt = `${layoutSchemaPrompt(input)}\nAnalyze the attached label photo. Reconstruct its visible text, barcode, QR code, lines and boxes as editable objects. Correct perspective conceptually, preserve reading order and approximate positions. Do not invent text. If a value is unreadable use an empty value and add it to warnings. Also return "confidence" from 0 to 1 and "warnings" array.`;
-  const result = await provider.generateJson({ prompt, ...image });
+  const prompt = `${layoutSchemaPrompt(input)}
+You are EasyLabel AI Scan Engine. Analyze only the physical label inside the attached cropped photo and reconstruct it as native editable objects.
+
+STRICT RULES:
+1. Return JSON only; never return SVG, HTML, markdown or a flattened full-label image.
+2. Preserve exact visible wording and reading order. Never invent product details.
+3. Detect text, barcode, qrcode, image/logo, line and rectangle independently.
+4. Use millimetre coordinates relative to the requested canvas.
+5. For barcode/QR, return the decoded value when readable. If not readable, keep value empty and add a warning.
+6. For logos/icons that cannot be represented as text or shapes, include an image element only when a compact cropped dataUrl is genuinely available; otherwise create a rectangle placeholder and warning.
+7. Border-only boxes must use rectangle with filled=false. Solid black areas use filled=true.
+8. Set fontSize, bold, alignment and rotation as accurately as possible.
+9. Keep every object inside the canvas and avoid overlaps introduced by reconstruction.
+10. Also return confidence from 0 to 1 and warnings as an array.
+
+Expected top-level shape:
+{"widthMm":50,"heightMm":30,"confidence":0.9,"warnings":[],"elements":[...]}
+Optional correction instruction from user: ${String(input.prompt || '').slice(0, 1000)}`;
+  const result = await provider.generateJson({ prompt, ...image, model: process.env.GEMINI_SCAN_MODEL || process.env.GEMINI_MODEL || 'gemini-3.5-flash' });
+  const layout = normalizeLayout(result.json, input);
+  if (!layout.elements.length) {
+    const error = new Error('No editable label elements were detected. Crop closer to the label and try again.');
+    error.statusCode = 422;
+    error.code = 'NO_LABEL_ELEMENTS';
+    throw error;
+  }
   return {
     ...result,
-    layout: normalizeLayout(result.json, input),
+    layout,
     confidence: clamp(result.json?.confidence ?? 0.7, 0, 1),
     warnings: Array.isArray(result.json?.warnings) ? result.json.warnings.slice(0, 20).map(String) : []
   };

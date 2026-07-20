@@ -271,10 +271,10 @@ exports.status = async (req, res) => {
 
   return res.json({
     success: true,
-    phase: 2,
+    phase: 1,
     configured: apiKey.length > 10,
     keyLoaded: Boolean(apiKey),
-    features: ['scan', 'design', 'voice', 'thermal', 'logo', 'shipping', 'product'],
+    features: ['scan', 'design'],
     models: {
       textVision: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
       image: process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image'
