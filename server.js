@@ -49,7 +49,7 @@ app.use(session({
 
 app.use(morgan('dev'));
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.json({ limit: process.env.JSON_BODY_LIMIT || '15mb' }));
 app.use('/template-assets-v2', express.static(path.join(__dirname, 'public', 'template-assets-v2')));
 
 

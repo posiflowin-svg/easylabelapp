@@ -128,56 +128,92 @@ exports.adminDashboard = async (req, res) => {
   }
 };
 
-exports.generateLabel = async (req, res) => {
+async function executeStudioFeature(req, res, feature, handler) {
   const started = Date.now();
   let debit = null;
+  const userId = req.body.userId;
+  const requestId = req.body.requestId || '';
   try {
-    const { userId, requestId = '' } = req.body;
     debit = await creditService.consumeCredit({
       userId,
-      feature: 'design',
+      feature,
       requestId,
-      metadata: { labelSize: `${req.body.widthMm || 50}x${req.body.heightMm || 30}` }
+      metadata: {
+        labelSize: `${req.body.widthMm || 50}x${req.body.heightMm || 30}`,
+        hasImage: Boolean(req.body.imageBase64)
+      }
     });
 
-    const result = await aiLabelService.generate(req.body);
+    const result = await handler(req.body);
     const { subscription } = await creditService.ensureAccount(userId);
+    const usage = result.usage || {};
 
     await AIUsage.create({
       userId,
       subscriptionId: subscription?._id || null,
-      requestType: 'design',
+      requestType: feature,
       status: 'success',
       creditSource: debit.source,
       creditTransactionId: debit.transaction._id,
       requestId: requestId || undefined,
-      modelName: result.provider,
+      modelName: result.model || result.provider || 'ai-studio',
+      inputTokens: Number(usage.promptTokenCount || usage.input_tokens || 0),
+      outputTokens: Number(usage.candidatesTokenCount || usage.output_tokens || 0),
       generationTimeMs: Date.now() - started,
       labelSize: `${req.body.widthMm || 50}x${req.body.heightMm || 30}`
     });
 
     return res.json({
       success: true,
+      feature,
       layout: result.layout,
+      image: result.image,
       provider: result.provider,
+      model: result.model,
       credits: debit.balance
     });
   } catch (error) {
-    if (debit && debit.transaction && !debit.idempotent) {
+    if (debit?.transaction && !debit.idempotent) {
       await creditService.refundCredit({ transactionId: debit.transaction._id, notes: error.message }).catch(() => {});
     }
-    if (mongoose.Types.ObjectId.isValid(req.body.userId)) {
+    if (mongoose.Types.ObjectId.isValid(userId)) {
       await AIUsage.create({
-        userId: req.body.userId,
-        requestType: 'design',
+        userId,
+        requestType: feature,
         status: 'failed',
         creditSource: debit?.source || 'none',
         creditTransactionId: debit?.transaction?._id || null,
-        requestId: req.body.requestId || undefined,
+        requestId: requestId || undefined,
         generationTimeMs: Date.now() - started,
         notes: error.message
       }).catch(() => {});
     }
     return apiError(res, error);
   }
+}
+
+const aiStudioService = require('../services/aiStudioService');
+
+exports.scanLabel = (req, res) => executeStudioFeature(req, res, 'scan', aiStudioService.scan);
+exports.designLabel = (req, res) => executeStudioFeature(req, res, 'design', aiStudioService.design);
+exports.voiceLabel = (req, res) => executeStudioFeature(req, res, 'voice', aiStudioService.voice);
+exports.imageToThermal = (req, res) => executeStudioFeature(req, res, 'thermal', aiStudioService.thermal);
+exports.generateLogo = (req, res) => executeStudioFeature(req, res, 'logo', aiStudioService.logo);
+exports.shippingLabel = (req, res) => executeStudioFeature(req, res, 'shipping', aiStudioService.shipping);
+exports.productLabel = (req, res) => executeStudioFeature(req, res, 'product', aiStudioService.product);
+
+// Backward-compatible Phase 1 endpoint.
+exports.generateLabel = exports.designLabel;
+
+exports.status = async (req, res) => {
+  return res.json({
+    success: true,
+    phase: 2,
+    configured: Boolean(process.env.GEMINI_API_KEY || process.env.AI_PROVIDER_API_KEY),
+    features: ['scan', 'design', 'voice', 'thermal', 'logo', 'shipping', 'product'],
+    models: {
+      textVision: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      image: process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image'
+    }
+  });
 };
