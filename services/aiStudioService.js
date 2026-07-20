@@ -2,6 +2,7 @@ const provider = require('./aiProviderService');
 
 const ALLOWED_TYPES = new Set(['text', 'barcode', 'qrcode', 'line', 'rectangle', 'image']);
 const ALLOWED_ALIGNMENTS = new Set(['left', 'center', 'right']);
+const ALLOWED_BARCODE_TYPES = new Set(['code128', 'code39', 'ean13', 'ean8', 'upca', 'upce', 'itf', 'codabar']);
 
 function clamp(value, min, max) {
   const n = Number(value);
@@ -46,7 +47,7 @@ function normalizeElement(element, widthMm, heightMm) {
   if (!ALLOWED_TYPES.has(type)) return null;
   const normalized = {
     type,
-    value: String(element.value || '').slice(0, 2000),
+    value: String(element.value || element.text || '').slice(0, 2000),
     x: clamp(element.x, 0, widthMm),
     y: clamp(element.y, 0, heightMm),
     width: clamp(element.width, 0.5, widthMm),
@@ -54,10 +55,31 @@ function normalizeElement(element, widthMm, heightMm) {
     rotation: clamp(element.rotation || 0, -180, 180),
     fontKey: String(element.fontKey || 'default').slice(0, 80),
     fontSize: clamp(element.fontSize || 12, 5, 72),
-    alignment: ALLOWED_ALIGNMENTS.has(element.alignment) ? element.alignment : 'left',
+    alignment: ALLOWED_ALIGNMENTS.has(String(element.alignment || '').toLowerCase())
+      ? String(element.alignment).toLowerCase() : 'left',
+    verticalAlignment: ['top', 'center', 'bottom'].includes(String(element.verticalAlignment || '').toLowerCase())
+      ? String(element.verticalAlignment).toLowerCase() : 'center',
     bold: Boolean(element.bold),
-    invert: Boolean(element.invert)
+    italic: Boolean(element.italic),
+    underline: Boolean(element.underline),
+    lineWrap: element.lineWrap !== false,
+    invert: Boolean(element.invert),
+    confidence: clamp(element.confidence ?? 0.75, 0, 1)
   };
+  if (type === 'barcode') {
+    const barcodeType = String(element.barcodeType || 'code128').toLowerCase();
+    normalized.barcodeType = ALLOWED_BARCODE_TYPES.has(barcodeType) ? barcodeType : 'code128';
+    normalized.showText = Boolean(element.showText);
+    normalized.moduleWidth = clamp(element.moduleWidth || 2, 1, 6);
+  }
+  if (type === 'qrcode') {
+    normalized.errorCorrection = ['L', 'M', 'Q', 'H'].includes(String(element.errorCorrection || '').toUpperCase())
+      ? String(element.errorCorrection).toUpperCase() : 'M';
+  }
+  if (type === 'line' || type === 'rectangle') {
+    normalized.thickness = clamp(element.thickness || element.strokeWidth || 0.35, 0.15, 3);
+    normalized.filled = Boolean(element.filled);
+  }
   if (type === 'image') {
     normalized.dataUrl = String(element.dataUrl || '').slice(0, 2_000_000);
     normalized.fit = ['contain', 'cover', 'stretch'].includes(element.fit) ? element.fit : 'contain';
@@ -121,26 +143,70 @@ async function voice(input) {
 
 async function scan(input) {
   const image = validateImageInput(input);
-  const prompt = `${layoutSchemaPrompt(input)}
-You are EasyLabel AI Scan Engine. Analyze only the physical label inside the attached cropped photo and reconstruct it as native editable objects.
+  const requestedWidth = clamp(input.widthMm || 50, 20, 110);
+  const requestedHeight = clamp(input.heightMm || 30, 10, 160);
+  const prompt = `${layoutSchemaPrompt({ ...input, widthMm: requestedWidth, heightMm: requestedHeight })}
+You are EasyLabel Phase-2 Precision Scan Engine. Reconstruct the photographed thermal label as a native editable layout, not as a screenshot.
 
-STRICT RULES:
-1. Return JSON only; never return SVG, HTML, markdown or a flattened full-label image.
-2. Preserve exact visible wording and reading order. Never invent product details.
-3. Detect text, barcode, qrcode, image/logo, line and rectangle independently.
-4. Use millimetre coordinates relative to the requested canvas.
-5. For barcode/QR, return the decoded value when readable. If not readable, keep value empty and add a warning.
-6. For logos/icons that cannot be represented as text or shapes, include an image element only when a compact cropped dataUrl is genuinely available; otherwise create a rectangle placeholder and warning.
-7. Border-only boxes must use rectangle with filled=false. Solid black areas use filled=true.
-8. Set fontSize, bold, alignment and rotation as accurately as possible.
-9. Keep every object inside the canvas and avoid overlaps introduced by reconstruction.
-10. Also return confidence from 0 to 1 and warnings as an array.
+ANALYSIS METHOD (perform silently before returning JSON):
+A. Find the four physical label edges and mentally perspective-correct the crop.
+B. Divide the label into a 1000×1000 normalized grid, locate every visible object, then convert coordinates to millimetres.
+C. OCR each text block exactly, preserving capitalization, punctuation, currency symbols, line breaks and reading order.
+D. Distinguish real barcodes/QR codes from decorative lines. Decode their value when readable and identify barcode symbology.
+E. Separate logos/icons from text. Use an image object only for the logo/icon region, never for the whole label.
+F. Measure margins, alignment, relative font hierarchy, border thickness and object rotation.
+G. Perform a final geometry check: no unintended overlaps, no object outside canvas, barcode quiet zones retained.
 
-Expected top-level shape:
-{"widthMm":50,"heightMm":30,"confidence":0.9,"warnings":[],"elements":[...]}
-Optional correction instruction from user: ${String(input.prompt || '').slice(0, 1000)}`;
-  const result = await provider.generateJson({ prompt, ...image, model: process.env.GEMINI_SCAN_MODEL || process.env.GEMINI_MODEL || 'gemini-3.5-flash' });
-  const layout = normalizeLayout(result.json, input);
+STRICT OUTPUT RULES:
+1. Return JSON only. Never return SVG, HTML, markdown, explanations or a flattened full-label image.
+2. Preserve exact visible wording. Never invent product details or substitute guessed text.
+3. Allowed objects: text, barcode, qrcode, image, line, rectangle.
+4. Coordinates and dimensions are millimetres on ${requestedWidth}×${requestedHeight} mm canvas.
+5. Text fields: value, x, y, width, height, fontSize (points), bold, italic, underline, lineWrap, alignment, verticalAlignment, rotation, confidence.
+6. Barcode fields: value, barcodeType (code128/code39/ean13/ean8/upca/upce/itf/codabar), showText, moduleWidth, x, y, width, height, rotation, confidence.
+7. QR fields: value, errorCorrection (L/M/Q/H), x, y, width, height, rotation, confidence.
+8. Rectangle fields: filled, thickness. Border-only boxes must use filled=false. Never turn a heading background into a black block unless it is visibly solid black.
+9. Image/logo objects must be tightly cropped to the logo/icon only. If no dataUrl can be returned, omit the object and add a warning rather than inserting a black placeholder.
+10. Each element needs confidence 0..1. Overall confidence must reflect OCR and geometry accuracy.
+11. Keep source order from top-left to bottom-right for predictable editing layer order.
+12. Use warnings for unreadable or uncertain content. Do not silently replace unreadable barcode/QR values.
+
+Expected shape:
+{"widthMm":${requestedWidth},"heightMm":${requestedHeight},"confidence":0.92,"warnings":[],"elements":[{"type":"text","value":"MRP ₹99","x":2,"y":2,"width":20,"height":4,"fontSize":12,"bold":true,"italic":false,"underline":false,"lineWrap":true,"alignment":"left","verticalAlignment":"center","rotation":0,"confidence":0.98}]}
+Optional user correction: ${String(input.prompt || '').slice(0, 1000)}`;
+
+  const first = await provider.generateJson({
+    prompt,
+    ...image,
+    model: process.env.GEMINI_SCAN_MODEL || process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+  });
+
+  let finalResult = first;
+  const refinementEnabled = String(process.env.AI_SCAN_REFINEMENT_ENABLED || 'true').toLowerCase() !== 'false';
+  const initialLayout = normalizeLayout(first.json, { ...input, widthMm: requestedWidth, heightMm: requestedHeight });
+  const initialConfidence = clamp(first.json?.confidence ?? 0.7, 0, 1);
+
+  // A second visual verification pass materially improves OCR, coordinates and object typing.
+  // It can be disabled on Render with AI_SCAN_REFINEMENT_ENABLED=false when lower latency is preferred.
+  if (refinementEnabled && initialLayout.elements.length) {
+    const refinePrompt = `You are the verification pass for an editable thermal-label scan.
+Compare the attached source image against this draft JSON and return a corrected complete JSON layout only.
+Fix OCR spelling, missing text, wrong object type, barcode/QR value, coordinates, dimensions, alignment, font hierarchy, border thickness and overlaps.
+Do not redesign, beautify or invent anything. Keep the same ${requestedWidth}×${requestedHeight} mm canvas.
+Remove any object not actually visible. Add any clearly visible missing object. Preserve exact wording.
+Draft JSON:\n${JSON.stringify({ ...initialLayout, confidence: initialConfidence, warnings: first.json?.warnings || [] })}`;
+    try {
+      finalResult = await provider.generateJson({
+        prompt: refinePrompt,
+        ...image,
+        model: process.env.GEMINI_SCAN_REFINEMENT_MODEL || process.env.GEMINI_SCAN_MODEL || process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+      });
+    } catch (error) {
+      console.warn('[AI Scan] Refinement pass failed; using first-pass layout:', error.message);
+    }
+  }
+
+  const layout = normalizeLayout(finalResult.json, { ...input, widthMm: requestedWidth, heightMm: requestedHeight });
   if (!layout.elements.length) {
     const error = new Error('No editable label elements were detected. Crop closer to the label and try again.');
     error.statusCode = 422;
@@ -148,10 +214,12 @@ Optional correction instruction from user: ${String(input.prompt || '').slice(0,
     throw error;
   }
   return {
-    ...result,
+    ...finalResult,
     layout,
-    confidence: clamp(result.json?.confidence ?? 0.7, 0, 1),
-    warnings: Array.isArray(result.json?.warnings) ? result.json.warnings.slice(0, 20).map(String) : []
+    confidence: clamp(finalResult.json?.confidence ?? initialConfidence, 0, 1),
+    warnings: Array.isArray(finalResult.json?.warnings)
+      ? finalResult.json.warnings.slice(0, 20).map(String)
+      : []
   };
 }
 
