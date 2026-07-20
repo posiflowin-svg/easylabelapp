@@ -3,6 +3,35 @@ const AICredit = require('../models/AICredit');
 const AITransaction = require('../models/AITransaction');
 const UserSubscription = require('../models/UserSubscription');
 const PremiumPlan = require('../models/PremiumPlan');
+const User = require('../models/User');
+
+// Development-only unlimited AI access.
+// Override in Render with DEV_AI_EMAILS (comma-separated) or DEV_AI_MOBILES.
+// Set DEV_AI_TEST_MODE=false to disable all automatic test credits.
+const DEFAULT_DEV_AI_EMAIL = 'marketingposiflow@gmail.com';
+const DEV_AI_CREDIT_LIMIT = 999;
+
+function normalizedCsv(value) {
+  return String(value || '')
+    .split(',')
+    .map(item => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+async function isDeveloperAccount(userId) {
+  if (String(process.env.DEV_AI_TEST_MODE || 'true').toLowerCase() === 'false') return false;
+
+  const emails = normalizedCsv(process.env.DEV_AI_EMAILS || DEFAULT_DEV_AI_EMAIL);
+  const mobiles = normalizedCsv(process.env.DEV_AI_MOBILES).map(value => value.replace(/\D/g, '').slice(-10));
+  if (!emails.length && !mobiles.length) return false;
+
+  const user = await User.findById(userId).select('email phone mobile mobileNumber').lean();
+  if (!user) return false;
+
+  const email = String(user.email || '').trim().toLowerCase();
+  const mobile = String(user.phone || user.mobile || user.mobileNumber || '').replace(/\D/g, '').slice(-10);
+  return (email && emails.includes(email)) || (mobile && mobiles.includes(mobile));
+}
 
 function monthKey(date = new Date()) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
@@ -35,7 +64,11 @@ async function ensureAccount(userId) {
   }
 
   const currentMonth = monthKey();
-  const { subscription, plan, planKey, monthlyLimit } = await activePlanForUser(userId);
+  const developerMode = await isDeveloperAccount(userId);
+  const activePlan = developerMode
+    ? { subscription: null, plan: null, planKey: 'free', monthlyLimit: DEV_AI_CREDIT_LIMIT }
+    : await activePlanForUser(userId);
+  const { subscription, plan, planKey, monthlyLimit } = activePlan;
 
   let account = await AICredit.findOne({ userId });
   if (!account) {
@@ -54,6 +87,11 @@ async function ensureAccount(userId) {
       account.lastResetAt = new Date();
       changed = true;
     }
+    // Keep the configured test account fully topped up on every request.
+    if (developerMode && account.monthlyUsed !== 0) {
+      account.monthlyUsed = 0;
+      changed = true;
+    }
     if (account.planKey !== planKey || account.monthlyLimit !== monthlyLimit) {
       account.planKey = planKey;
       account.monthlyLimit = monthlyLimit;
@@ -63,7 +101,7 @@ async function ensureAccount(userId) {
     if (changed) await account.save();
   }
 
-  return { account, subscription, plan };
+  return { account, subscription, plan, developerMode };
 }
 
 function balancePayload(account) {
@@ -81,7 +119,7 @@ function balancePayload(account) {
 }
 
 async function consumeCredit({ userId, feature = 'other', requestId = '', metadata = {} }) {
-  const { account } = await ensureAccount(userId);
+  const { account, developerMode } = await ensureAccount(userId);
 
   if (requestId) {
     const previous = await AITransaction.findOne({ requestId, userId, type: 'usage', status: 'completed' }).lean();
@@ -123,6 +161,14 @@ async function consumeCredit({ userId, feature = 'other', requestId = '', metada
     error.code = 'AI_CREDITS_EXHAUSTED';
     error.balance = balancePayload(fresh);
     throw error;
+  }
+
+  // Developer test account is unlimited: restore the included credit immediately.
+  if (developerMode) {
+    updated.monthlyUsed = 0;
+    updated.monthlyLimit = DEV_AI_CREDIT_LIMIT;
+    // Keep the existing planKey to remain compatible with any schema enum.
+    await updated.save();
   }
 
   const balance = balancePayload(updated);
