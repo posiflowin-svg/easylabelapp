@@ -206,10 +206,17 @@ exports.productLabel = (req, res) => executeStudioFeature(req, res, 'product', a
 exports.generateLabel = exports.designLabel;
 
 exports.status = async (req, res) => {
+  const apiKey = String(
+    process.env.GEMINI_API_KEY ||
+    process.env.AI_PROVIDER_API_KEY ||
+    ''
+  ).trim();
+
   return res.json({
     success: true,
     phase: 2,
-    configured: Boolean(process.env.GEMINI_API_KEY || process.env.AI_PROVIDER_API_KEY),
+    configured: apiKey.length > 10,
+    keyLoaded: Boolean(apiKey),
     features: ['scan', 'design', 'voice', 'thermal', 'logo', 'shipping', 'product'],
     models: {
       textVision: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
