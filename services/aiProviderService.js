@@ -1,10 +1,18 @@
 const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 const DEFAULT_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image';
 
+const ENV_TEXT_FALLBACKS = String(process.env.GEMINI_FALLBACK_MODELS || process.env.GEMINI_SCAN_FALLBACK_MODELS || '')
+  .split(',')
+  .map(value => value.trim())
+  .filter(Boolean);
+
 const TEXT_MODEL_FALLBACKS = [
   DEFAULT_MODEL,
+  ...ENV_TEXT_FALLBACKS,
+  'gemini-flash-latest',
   'gemini-3.1-flash-lite',
-  'gemini-flash-latest'
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite'
 ].filter((model, index, list) => model && list.indexOf(model) === index);
 
 const IMAGE_MODEL_FALLBACKS = [
@@ -121,6 +129,24 @@ function isModelAvailabilityError(error) {
   );
 }
 
+function isRetryableProviderError(error) {
+  const status = Number(error?.providerStatus || error?.statusCode || 0);
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504 ||
+    message.includes('high demand') ||
+    message.includes('overloaded') ||
+    message.includes('temporarily unavailable') ||
+    message.includes('resource exhausted') ||
+    message.includes('rate limit') ||
+    message.includes('quota')
+  );
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function geminiRequest({
   model = DEFAULT_MODEL,
   fallbackModels = TEXT_MODEL_FALLBACKS,
@@ -140,21 +166,44 @@ async function geminiRequest({
     .filter((item, index, list) => item && list.indexOf(item) === index);
 
   let lastError;
+  const retriesPerModel = Math.max(1, Math.min(3, Number(process.env.AI_RETRIES_PER_MODEL || 2)));
+  const baseDelayMs = Math.max(500, Number(process.env.AI_RETRY_BASE_DELAY_MS || 1200));
+
   for (const candidateModel of models) {
-    try {
-      return await requestSingleModel({
-        model: candidateModel,
-        parts,
-        generationConfig,
-        apiKey
-      });
-    } catch (error) {
-      lastError = error;
-      if (!isModelAvailabilityError(error)) {
-        throw error;
+    for (let attempt = 1; attempt <= retriesPerModel; attempt++) {
+      try {
+        return await requestSingleModel({
+          model: candidateModel,
+          parts,
+          generationConfig,
+          apiKey
+        });
+      } catch (error) {
+        lastError = error;
+        const unavailable = isModelAvailabilityError(error);
+        const retryable = isRetryableProviderError(error);
+
+        if (!unavailable && !retryable) throw error;
+
+        if (retryable && attempt < retriesPerModel) {
+          const delayMs = baseDelayMs * attempt;
+          console.warn(`[AI] ${candidateModel} busy (attempt ${attempt}/${retriesPerModel}). Retrying in ${delayMs}ms.`);
+          await sleep(delayMs);
+          continue;
+        }
+
+        console.warn(`[AI] Switching from ${candidateModel} to fallback model.`);
+        break;
       }
-      console.warn(`[AI] Gemini model unavailable: ${candidateModel}. Trying fallback model.`);
     }
+  }
+
+  if (lastError && isRetryableProviderError(lastError)) {
+    throw providerError(
+      'AI is busy right now. Please wait a few seconds and try again.',
+      503,
+      'AI_BUSY'
+    );
   }
 
   throw lastError || providerError('No supported Gemini model is available.', 502, 'GEMINI_MODEL_UNAVAILABLE');
