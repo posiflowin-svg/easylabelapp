@@ -1,5 +1,16 @@
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-const DEFAULT_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image';
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+const DEFAULT_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image';
+
+const TEXT_MODEL_FALLBACKS = [
+  DEFAULT_MODEL,
+  'gemini-3.1-flash-lite',
+  'gemini-flash-latest'
+].filter((model, index, list) => model && list.indexOf(model) === index);
+
+const IMAGE_MODEL_FALLBACKS = [
+  DEFAULT_IMAGE_MODEL,
+  'gemini-3.1-flash-lite-image'
+].filter((model, index, list) => model && list.indexOf(model) === index);
 
 function providerError(message, statusCode = 502, code = 'AI_PROVIDER_FAILED') {
   const error = new Error(message);
@@ -52,16 +63,7 @@ function parseJsonText(text) {
   }
 }
 
-async function geminiRequest({ model = DEFAULT_MODEL, parts, generationConfig = {} }) {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.AI_PROVIDER_API_KEY;
-  if (!apiKey) {
-    throw providerError('GEMINI_API_KEY is not configured.', 503, 'AI_NOT_CONFIGURED');
-  }
-
-  if (typeof fetch !== 'function') {
-    throw providerError('Global fetch is unavailable. Use Node.js 18 or newer.', 500, 'FETCH_UNAVAILABLE');
-  }
-
+async function requestSingleModel({ model, parts, generationConfig, apiKey }) {
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   const controller = new AbortController();
   const timeout = setTimeout(
@@ -87,14 +89,17 @@ async function geminiRequest({ model = DEFAULT_MODEL, parts, generationConfig = 
 
     if (!response.ok) {
       const message = body?.error?.message || `Gemini request failed (${response.status}).`;
-      throw providerError(
+      const error = providerError(
         message,
         response.status >= 500 ? 502 : response.status,
         'GEMINI_REQUEST_FAILED'
       );
+      error.providerStatus = response.status;
+      error.model = model;
+      throw error;
     }
 
-    return body;
+    return { body, model };
   } catch (error) {
     if (error?.name === 'AbortError') {
       throw providerError('AI request timed out.', 504, 'AI_TIMEOUT');
@@ -103,6 +108,56 @@ async function geminiRequest({ model = DEFAULT_MODEL, parts, generationConfig = 
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function isModelAvailabilityError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    error?.providerStatus === 404 ||
+    message.includes('no longer available') ||
+    message.includes('not found') ||
+    message.includes('not supported for generatecontent') ||
+    message.includes('model is not available')
+  );
+}
+
+async function geminiRequest({
+  model = DEFAULT_MODEL,
+  fallbackModels = TEXT_MODEL_FALLBACKS,
+  parts,
+  generationConfig = {}
+}) {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.AI_PROVIDER_API_KEY;
+  if (!apiKey) {
+    throw providerError('GEMINI_API_KEY is not configured.', 503, 'AI_NOT_CONFIGURED');
+  }
+
+  if (typeof fetch !== 'function') {
+    throw providerError('Global fetch is unavailable. Use Node.js 18 or newer.', 500, 'FETCH_UNAVAILABLE');
+  }
+
+  const models = [model, ...fallbackModels]
+    .filter((item, index, list) => item && list.indexOf(item) === index);
+
+  let lastError;
+  for (const candidateModel of models) {
+    try {
+      return await requestSingleModel({
+        model: candidateModel,
+        parts,
+        generationConfig,
+        apiKey
+      });
+    } catch (error) {
+      lastError = error;
+      if (!isModelAvailabilityError(error)) {
+        throw error;
+      }
+      console.warn(`[AI] Gemini model unavailable: ${candidateModel}. Trying fallback model.`);
+    }
+  }
+
+  throw lastError || providerError('No supported Gemini model is available.', 502, 'GEMINI_MODEL_UNAVAILABLE');
 }
 
 async function generateJson({
@@ -122,8 +177,9 @@ async function generateJson({
     });
   }
 
-  const body = await geminiRequest({
+  const result = await geminiRequest({
     model,
+    fallbackModels: TEXT_MODEL_FALLBACKS,
     parts,
     generationConfig: {
       temperature: 0.2,
@@ -131,11 +187,12 @@ async function generateJson({
     }
   });
 
+  const { body, model: resolvedModel } = result;
   const json = parseJsonText(extractText(body));
 
   return {
     provider: 'gemini',
-    model,
+    model: resolvedModel,
     json,
     data: json,
     usage: body.usageMetadata || {}
@@ -159,14 +216,16 @@ async function generateText({
     });
   }
 
-  const body = await geminiRequest({
+  const result = await geminiRequest({
     model,
+    fallbackModels: TEXT_MODEL_FALLBACKS,
     parts,
     generationConfig: {
       temperature: 0.2
     }
   });
 
+  const { body, model: resolvedModel } = result;
   const text = extractText(body);
   if (!text) {
     throw providerError('AI returned an empty text response.', 502, 'AI_TEXT_MISSING');
@@ -174,21 +233,23 @@ async function generateText({
 
   return {
     provider: 'gemini',
-    model,
+    model: resolvedModel,
     text,
     usage: body.usageMetadata || {}
   };
 }
 
 async function generateImage({ prompt, model = DEFAULT_IMAGE_MODEL }) {
-  const body = await geminiRequest({
+  const result = await geminiRequest({
     model,
+    fallbackModels: IMAGE_MODEL_FALLBACKS,
     parts: [{ text: prompt }],
     generationConfig: {
       responseModalities: ['TEXT', 'IMAGE']
     }
   });
 
+  const { body, model: resolvedModel } = result;
   const image = extractImage(body);
   if (!image) {
     throw providerError('AI did not return an image.', 502, 'AI_IMAGE_MISSING');
@@ -196,7 +257,7 @@ async function generateImage({ prompt, model = DEFAULT_IMAGE_MODEL }) {
 
   return {
     provider: 'gemini',
-    model,
+    model: resolvedModel,
     image,
     usage: body.usageMetadata || {}
   };
