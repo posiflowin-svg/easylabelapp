@@ -168,6 +168,10 @@ async function executeStudioFeature(req, res, feature, handler) {
       feature,
       layout: result.layout,
       image: result.image,
+      dataUrl: result.dataUrl,
+      svg: result.svg,
+      confidence: result.confidence,
+      warnings: result.warnings,
       provider: result.provider,
       model: result.model,
       credits: debit.balance
