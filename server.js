@@ -22,6 +22,8 @@ const PremiumRoute = require('./routes/premium');
 const BillingRoute = require('./routes/billing');
 const NotificationsApiRoute = require('./routes/notificationsApi');
 const AIRoute = require('./routes/ai');
+const BorderRoute = require('./routes/border');
+const BorderController = require('./controllers/BorderController');
 const PremiumController = require('./controllers/PremiumController');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
@@ -50,6 +52,7 @@ app.use(session({
 app.use(morgan('dev'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json({ limit: process.env.JSON_BODY_LIMIT || '15mb' }));
+app.use('/border-assets', express.static(path.join(__dirname, 'public', 'border-assets')));
 app.use('/template-assets-v2', express.static(path.join(__dirname, 'public', 'template-assets-v2')));
 
 
@@ -79,6 +82,7 @@ app.get('/sells_users', (req, res) => {
 });
 
 app.get('/premium-management', PremiumController.page);
+app.get('/border-management', BorderController.page);
 // Add the password verification route directly to app
 app.post('/api/verify-admin-password', (req, res) => {
     const { password } = req.body;
@@ -108,6 +112,7 @@ app.use('/api/premium', PremiumRoute);
 app.use('/api/billing/google', BillingRoute);
 app.use('/api/notifications', NotificationsApiRoute);
 app.use('/api/ai', AIRoute);
+app.use('/api/borders', BorderRoute);
 
 // Import users CSV route
 app.post('/api/import-users', upload.single('file'), walletUserController.importUsers);
