@@ -16,6 +16,7 @@ router.get('/admin/dashboard', adminOnly, controller.adminDashboard);
 
 // EasyLabel AI Studio Phase 2
 router.post('/scan', controller.scanLabel);
+router.post('/scan/refine', controller.refineScan);
 router.post('/design', controller.designLabel);
 router.post('/voice', controller.voiceLabel);
 router.post('/thermal', controller.imageToThermal);

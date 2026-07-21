@@ -146,79 +146,109 @@ async function scan(input) {
   const requestedWidth = clamp(input.widthMm || 50, 20, 110);
   const requestedHeight = clamp(input.heightMm || 30, 10, 160);
   const prompt = `${layoutSchemaPrompt({ ...input, widthMm: requestedWidth, heightMm: requestedHeight })}
-You are EasyLabel Phase-2 Precision Scan Engine. Reconstruct the photographed thermal label as a native editable layout, not as a screenshot.
+You are EasyLabel Phase-2.1 Fast Precision Scan Engine. Reconstruct the photographed thermal label as a native editable layout, not as a screenshot.
 
-ANALYSIS METHOD (perform silently before returning JSON):
-A. Find the four physical label edges and mentally perspective-correct the crop.
-B. Divide the label into a 1000×1000 normalized grid, locate every visible object, then convert coordinates to millimetres.
-C. OCR each text block exactly, preserving capitalization, punctuation, currency symbols, line breaks and reading order.
-D. Distinguish real barcodes/QR codes from decorative lines. Decode their value when readable and identify barcode symbology.
-E. Separate logos/icons from text. Use an image object only for the logo/icon region, never for the whole label.
-F. Measure margins, alignment, relative font hierarchy, border thickness and object rotation.
-G. Perform a final geometry check: no unintended overlaps, no object outside canvas, barcode quiet zones retained.
+Perform one careful visual pass and return the editable JSON immediately.
+- Perspective-correct the cropped label mentally.
+- OCR visible text exactly, preserving capitalization, punctuation, currency symbols and line breaks.
+- Detect barcode and QR objects only when they are genuinely visible.
+- Keep logos/icons separate from text and never use a full-label screenshot as an image object.
+- Match position, size, alignment, font hierarchy, border thickness and rotation.
+- Keep all objects inside the ${requestedWidth}×${requestedHeight} mm canvas.
 
 STRICT OUTPUT RULES:
-1. Return JSON only. Never return SVG, HTML, markdown, explanations or a flattened full-label image.
-2. Preserve exact visible wording. Never invent product details or substitute guessed text.
+1. Return JSON only; no SVG, HTML, markdown or explanation.
+2. Never invent text or product information.
 3. Allowed objects: text, barcode, qrcode, image, line, rectangle.
-4. Coordinates and dimensions are millimetres on ${requestedWidth}×${requestedHeight} mm canvas.
-5. Text fields: value, x, y, width, height, fontSize (points), bold, italic, underline, lineWrap, alignment, verticalAlignment, rotation, confidence.
-6. Barcode fields: value, barcodeType (code128/code39/ean13/ean8/upca/upce/itf/codabar), showText, moduleWidth, x, y, width, height, rotation, confidence.
-7. QR fields: value, errorCorrection (L/M/Q/H), x, y, width, height, rotation, confidence.
-8. Rectangle fields: filled, thickness. Border-only boxes must use filled=false. Never turn a heading background into a black block unless it is visibly solid black.
-9. Image/logo objects must be tightly cropped to the logo/icon only. If no dataUrl can be returned, omit the object and add a warning rather than inserting a black placeholder.
-10. Each element needs confidence 0..1. Overall confidence must reflect OCR and geometry accuracy.
-11. Keep source order from top-left to bottom-right for predictable editing layer order.
-12. Use warnings for unreadable or uncertain content. Do not silently replace unreadable barcode/QR values.
+4. Coordinates and dimensions are millimetres.
+5. Border-only boxes must use filled=false; never convert headings or logos into solid black rectangles.
+6. Include confidence 0..1 for each element and for the complete layout.
+7. Add warnings for unreadable barcode/QR/text instead of guessing.
+8. Order elements from top-left to bottom-right.
 
 Expected shape:
-{"widthMm":${requestedWidth},"heightMm":${requestedHeight},"confidence":0.92,"warnings":[],"elements":[{"type":"text","value":"MRP ₹99","x":2,"y":2,"width":20,"height":4,"fontSize":12,"bold":true,"italic":false,"underline":false,"lineWrap":true,"alignment":"left","verticalAlignment":"center","rotation":0,"confidence":0.98}]}
+{"widthMm":${requestedWidth},"heightMm":${requestedHeight},"confidence":0.90,"warnings":[],"elements":[{"type":"text","value":"MRP ₹99","x":2,"y":2,"width":20,"height":4,"fontSize":12,"bold":true,"alignment":"left","verticalAlignment":"center","rotation":0,"confidence":0.98}]}
 Optional user correction: ${String(input.prompt || '').slice(0, 1000)}`;
 
-  const first = await provider.generateJson({
+  const result = await provider.generateJson({
     prompt,
     ...image,
     model: process.env.GEMINI_SCAN_MODEL || process.env.GEMINI_MODEL || 'gemini-2.5-flash'
   });
 
-  let finalResult = first;
-  const refinementEnabled = String(process.env.AI_SCAN_REFINEMENT_ENABLED || 'true').toLowerCase() !== 'false';
-  const initialLayout = normalizeLayout(first.json, { ...input, widthMm: requestedWidth, heightMm: requestedHeight });
-  const initialConfidence = clamp(first.json?.confidence ?? 0.7, 0, 1);
-
-  // A second visual verification pass materially improves OCR, coordinates and object typing.
-  // It can be disabled on Render with AI_SCAN_REFINEMENT_ENABLED=false when lower latency is preferred.
-  if (refinementEnabled && initialLayout.elements.length) {
-    const refinePrompt = `You are the verification pass for an editable thermal-label scan.
-Compare the attached source image against this draft JSON and return a corrected complete JSON layout only.
-Fix OCR spelling, missing text, wrong object type, barcode/QR value, coordinates, dimensions, alignment, font hierarchy, border thickness and overlaps.
-Do not redesign, beautify or invent anything. Keep the same ${requestedWidth}×${requestedHeight} mm canvas.
-Remove any object not actually visible. Add any clearly visible missing object. Preserve exact wording.
-Draft JSON:\n${JSON.stringify({ ...initialLayout, confidence: initialConfidence, warnings: first.json?.warnings || [] })}`;
-    try {
-      finalResult = await provider.generateJson({
-        prompt: refinePrompt,
-        ...image,
-        model: process.env.GEMINI_SCAN_REFINEMENT_MODEL || process.env.GEMINI_SCAN_MODEL || process.env.GEMINI_MODEL || 'gemini-2.5-flash'
-      });
-    } catch (error) {
-      console.warn('[AI Scan] Refinement pass failed; using first-pass layout:', error.message);
-    }
-  }
-
-  const layout = normalizeLayout(finalResult.json, { ...input, widthMm: requestedWidth, heightMm: requestedHeight });
+  const layout = normalizeLayout(result.json, { ...input, widthMm: requestedWidth, heightMm: requestedHeight });
   if (!layout.elements.length) {
     const error = new Error('No editable label elements were detected. Crop closer to the label and try again.');
     error.statusCode = 422;
     error.code = 'NO_LABEL_ELEMENTS';
     throw error;
   }
+
   return {
-    ...finalResult,
+    ...result,
     layout,
-    confidence: clamp(finalResult.json?.confidence ?? initialConfidence, 0, 1),
-    warnings: Array.isArray(finalResult.json?.warnings)
-      ? finalResult.json.warnings.slice(0, 20).map(String)
+    confidence: clamp(result.json?.confidence ?? 0.7, 0, 1),
+    warnings: Array.isArray(result.json?.warnings)
+      ? result.json.warnings.slice(0, 20).map(String)
+      : []
+  };
+}
+
+async function refineScan(input) {
+  const image = validateImageInput(input);
+  const requestedWidth = clamp(input.widthMm || input.draftLayout?.widthMm || 50, 20, 110);
+  const requestedHeight = clamp(input.heightMm || input.draftLayout?.heightMm || 30, 10, 160);
+  const draftLayout = normalizeLayout(input.draftLayout || input.layout || {}, {
+    ...input,
+    widthMm: requestedWidth,
+    heightMm: requestedHeight
+  });
+
+  if (!draftLayout.elements.length) {
+    const error = new Error('A scanned draft layout is required before improving the scan.');
+    error.statusCode = 400;
+    error.code = 'DRAFT_LAYOUT_REQUIRED';
+    throw error;
+  }
+
+  const prompt = `You are EasyLabel Phase-2.1 Scan Refinement Engine.
+Compare the attached original label image against the draft editable JSON below.
+Return one corrected complete JSON layout only.
+
+Correct only what the source image proves:
+- OCR spelling, punctuation, currency symbols and line breaks
+- missing or extra elements
+- text hierarchy, bold style, alignment and rotation
+- barcode/QR type and value when readable
+- coordinates, dimensions, margins, overlaps and border thickness
+- logos/icons that were incorrectly represented as black boxes
+
+Do not redesign, beautify, invent content or flatten the label into an image.
+Canvas: ${requestedWidth}×${requestedHeight} mm.
+Allowed objects: text, barcode, qrcode, image, line, rectangle.
+Draft JSON:
+${JSON.stringify(draftLayout)}`;
+
+  const result = await provider.generateJson({
+    prompt,
+    ...image,
+    model: process.env.GEMINI_SCAN_REFINEMENT_MODEL || process.env.GEMINI_SCAN_MODEL || process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+  });
+
+  const layout = normalizeLayout(result.json, { ...input, widthMm: requestedWidth, heightMm: requestedHeight });
+  if (!layout.elements.length) {
+    const error = new Error('The improved scan did not contain editable elements. Keep the current scan and try again later.');
+    error.statusCode = 422;
+    error.code = 'REFINEMENT_EMPTY';
+    throw error;
+  }
+
+  return {
+    ...result,
+    layout,
+    confidence: clamp(result.json?.confidence ?? 0.8, 0, 1),
+    warnings: Array.isArray(result.json?.warnings)
+      ? result.json.warnings.slice(0, 20).map(String)
       : []
   };
 }
@@ -261,4 +291,4 @@ async function thermal(input) {
   };
 }
 
-module.exports = { design, product, shipping, voice, scan, logo, thermal, normalizeLayout };
+module.exports = { design, product, shipping, voice, scan, refineScan, logo, thermal, normalizeLayout };

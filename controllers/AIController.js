@@ -252,6 +252,7 @@ async function executeStudioFeature(req, res, feature, handler) {
 const aiStudioService = require('../services/aiStudioService');
 
 exports.scanLabel = (req, res) => executeStudioFeature(req, res, 'scan', aiStudioService.scan);
+exports.refineScan = (req, res) => executeStudioFeature(req, res, 'scan', aiStudioService.refineScan);
 exports.designLabel = (req, res) => executeStudioFeature(req, res, 'design', aiStudioService.design);
 exports.voiceLabel = (req, res) => executeStudioFeature(req, res, 'voice', aiStudioService.voice);
 exports.imageToThermal = (req, res) => executeStudioFeature(req, res, 'thermal', aiStudioService.thermal);
