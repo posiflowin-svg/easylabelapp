@@ -92,7 +92,7 @@ button:hover{background:#f8fafc}
   white-space:nowrap;
 }
 .category-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:15px}
-.category-table{width:100%;border-collapse:collapse;min-width:760px;background:#fff}
+.category-table{width:100%;border-collapse:collapse;min-width:660px;background:#fff}
 .category-table th,.category-table td{padding:13px 14px;text-align:left;border-bottom:1px solid var(--line)}
 .category-table th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#667085;background:#f8fafc}
 .category-table tr:last-child td{border-bottom:0}
@@ -269,7 +269,6 @@ button:hover{background:#f8fafc}
             <th>Order</th>
             <th>Status</th>
             <th>Save</th>
-            <th>Delete</th>
           </tr>
         </thead>
         <tbody>
@@ -287,11 +286,7 @@ button:hover{background:#f8fafc}
               </td>
               <td><button class="secondary small-btn" type="submit">Save</button></td>
             </form>
-            <td>
-              <form action="/api/borders/admin/categories/<%= c._id %>/delete" method="post" onsubmit="return confirm('Delete this category? It must not contain borders.')">
-                <button class="danger small-btn" type="submit">Delete</button>
-              </form>
-            </td>
+
           </tr>
         <% }) %>
         </tbody>
