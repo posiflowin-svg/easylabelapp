@@ -1,17 +1,94 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Border Management</title>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Border Management</title>
 <style>
-body{font-family:Arial,sans-serif;background:#f6f7f9;margin:0;padding:24px;color:#171b25}h1{color:#ff2d2d}.card{background:#fff;padding:20px;border-radius:16px;margin-bottom:18px;box-shadow:0 8px 28px rgba(16,24,40,.06)}form{display:flex;gap:12px;flex-wrap:wrap;align-items:end}label{font-weight:700;font-size:13px}input,select,button{padding:11px;border:1px solid #dfe3ea;border-radius:9px;background:#fff}button{cursor:pointer;font-weight:700}.primary{background:#ff2d2d;color:#fff;border-color:#ff2d2d}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}.item{background:#fff;border:1px solid #eceef2;border-radius:14px;padding:12px}.item img{width:100%;height:125px;object-fit:contain;background:#fafafa;border-radius:9px}.tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800;margin-top:6px}.free{background:#dcfce7;color:#166534}.premium{background:#fff0c2;color:#8a5a00}.business{background:#ebe5ff;color:#5634c9}.actions{display:flex;gap:7px;margin-top:10px}.actions form{margin:0}.hint{color:#667085;line-height:1.5}
-</style></head><body>
+:root{--red:#ff2d2d;--bg:#f6f7f9;--text:#171b25;--muted:#667085;--line:#e6e9ef}
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:var(--bg);margin:0;padding:24px;color:var(--text)}
+h1{margin:0 0 20px;color:var(--red)}h2{margin:0 0 14px}.card{background:#fff;padding:20px;border-radius:16px;margin-bottom:18px;box-shadow:0 8px 28px rgba(16,24,40,.06)}
+form{display:flex;gap:12px;flex-wrap:wrap;align-items:end}label{font-weight:700;font-size:13px;display:block}input,select,button{padding:11px;border:1px solid #dfe3ea;border-radius:9px;background:#fff;font:inherit}button{cursor:pointer;font-weight:700}.primary{background:var(--red);color:#fff;border-color:var(--red)}.danger{color:#b42318}.secondary{background:#f3f4f6}.hint{color:var(--muted);line-height:1.5}.notice{padding:12px 14px;border-radius:10px;margin-bottom:16px}.success{background:#dcfce7;color:#166534}.error{background:#fee2e2;color:#991b1b}
+.management{display:grid;grid-template-columns:minmax(300px,.75fr) minmax(500px,1.7fr);gap:18px}.category-list{display:flex;flex-direction:column;gap:10px}.category-row{border:1px solid var(--line);border-radius:12px;padding:10px}.category-row form{display:grid;grid-template-columns:1fr 1fr 80px auto;align-items:center;gap:8px}.category-actions{display:flex;gap:7px;margin-top:8px}.category-actions form{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}.item{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px}.item img{width:100%;height:145px;object-fit:contain;background:#fafafa;border-radius:9px}.item h3{margin:10px 0 5px}.meta{color:var(--muted);font-size:13px}.tag{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800;margin:7px 0}.free{background:#dcfce7;color:#166534}.premium{background:#fff0c2;color:#8a5a00}.business{background:#ebe5ff;color:#5634c9}.actions{display:flex;gap:7px;margin-top:10px}.actions form{margin:0}.edit-box{display:none;border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.edit-box.open{display:block}.edit-box form{display:grid;grid-template-columns:1fr 1fr;align-items:end}.edit-box .wide{grid-column:1/-1}.checkbox{display:flex;gap:7px;align-items:center}.checkbox input{width:auto}
+@media(max-width:900px){.management{grid-template-columns:1fr}.category-row form{grid-template-columns:1fr 1fr}.edit-box form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
 <h1>Easy Label Borders</h1>
-<div class="card"><h2>Upload Border</h2><p class="hint">Upload a transparent black SVG, PNG or JPG. Set access to Free, Premium ₹99/₹299, or Business ₹299 only.</p>
+<% if(message){ %><div class="notice success"><%= message %></div><% } %>
+<% if(error){ %><div class="notice error"><%= error %></div><% } %>
+
+<div class="card">
+<h2>Upload Border</h2>
+<p class="hint">Upload a transparent black SVG, PNG or JPG. Categories are controlled from Category Management below.</p>
 <form action="/api/borders/admin/upload" method="post" enctype="multipart/form-data">
 <label>Name<br><input name="name" required></label>
-<label>Category<br><select name="category"><option>new</option><option>hot</option><option>fancy</option><option>plant</option><option>holiday</option><option>animal</option></select></label>
+<label>Category<br><select name="category" required><% categories.filter(c=>c.active).forEach(c=>{ %><option value="<%= c.name %>"><%= c.label %></option><% }) %></select></label>
 <label>Plan access<br><select name="accessLevel"><option value="premium" selected>Premium ₹99 + Business ₹299</option><option value="business">Business ₹299 only</option><option value="free">Free users</option></select></label>
 <label>Order<br><input name="sortOrder" type="number" value="0"></label>
 <input name="border" type="file" accept="image/svg+xml,image/png,image/jpeg,.svg,.png,.jpg,.jpeg" required>
-<button class="primary">Upload Border</button></form></div>
-<div class="grid"><% borders.forEach(b=>{ const level=b.accessLevel||'free'; %>
-<div class="item"><img src="<%= b.thumbnailUrl || b.imageUrl %>" alt="<%= b.name %>"><h3><%= b.name %></h3><div><%= b.category %></div><span class="tag <%= level %>"><%= level==='business'?'BUSINESS ₹299':level==='premium'?'PREMIUM ₹99/₹299':'FREE' %></span><div><%= b.active?'Active':'Disabled' %></div><div class="actions"><form action="/api/borders/admin/<%= b._id %>/toggle" method="post"><button>Enable/Disable</button></form><form action="/api/borders/admin/<%= b._id %>/delete" method="post" onsubmit="return confirm('Delete border?')"><button>Delete</button></form></div></div>
-<% }) %></div></body></html>
+<button class="primary">Upload Border</button>
+</form>
+</div>
+
+<div class="management">
+<section class="card">
+<h2>Category Management</h2>
+<form action="/api/borders/admin/categories/create" method="post" style="margin-bottom:15px">
+<label>Category label<br><input name="label" placeholder="Example: Wedding" required></label>
+<label>Category key<br><input name="name" placeholder="wedding" required></label>
+<label>Order<br><input name="sortOrder" type="number" value="0" style="width:90px"></label>
+<button class="primary">Add Category</button>
+</form>
+<div class="category-list">
+<% categories.forEach(c=>{ %>
+<div class="category-row">
+<form action="/api/borders/admin/categories/<%= c._id %>/update" method="post">
+<input name="label" value="<%= c.label %>" required>
+<input name="name" value="<%= c.name %>" required>
+<input name="sortOrder" type="number" value="<%= c.sortOrder %>">
+<label class="checkbox"><input name="active" type="checkbox" value="true" <%= c.active?'checked':'' %>> Active</label>
+<button class="secondary">Save</button>
+</form>
+<div class="category-actions"><form action="/api/borders/admin/categories/<%= c._id %>/delete" method="post" onsubmit="return confirm('Delete this category? It must not contain borders.')"><button class="danger">Delete</button></form></div>
+</div>
+<% }) %>
+</div>
+</section>
+
+<section>
+<div class="grid">
+<% borders.forEach(b=>{ const level=b.accessLevel||'free'; %>
+<div class="item">
+<img src="<%= b.thumbnailUrl || b.imageUrl %>" alt="<%= b.name %>">
+<h3><%= b.name %></h3>
+<div class="meta"><%= b.category %> · Order <%= b.sortOrder %></div>
+<span class="tag <%= level %>"><%= level==='business'?'BUSINESS ₹299':level==='premium'?'PREMIUM ₹99/₹299':'FREE' %></span>
+<div class="meta"><%= b.active?'Active':'Disabled' %></div>
+<div class="actions">
+<button type="button" onclick="toggleEdit('<%= b._id %>')">Edit</button>
+<form action="/api/borders/admin/<%= b._id %>/toggle" method="post"><button>Enable/Disable</button></form>
+<form action="/api/borders/admin/<%= b._id %>/delete" method="post" onsubmit="return confirm('Delete border?')"><button class="danger">Delete</button></form>
+</div>
+<div class="edit-box" id="edit-<%= b._id %>">
+<form action="/api/borders/admin/<%= b._id %>/update" method="post" enctype="multipart/form-data">
+<label>Name<br><input name="name" value="<%= b.name %>" required></label>
+<label>Category<br><select name="category"><% categories.filter(c=>c.active).forEach(c=>{ %><option value="<%= c.name %>" <%= c.name===b.category?'selected':'' %>><%= c.label %></option><% }) %></select></label>
+<label>Plan access<br><select name="accessLevel"><option value="free" <%= level==='free'?'selected':'' %>>Free users</option><option value="premium" <%= level==='premium'?'selected':'' %>>Premium ₹99 + Business ₹299</option><option value="business" <%= level==='business'?'selected':'' %>>Business ₹299 only</option></select></label>
+<label>Order<br><input name="sortOrder" type="number" value="<%= b.sortOrder %>"></label>
+<label class="checkbox"><input name="active" type="checkbox" value="true" <%= b.active?'checked':'' %>> Active</label>
+<label class="wide">Replace image (optional)<br><input name="border" type="file" accept="image/svg+xml,image/png,image/jpeg,.svg,.png,.jpg,.jpeg"></label>
+<button class="primary wide">Save Changes</button>
+</form>
+</div>
+</div>
+<% }) %>
+</div>
+</section>
+</div>
+<script>
+function toggleEdit(id){document.getElementById('edit-'+id).classList.toggle('open')}
+</script>
+</body>
+</html>

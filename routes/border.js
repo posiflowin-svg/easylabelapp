@@ -28,8 +28,15 @@ const upload = multer({
 });
 
 router.get('/', controller.list);
+router.get('/categories', controller.categories);
+
 router.post('/admin/upload', upload.single('border'), controller.create);
+router.post('/admin/:id/update', upload.single('border'), controller.update);
 router.post('/admin/:id/delete', controller.remove);
 router.post('/admin/:id/toggle', controller.toggle);
+
+router.post('/admin/categories/create', controller.createCategory);
+router.post('/admin/categories/:id/update', controller.updateCategory);
+router.post('/admin/categories/:id/delete', controller.removeCategory);
 
 module.exports = router;
