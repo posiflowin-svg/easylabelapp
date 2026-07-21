@@ -74,7 +74,22 @@ button:hover{background:#f8fafc}
   gap:12px;
   align-items:end;
   margin-top:18px;
+  margin-bottom:16px;
+}
+.category-delete-bar{
+  display:grid;
+  grid-template-columns:minmax(240px,420px) auto;
+  gap:12px;
+  align-items:end;
   margin-bottom:20px;
+  padding:14px;
+  background:#fff8f7;
+  border:1px solid #ffd8d5;
+  border-radius:14px;
+}
+.category-delete-bar .danger{
+  background:#fff;
+  white-space:nowrap;
 }
 .category-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:15px}
 .category-table{width:100%;border-collapse:collapse;min-width:760px;background:#fff}
@@ -159,6 +174,7 @@ button:hover{background:#f8fafc}
   body{padding:16px}
   .card{padding:18px;border-radius:16px}
   .upload-form,.category-create{grid-template-columns:1fr 1fr}
+  .category-delete-bar{grid-template-columns:1fr}
   .border-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:560px){
@@ -227,6 +243,21 @@ button:hover{background:#f8fafc}
       <label>Category key<input name="name" placeholder="wedding" required></label>
       <label>Order<input name="sortOrder" type="number" value="0"></label>
       <button class="primary" type="submit">Add Category</button>
+    </form>
+
+    <form class="category-delete-bar"
+          action=""
+          method="post"
+          onsubmit="return prepareSelectedCategoryDelete(this)">
+      <label>Select category to delete
+        <select name="categoryId" required>
+          <option value="">Choose category</option>
+          <% categories.forEach(c=>{ %>
+            <option value="<%= c._id %>"><%= c.label %> (<%= c.name %>)</option>
+          <% }) %>
+        </select>
+      </label>
+      <button class="danger" type="submit">Delete Selected Category</button>
     </form>
 
     <div class="category-table-wrap">
@@ -351,6 +382,21 @@ button:hover{background:#f8fafc}
 function toggleEdit(id){
   const target=document.getElementById('edit-'+id);
   if(target) target.classList.toggle('open');
+}
+
+function prepareSelectedCategoryDelete(form){
+  const select=form.querySelector('select[name="categoryId"]');
+  if(!select || !select.value){
+    alert('Please select a category to delete.');
+    return false;
+  }
+  const label=select.options[select.selectedIndex].text;
+  if(!confirm('Delete category "'+label+'"? The category must not contain borders.')){
+    return false;
+  }
+  form.action='/api/borders/admin/categories/'+encodeURIComponent(select.value)+'/delete';
+  select.removeAttribute('name');
+  return true;
 }
 </script>
 </body>
