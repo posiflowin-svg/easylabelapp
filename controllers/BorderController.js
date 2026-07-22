@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const AdmZip = require('adm-zip');
 const Border = require('../models/Border');
 const BorderCategory = require('../models/BorderCategory');
 
@@ -37,20 +39,96 @@ function removeLocalAsset(url) {
   }
 }
 
+function removeUploadedZip(req) {
+  try {
+    if (req.file && req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+  } catch (error) {
+    console.warn('Unable to remove uploaded ZIP:', error.message);
+  }
+}
+
 function cleanupUploadedFiles(req) {
+  removeUploadedZip(req);
   Object.values(req.files || {}).flat().forEach(file => {
-    removeLocalAsset(`${publicBaseUrl(req)}/border-assets/${file.filename}`);
+    if (file && file.filename) removeLocalAsset(`${publicBaseUrl(req)}/border-assets/${file.filename}`);
   });
 }
 
-function uploadedVariants(req) {
-  const base = publicBaseUrl(req);
-  const result = {};
+function sanitiseBaseName(value) {
+  return String(value || 'border')
+    .replace(/[^a-z0-9_-]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 70) || 'border';
+}
+
+function detectSupportedSize(filename) {
+  const normalised = String(filename || '').toLowerCase().replace(/[×*]/g, 'x');
   for (const size of SUPPORTED_SIZES) {
-    const file = req.files && req.files[`border_${size}`] && req.files[`border_${size}`][0];
-    if (file) result[size] = `${base}/border-assets/${file.filename}`;
+    const escaped = size.replace('x', '[x_-]?');
+    const pattern = new RegExp(`(^|[^0-9])${escaped}([^0-9]|$)`, 'i');
+    if (pattern.test(normalised)) return size;
   }
-  return result;
+  return '';
+}
+
+function extractZipVariants(req) {
+  if (!req.file) throw new Error('Please choose one ZIP file containing the border sizes.');
+
+  const zipPath = req.file.path;
+  const destination = path.join(__dirname, '..', 'public', 'border-assets');
+  const base = publicBaseUrl(req);
+  const created = [];
+
+  try {
+    const zip = new AdmZip(zipPath);
+    const entries = zip.getEntries();
+    if (!entries.length) throw new Error('The uploaded ZIP is empty.');
+    if (entries.length > 60) throw new Error('The ZIP contains too many files. Maximum 60 entries are allowed.');
+
+    const variants = {};
+    const ignored = [];
+    let totalBytes = 0;
+
+    for (const entry of entries) {
+      if (entry.isDirectory) continue;
+      const originalName = path.basename(entry.entryName || '');
+      if (!originalName || originalName.startsWith('.') || originalName === '__MACOSX') continue;
+
+      const extension = path.extname(originalName).toLowerCase();
+      if (!['.svg', '.png', '.jpg', '.jpeg'].includes(extension)) {
+        ignored.push(originalName);
+        continue;
+      }
+
+      const size = detectSupportedSize(originalName);
+      if (!size) {
+        ignored.push(originalName);
+        continue;
+      }
+      if (variants[size]) throw new Error(`More than one file was found for ${size}. Keep only one file for each size.`);
+
+      const data = entry.getData();
+      totalBytes += data.length;
+      if (data.length > 10 * 1024 * 1024) throw new Error(`${originalName} is larger than 10 MB.`);
+      if (totalBytes > 50 * 1024 * 1024) throw new Error('Extracted ZIP content is larger than 50 MB.');
+
+      const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}-${sanitiseBaseName(req.body.name)}-${size}${extension}`;
+      fs.writeFileSync(path.join(destination, filename), data);
+      created.push(filename);
+      variants[size] = `${base}/border-assets/${filename}`;
+    }
+
+    if (!Object.keys(variants).length) {
+      throw new Error('No supported border files were found. Filenames must include a size such as 50x25.svg or Plain_Border_50x25.svg.');
+    }
+
+    return { variants, ignored };
+  } catch (error) {
+    created.forEach(filename => removeLocalAsset(`${base}/border-assets/${filename}`));
+    throw error;
+  } finally {
+    removeUploadedZip(req);
+  }
 }
 
 function mapToObject(value) {
@@ -128,8 +206,8 @@ exports.page = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const variants = uploadedVariants(req);
-    if (!Object.keys(variants).length) throw new Error('Select at least one label size and upload its SVG/PNG/JPG file.');
+    const zipResult = extractZipVariants(req);
+    const variants = zipResult.variants;
 
     const category = categoryKey(req.body.category) || 'new';
     if (!(await BorderCategory.exists({ name: category, active: true }))) {
@@ -144,7 +222,9 @@ exports.create = async (req, res) => {
       previewUrl, thumbnailUrl: previewUrl, imageUrl: firstVariant(variants),
       accessLevel, isVip: accessLevel !== 'free', sortOrder: Number(req.body.sortOrder || 0), active: true
     });
-    res.redirect('/border-management?message=' + encodeURIComponent('Border design and size files uploaded successfully.'));
+    const uploadedSizes = Object.keys(variants).join(', ');
+    const ignoredNote = zipResult.ignored.length ? ` Ignored: ${zipResult.ignored.join(', ')}.` : '';
+    res.redirect('/border-management?message=' + encodeURIComponent(`Border ZIP uploaded successfully. Sizes: ${uploadedSizes}.${ignoredNote}`));
   } catch (error) {
     cleanupUploadedFiles(req);
     res.redirect('/border-management?error=' + encodeURIComponent(error.message));
@@ -166,17 +246,22 @@ exports.update = async (req, res) => {
     border.active = req.body.active === 'true' || req.body.active === 'on';
 
     const existing = mapToObject(border.variants);
-    const replacements = uploadedVariants(req);
-    for (const [size, url] of Object.entries(replacements)) {
-      if (existing[size]) removeLocalAsset(existing[size]);
-      existing[size] = url;
+    let ignored = [];
+    if (req.file) {
+      const zipResult = extractZipVariants(req);
+      ignored = zipResult.ignored;
+      for (const [size, url] of Object.entries(zipResult.variants)) {
+        if (existing[size]) removeLocalAsset(existing[size]);
+        existing[size] = url;
+      }
     }
     border.variants = existing;
     border.previewUrl = existing['50x25'] || firstVariant(existing) || border.previewUrl;
     border.thumbnailUrl = border.previewUrl;
     border.imageUrl = firstVariant(existing) || border.imageUrl;
     await border.save();
-    res.redirect('/border-management?message=' + encodeURIComponent('Border design updated successfully.'));
+    const ignoredNote = ignored.length ? ` Ignored: ${ignored.join(', ')}.` : '';
+    res.redirect('/border-management?message=' + encodeURIComponent(`Border design updated successfully.${ignoredNote}`));
   } catch (error) {
     cleanupUploadedFiles(req);
     res.redirect('/border-management?error=' + encodeURIComponent(error.message));

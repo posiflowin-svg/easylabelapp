@@ -15,29 +15,21 @@ const storage = multer.diskStorage({
   )
 });
 
-const allowedMimeTypes = new Set(['image/png', 'image/jpeg', 'image/svg+xml']);
-const allowedExtensions = new Set(['.png', '.jpg', '.jpeg', '.svg']);
-const upload = multer({
+const uploadZip = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024, files: 12 },
+  limits: { fileSize: 50 * 1024 * 1024, files: 1 },
   fileFilter: (req, file, callback) => {
     const extension = path.extname(file.originalname || '').toLowerCase();
-    const allowed = allowedMimeTypes.has(file.mimetype) && allowedExtensions.has(extension);
-    callback(allowed ? null : new Error('Only SVG, PNG, JPG and JPEG borders are allowed'), allowed);
+    const isZip = extension === '.zip' && ['application/zip', 'application/x-zip-compressed', 'application/octet-stream'].includes(file.mimetype);
+    callback(isZip ? null : new Error('Please upload a ZIP file only.'), isZip);
   }
 });
-
-const SIZE_FIELDS = [
-  'border_50x25','border_50x30','border_50x50','border_50x12',
-  'border_38x38','border_38x25','border_38x15','border_75x25',
-  'border_75x50','border_100x50','border_100x150','border_100x15'
-].map(name => ({ name, maxCount: 1 }));
 
 router.get('/', controller.list);
 router.get('/categories', controller.categories);
 
-router.post('/admin/upload', upload.fields(SIZE_FIELDS), controller.create);
-router.post('/admin/:id/update', upload.fields(SIZE_FIELDS), controller.update);
+router.post('/admin/upload', uploadZip.single('borderZip'), controller.create);
+router.post('/admin/:id/update', uploadZip.single('borderZip'), controller.update);
 router.post('/admin/:id/delete', controller.remove);
 router.post('/admin/:id/toggle', controller.toggle);
 
