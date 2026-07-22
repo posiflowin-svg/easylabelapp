@@ -1,31 +1,63 @@
-const User   = require('../models/User')
-const bcrypt = require('bcryptjs')
-const jwt    = require('jsonwebtoken')
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-// Generate referral code using user ID and timestamp
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+const normalizePhone = (value) => String(value || '').replace(/\D/g, '').trim();
+
 const generateReferralCode = (userId) => {
     return `${userId.slice(-4)}${Date.now().toString().slice(-6)}`;
 };
 
-const register = async (req, res, next) => {
+const publicUser = (user) => ({
+    id: user._id.toString(),
+    name: user.name || '',
+    email: user.email || '',
+    phone: user.phone || '',
+    referal: user.referralCode || '',
+    referralCode: user.referralCode || ''
+});
+
+const register = async (req, res) => {
     try {
-        const { name, email, phone, password, referredBy } = req.body;
+        const name = String(req.body.name || '').trim();
+        const email = normalizeEmail(req.body.email);
+        const phone = normalizePhone(req.body.phone);
+        const password = String(req.body.password || '');
+        const referredBy = String(req.body.referredBy || '').trim();
 
-        // Validate required fields
         if (!name || !email || !phone || !password) {
-            return res.status(400).json({ message: 'All fields are required' });
+            return res.status(400).json({
+                success: false,
+                message: 'All fields are required'
+            });
         }
 
-        // Check if email or phone already exists
-        const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
+        if (!/^\S+@\S+\.\S+$/.test(email)) {
+            return res.status(400).json({ success: false, message: 'Please enter a valid email address' });
+        }
+
+        if (phone.length !== 10) {
+            return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit mobile number' });
+        }
+
+        const existingUser = await User.findOne({
+            $or: [
+                { email: { $regex: `^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } },
+                { phone }
+            ]
+        });
+
         if (existingUser) {
-            return res.status(400).json({ message: 'Email or phone already in use' });
+            return res.status(409).json({
+                success: false,
+                message: existingUser.email && normalizeEmail(existingUser.email) === email
+                    ? 'Email already registered. Please login.'
+                    : 'Mobile number already registered. Please login.'
+            });
         }
 
-        // Hash password
         const hashedPass = await bcrypt.hash(password, 10);
-
-        // Create new user
         const user = new User({
             name,
             email,
@@ -36,148 +68,122 @@ const register = async (req, res, next) => {
             rewardGiven: false
         });
 
-        await user.save();
-
-        // Generate referral code based on user ID and timestamp
+        // Create the referral code before the first save. This avoids a duplicate
+        // null value on older MongoDB unique referralCode indexes.
         user.referralCode = generateReferralCode(user._id.toString());
         await user.save();
 
-        res.status(201).json({ message: 'User Added Successfully!', referralCode: user.referralCode });
+        return res.status(201).json({
+            success: true,
+            message: 'User Added Successfully!',
+            referralCode: user.referralCode,
+            user: publicUser(user)
+        });
     } catch (error) {
-        res.status(500).json({ message: 'An error occurred!', error: error.message });
+        console.error('Register error:', error);
+        if (error && error.code === 11000) {
+            return res.status(409).json({ success: false, message: 'Email, mobile number, or referral code already exists' });
+        }
+        return res.status(500).json({ success: false, message: 'Registration failed. Please try again.' });
     }
 };
-// Update hasPurchased and rewardGiven by user email
+
 const updateUserStatus = async (req, res) => {
     try {
-        const { email } = req.query;  // Use req.query to get email from query parameters
+        const email = normalizeEmail(req.query.email);
         const { hasPurchased, rewardGiven } = req.body;
 
-        if (!email) {
-            return res.status(400).json({ message: 'Email is required' });
+        if (!email) return res.status(400).json({ message: 'Email is required' });
+
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (hasPurchased !== undefined) user.hasPurchased = hasPurchased;
+        if (rewardGiven !== undefined) user.rewardGiven = rewardGiven;
+        await user.save();
+
+        return res.json({ message: 'User status updated successfully!', user });
+    } catch (error) {
+        console.error('Update user status error:', error);
+        return res.status(500).json({ message: 'An error occurred!', error: error.message });
+    }
+};
+
+const login = async (req, res) => {
+    try {
+        const username = String(req.body.username || req.body.email || req.body.phone || '').trim();
+        const password = String(req.body.password || '');
+        if (!username || !password) {
+            return res.status(400).json({ success: false, message: 'Username and password are required' });
         }
+
+        const email = normalizeEmail(username);
+        const phone = normalizePhone(username);
+        const user = await User.findOne({ $or: [{ email }, { phone }] });
+        if (!user) return res.status(404).json({ success: false, message: 'No user found!' });
+
+        const matched = await bcrypt.compare(password, user.password || '');
+        if (!matched) return res.status(401).json({ success: false, message: 'Password does not match!' });
+
+        const secret = process.env.JWT_SECRET || 'verySecretValue';
+        const token = jwt.sign({ userId: user._id.toString(), name: user.name, email: user.email }, secret, { expiresIn: '7d' });
+        return res.json({ success: true, message: 'Login Successful!', token, user: publicUser(user) });
+    } catch (error) {
+        console.error('Login error:', error);
+        return res.status(500).json({ success: false, message: 'Login failed. Please try again.' });
+    }
+};
+
+const quickLogin = async (req, res) => {
+    try {
+        const email = normalizeEmail(req.body.email);
+        if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
 
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ success: false, message: 'No user found with this email!' });
         }
 
-        user.hasPurchased = hasPurchased !== undefined ? hasPurchased : user.hasPurchased;
-        user.rewardGiven = rewardGiven !== undefined ? rewardGiven : user.rewardGiven;
-
-        await user.save();
-        res.json({ message: 'User status updated successfully!', user });
-    } catch (error) {
-        res.status(500).json({ message: 'An error occurred!', error: error.message });
-    }
-};
-
-const login = (req, res, next) =>{
-    var username = req.body.username
-    var password = req.body.password
-
-    User.findOne({$or: [{email:username}, {phone:username}]})
-    .then(user => {
-        if(user) {
-            bcrypt.compare(password, user.password, function(err, result) {
-                if(err) {
-                    res.json({
-                        error: err
-                    })
-                }
-                if(result){
-                    let token = jwt.sign({name:user.name}, 'verySecretValue', {expiresIn: '1h'})
-                    res.json({
-                        message: 'Login Successful!',
-                        token
-                    })
-                }else{
-                    res.json({
-                        message: 'Password does not macthed!'
-                    })
-                }
-            })
-        } else {
-            res.json({
-                message: 'No user Found!'
-            })
-        }
-    })
-}
-
-const quickLogin = (req, res, next) => {
-    const email = req.body.email;
-
-    User.findOne({ email: email })
-        .then(user => {
-            if (user) {
-                res.json({
-                    message: 'Quick Login Successful!',
-                    user: {
-                        name: user.name,
-                        email: user.email,
-                        referal: user.referralCode,
-                        phone: user.phone
-                    }
-                });
-            } else {
-                res.json({
-                    message: 'No user found with this email!'
-                });
-            }
-        })
-        .catch(error => {
-            res.json({
-                message: 'An error occurred!',
-                error: error
-            });
+        return res.json({
+            success: true,
+            message: 'Quick Login Successful!',
+            user: publicUser(user)
         });
+    } catch (error) {
+        console.error('Quick login error:', error);
+        return res.status(500).json({ success: false, message: 'Login failed. Please try again.' });
+    }
 };
 
 const getReferredUsers = async (req, res) => {
     try {
-        const { phone } = req.query; // Get phone number from query parameters
+        const phone = normalizePhone(req.query.phone);
+        if (!phone) return res.status(400).json({ message: 'Phone number is required' });
 
-        if (!phone) {
-            return res.status(400).json({ message: 'Phone number is required' });
-        }
-
-        // Find the user with the given phone number
         const user = await User.findOne({ phone });
-
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
+        if (!user) return res.status(404).json({ message: 'User not found' });
 
         if (!user.referralCode) {
-            return res.status(404).json({ 
+            return res.status(404).json({
                 message: 'No referral code available for this user',
                 referralCode: null,
                 referredUsers: []
             });
         }
 
-        // Use the retrieved referral code to get referred users
         const referredUsers = await User.find({ referredBy: user.referralCode })
             .select('name email hasPurchased rewardGiven');
 
-        res.json({ 
-            message: referredUsers.length > 0 
-                ? 'Referred users retrieved successfully!' 
-                : 'No referred users found',
+        return res.json({
+            message: referredUsers.length > 0 ? 'Referred users retrieved successfully!' : 'No referred users found',
             referralCode: user.referralCode,
             referredUsers,
-            hasReferralCode: !!user.referralCode
+            hasReferralCode: Boolean(user.referralCode)
         });
     } catch (error) {
-        res.status(500).json({ 
-            message: 'An error occurred!', 
-            error: error.message 
-        });
+        console.error('Get referred users error:', error);
+        return res.status(500).json({ message: 'An error occurred!', error: error.message });
     }
 };
 
-
-module.exports = {
-    register, login, quickLogin, updateUserStatus, getReferredUsers
-}
+module.exports = { register, login, quickLogin, updateUserStatus, getReferredUsers };

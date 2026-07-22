@@ -6,7 +6,9 @@ const userSchema = new Schema({
         type: String
     },
     email: {
-        type: String
+        type: String,
+        trim: true,
+        lowercase: true
     },
     phone: {
         type: String
@@ -16,7 +18,8 @@ const userSchema = new Schema({
     },
     referralCode: {
         type: String,
-        unique: true
+        unique: true,
+        sparse: true
     },
     referredBy: {
         type: String,
