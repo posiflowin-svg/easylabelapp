@@ -67,6 +67,12 @@ button:hover{background:#f8fafc}
 }
 .upload-file input{padding:7px}
 .upload-form .primary{white-space:nowrap}
+.size-upload-box{grid-column:1/-1;border:1px solid var(--line);border-radius:15px;padding:16px;background:#fbfcfe}
+.size-upload-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.size-file{display:grid;grid-template-columns:92px 1fr;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:11px;background:#fff}
+.size-file strong{font-size:14px}
+.size-file input{min-width:0;padding:6px}
+.variant-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.variant-tag{padding:4px 7px;border-radius:7px;background:#eef2f7;font-size:11px;font-weight:800;color:#475467}
 
 .category-create{
   display:grid;
@@ -171,6 +177,7 @@ button:hover{background:#f8fafc}
   .border-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media(max-width:850px){
+  .size-upload-grid{grid-template-columns:1fr 1fr}
   body{padding:16px}
   .card{padding:18px;border-radius:16px}
   .upload-form,.category-create{grid-template-columns:1fr 1fr}
@@ -178,6 +185,7 @@ button:hover{background:#f8fafc}
   .border-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:560px){
+  .size-upload-grid{grid-template-columns:1fr}
   h1{font-size:28px}
   h2{font-size:22px}
   .upload-form,.category-create,.edit-form{grid-template-columns:1fr}
@@ -202,16 +210,12 @@ button:hover{background:#f8fafc}
     </div>
 
     <form class="upload-form" action="/api/borders/admin/upload" method="post" enctype="multipart/form-data">
-      <label>Name<input name="name" required placeholder="Example: Vintage Frame"></label>
-
+      <label>Name<input name="name" required placeholder="Example: Plain Rounded Border"></label>
       <label>Category
         <select name="category" required>
-          <% categories.filter(c=>c.active).forEach(c=>{ %>
-            <option value="<%= c.name %>"><%= c.label %></option>
-          <% }) %>
+          <% categories.filter(c=>c.active).forEach(c=>{ %><option value="<%= c.name %>"><%= c.label %></option><% }) %>
         </select>
       </label>
-
       <label>Plan access
         <select name="accessLevel">
           <option value="premium" selected>Premium ₹99 + Business ₹299</option>
@@ -219,14 +223,18 @@ button:hover{background:#f8fafc}
           <option value="free">Free users</option>
         </select>
       </label>
-
       <label>Order<input name="sortOrder" type="number" value="0"></label>
 
-      <label class="upload-file">Border file
-        <input name="border" type="file" accept="image/svg+xml,image/png,image/jpeg,.svg,.png,.jpg,.jpeg" required>
-      </label>
-
-      <button class="primary" type="submit">Upload Border</button>
+      <div class="size-upload-box">
+        <strong>Select multiple sizes and upload the matching SVG/PNG/JPG for each size</strong>
+        <p class="hint">The 50×25 file is used as the common library preview. When a user selects the design, the app imports the exact file matching the current label size.</p>
+        <div class="size-upload-grid">
+          <% sizes.forEach(size=>{ %>
+            <label class="size-file"><strong><%= size.replace('x','×') %></strong><input name="border_<%= size %>" type="file" accept="image/svg+xml,image/png,image/jpeg,.svg,.png,.jpg,.jpeg"></label>
+          <% }) %>
+        </div>
+      </div>
+      <button class="primary" type="submit">Upload Design</button>
     </form>
   </section>
 
@@ -298,7 +306,7 @@ button:hover{background:#f8fafc}
     <div class="section-head">
       <div>
         <h2>Uploaded Borders</h2>
-        <p class="hint">Edit border details, access level, display order, status or replace the source image.</p>
+        <p class="hint">Edit the design details or replace only the size files that need updating.</p>
       </div>
       <div class="meta"><%= borders.length %> border<%= borders.length===1?'':'s' %></div>
     </div>
@@ -320,6 +328,7 @@ button:hover{background:#f8fafc}
 
           <h3 class="border-title" title="<%= b.name %>"><%= b.name %></h3>
           <div class="meta"><%= b.category %> · Order <%= b.sortOrder %></div>
+          <div class="variant-tags"><% Object.keys(b.variants || {}).forEach(size=>{ %><span class="variant-tag"><%= size.replace('x','×') %></span><% }) %></div>
           <span class="tag <%= level %>"><%= level==='business'?'BUSINESS ₹299':level==='premium'?'PREMIUM ₹99/₹299':'FREE' %></span>
           <div class="<%= b.active?'status-active':'status-disabled' %>"><%= b.active?'Active':'Disabled' %></div>
 
@@ -360,10 +369,15 @@ button:hover{background:#f8fafc}
                 Active
               </label>
 
-              <label class="wide">Replace image (optional)
-                <input name="border" type="file" accept="image/svg+xml,image/png,image/jpeg,.svg,.png,.jpg,.jpeg">
-              </label>
-
+              <div class="wide size-upload-box">
+                <strong>Replace size files (optional)</strong>
+                <p class="hint">Choose only the sizes you want to replace. Existing size files remain unchanged.</p>
+                <div class="size-upload-grid">
+                  <% sizes.forEach(size=>{ %>
+                    <label class="size-file"><strong><%= size.replace('x','×') %></strong><input name="border_<%= size %>" type="file" accept="image/svg+xml,image/png,image/jpeg,.svg,.png,.jpg,.jpeg"></label>
+                  <% }) %>
+                </div>
+              </div>
               <button class="primary wide" type="submit">Save Changes</button>
             </form>
           </div>
