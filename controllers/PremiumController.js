@@ -238,6 +238,44 @@ exports.updatePlan = async (req, res) => {
   }
 };
 
+
+exports.searchUsers = async (req, res) => {
+  try {
+    const raw = String(req.query.q || '').trim();
+    if (!raw) return res.json({ success: true, users: [] });
+
+    const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const digits = raw.replace(/\D/g, '');
+    const clauses = [];
+
+    if (raw.length >= 2) {
+      const rx = new RegExp(escapeRegex(raw), 'i');
+      clauses.push({ name: rx }, { email: rx });
+    }
+
+    if (digits) {
+      clauses.push({ phone: new RegExp(escapeRegex(digits)) });
+    }
+
+    if (mongoose.Types.ObjectId.isValid(raw)) {
+      clauses.push({ _id: raw });
+    }
+
+    if (!clauses.length) return res.json({ success: true, users: [] });
+
+    const users = await User.find({ $or: clauses })
+      .select('name email phone')
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('Premium user search error:', error);
+    res.status(500).json({ success: false, message: 'Unable to search users. ' + error.message });
+  }
+};
+
 exports.createSubscription = async (req, res) => {
   try {
     const { userId, planKey, expiryDate, autoRenew, notes, status } = req.body;

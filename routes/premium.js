@@ -11,6 +11,7 @@ router.delete('/features/:id', premiumController.deleteFeature);
 router.post('/plans', premiumController.createPlan);
 router.put('/plans/:id', premiumController.updatePlan);
 router.delete('/plans/:id', premiumController.deletePlan);
+router.get('/users/search', premiumController.searchUsers);
 router.post('/subscriptions', premiumController.createSubscription);
 router.put('/subscriptions/:id/status', premiumController.updateSubscriptionStatus);
 router.put('/subscriptions/:id/extend', premiumController.extendSubscription);
