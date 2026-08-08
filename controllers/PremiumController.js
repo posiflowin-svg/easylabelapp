@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const PremiumFeature = require('../models/PremiumFeature');
 const PremiumPlan = require('../models/PremiumPlan');
 const UserSubscription = require('../models/UserSubscription');
