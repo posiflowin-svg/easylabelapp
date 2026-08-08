@@ -23,6 +23,7 @@ const BillingRoute = require('./routes/billing');
 const NotificationsApiRoute = require('./routes/notificationsApi');
 const AIRoute = require('./routes/ai');
 const BorderRoute = require('./routes/border');
+const UsageAnalyticsRoute = require('./routes/usageAnalytics');
 const BorderController = require('./controllers/BorderController');
 const PremiumController = require('./controllers/PremiumController');
 const multer = require('multer');
@@ -83,6 +84,7 @@ app.get('/sells_users', (req, res) => {
 
 app.get('/premium-management', PremiumController.page);
 app.get('/border-management', BorderController.page);
+app.get('/usage-analytics', require('./controllers/UsageAnalyticsController').page);
 // Add the password verification route directly to app
 app.post('/api/verify-admin-password', (req, res) => {
     const { password } = req.body;
@@ -113,6 +115,7 @@ app.use('/api/billing/google', BillingRoute);
 app.use('/api/notifications', NotificationsApiRoute);
 app.use('/api/ai', AIRoute);
 app.use('/api/borders', BorderRoute);
+app.use('/api/usage', UsageAnalyticsRoute);
 
 // Import users CSV route
 app.post('/api/import-users', upload.single('file'), walletUserController.importUsers);
