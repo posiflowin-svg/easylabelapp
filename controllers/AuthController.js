@@ -136,12 +136,20 @@ const login = async (req, res) => {
 
 const quickLogin = async (req, res) => {
     try {
-        const email = normalizeEmail(req.body.email);
-        if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
+        // Quick login accepts either the registered email address or 10-digit mobile number.
+        const identifier = String(req.body.identifier || req.body.username || req.body.email || req.body.phone || '').trim();
+        if (!identifier) return res.status(400).json({ success: false, message: 'Email or mobile number is required' });
 
-        const user = await User.findOne({ email });
+        const isEmail = identifier.includes('@');
+        const email = normalizeEmail(identifier);
+        const phone = normalizePhone(identifier);
+        if (!isEmail && phone.length !== 10) {
+            return res.status(400).json({ success: false, message: 'Enter a valid email or 10-digit mobile number' });
+        }
+
+        const user = await User.findOne(isEmail ? { email } : { phone });
         if (!user) {
-            return res.status(404).json({ success: false, message: 'No user found with this email!' });
+            return res.status(404).json({ success: false, message: 'No user found with this email or mobile number!' });
         }
 
         return res.json({
