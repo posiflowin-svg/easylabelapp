@@ -24,6 +24,7 @@ const NotificationsApiRoute = require('./routes/notificationsApi');
 const AIRoute = require('./routes/ai');
 const BorderRoute = require('./routes/border');
 const UsageAnalyticsRoute = require('./routes/usageAnalytics');
+const CloudBackupRoute = require('./routes/cloudBackup');
 const BorderController = require('./controllers/BorderController');
 const PremiumController = require('./controllers/PremiumController');
 const multer = require('multer');
@@ -117,6 +118,7 @@ app.use('/api/notifications', NotificationsApiRoute);
 app.use('/api/ai', AIRoute);
 app.use('/api/borders', BorderRoute);
 app.use('/api/usage', UsageAnalyticsRoute);
+app.use('/api/cloud-backup', CloudBackupRoute);
 
 // Import users CSV route
 app.post('/api/import-users', upload.single('file'), walletUserController.importUsers);

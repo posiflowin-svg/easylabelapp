@@ -13,7 +13,7 @@ const DEFAULT_FEATURES = [
   { key: 'premium_fonts', name: 'Premium Fonts', description: 'Exclusive professional fonts for label design.', category: 'design', icon: 'fa-font', displayOrder: 1 },
   { key: 'premium_templates', name: 'Premium Label Templates', description: 'Professionally designed thermal label templates.', category: 'content', icon: 'fa-tags', displayOrder: 2 },
   { key: 'ai_label_design', name: 'AI Label Designer', description: 'AI-assisted editable thermal label layouts.', category: 'ai', icon: 'fa-wand-magic-sparkles', displayOrder: 3 },
-  { key: 'cloud_backup', name: 'Cloud Backup', description: 'Back up and restore user-created templates.', category: 'cloud', icon: 'fa-cloud-arrow-up', displayOrder: 4 },
+  { key: 'cloud_backup', name: 'Cloud Backup', description: 'Secure Quick Billing cloud sync for products, inventory, images, customers, suppliers and sales across devices.', category: 'cloud', icon: 'fa-cloud-arrow-up', displayOrder: 4 },
   { key: 'team_sharing', name: 'Team Sharing', description: 'Share and sync templates across authorised team phones.', category: 'team', icon: 'fa-users', displayOrder: 5 }
 ];
 
