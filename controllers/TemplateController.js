@@ -1,4 +1,23 @@
 const Template = require('../models/Template');
+const BUSINESS_CATEGORIES = [
+    'Commercial Retail',
+    'Grocery Store',
+    'Bakery',
+    'Restaurant & Food',
+    'Clothing',
+    'Jewelry',
+    'Beauty & Personal Care',
+    'School & Education',
+    'Medical & Pharmacy',
+    'Home Storage',
+    'Office & Work',
+    'Shipping & Warehouse',
+    'Digital Devices',
+    'Gardening',
+    'Festive Theme',
+    'Other'
+];
+
 
 const SUPPORTED_SIZES = new Set([
     '38x38', '38x25', '38x15',
@@ -229,19 +248,34 @@ const getByTemplateCategory = async (req, res) => {
 const category = async (req, res) => {
     try {
         const active = { isActive: { $ne: false } };
+        const [dbMainCategories, templateCategories] = await Promise.all([
+            Template.distinct('mainCategory', active),
+            Template.distinct('templateCategory', active)
+        ]);
+
+        // Always return the same Business Category choices shown in the
+        // Manual Template Manager. Any legacy/custom category already stored
+        // on templates is appended without removing the canonical choices.
+        const mainCategories = [...BUSINESS_CATEGORIES];
+        for (const value of dbMainCategories || []) {
+            const categoryName = String(value || '').trim();
+            if (categoryName && !mainCategories.includes(categoryName)) {
+                mainCategories.push(categoryName);
+            }
+        }
 
         res.json({
             success: true,
-            mainCategories: await Template.distinct('mainCategory', active),
-            templateCategories: await Template.distinct(
-                'templateCategory',
-                active
-            )
+            mainCategories,
+            templateCategories: templateCategories || []
         });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Unable to fetch categories.'
+        // Even if Mongo is temporarily unavailable, onboarding can still use
+        // the canonical Business Category list.
+        res.json({
+            success: true,
+            mainCategories: BUSINESS_CATEGORIES,
+            templateCategories: []
         });
     }
 };
