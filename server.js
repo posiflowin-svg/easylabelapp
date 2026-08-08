@@ -84,6 +84,7 @@ app.get('/sells_users', (req, res) => {
 
 app.get('/premium-management', PremiumController.page);
 app.get('/border-management', BorderController.page);
+app.get('/api/usage/customer-detail', require('./controllers/UsageAnalyticsController').customerDetail);
 app.get('/usage-analytics', require('./controllers/UsageAnalyticsController').page);
 // Add the password verification route directly to app
 app.post('/api/verify-admin-password', (req, res) => {
