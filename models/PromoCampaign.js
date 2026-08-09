@@ -15,7 +15,11 @@ const promoCampaignSchema = new mongoose.Schema({
   active: { type: Boolean, default: true },
   priority: { type: Number, default: 0 },
   maxDisplays: { type: Number, default: 1, min: 0 },
-  displayCount: { type: Number, default: 0, min: 0 }
+  displayCount: { type: Number, default: 0, min: 0 },
+  clickCount: { type: Number, default: 0, min: 0 },
+  dismissCount: { type: Number, default: 0, min: 0 },
+  lastDisplayedAt: { type: Date, default: null },
+  lastClickedAt: { type: Date, default: null }
 }, { timestamps: true });
 
 module.exports = mongoose.model('PromoCampaign', promoCampaignSchema);

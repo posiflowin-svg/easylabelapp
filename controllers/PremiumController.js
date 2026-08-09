@@ -4,6 +4,7 @@ const PremiumPlan = require('../models/PremiumPlan');
 const UserSubscription = require('../models/UserSubscription');
 const User = require('../models/User');
 const PromoCampaign = require('../models/PromoCampaign');
+const CampaignInteraction = require('../models/CampaignInteraction');
 const PushNotification = require('../models/PushNotification');
 const PremiumSetting = require('../models/PremiumSetting');
 const AIUsage = require('../models/AIUsage');
@@ -44,6 +45,128 @@ async function ensureDefaults() {
 
 function isActiveSubscription(subscription, now = new Date()) {
   return ['active', 'trial', 'grace_period'].includes(subscription.status) && new Date(subscription.expiryDate) > now;
+}
+
+
+function parseOptionalDate(value, fallback = null) {
+  if (!value) return fallback;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? fallback : date;
+}
+
+function campaignIdentityQuery(campaignId, userId, deviceId) {
+  return {
+    campaignId,
+    userId: userId || null,
+    deviceId: String(deviceId || '')
+  };
+}
+
+function startOfDay(date = new Date()) {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  return value;
+}
+
+function startOfWeek(date = new Date()) {
+  const value = startOfDay(date);
+  const day = value.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  value.setDate(value.getDate() + mondayOffset);
+  return value;
+}
+
+async function resolveCampaignAudience(userId) {
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    return { audience: 'free', subscription: null };
+  }
+
+  const now = new Date();
+  const subscriptions = await UserSubscription.find({ userId })
+    .sort({ expiryDate: -1, createdAt: -1 })
+    .lean();
+
+  const active = subscriptions.find(item => isActiveSubscription(item, now));
+  if (active) {
+    if (active.planKey === 'business_monthly' || String(active.planKey).includes('business')) {
+      return { audience: 'business', subscription: active };
+    }
+    return { audience: 'premium', subscription: active };
+  }
+
+  const hadSubscription = subscriptions.length > 0;
+  return {
+    audience: hadSubscription ? 'expired' : 'free',
+    subscription: subscriptions[0] || null
+  };
+}
+
+function campaignMatchesAudience(campaign, audience) {
+  return campaign.targetAudience === 'all' || campaign.targetAudience === audience;
+}
+
+function campaignFrequencyAllows(campaign, interaction, now = new Date()) {
+  if (!interaction) return true;
+
+  const count = Number(interaction.impressionCount || 0);
+  const maxDisplays = Number(campaign.maxDisplays || 0);
+  if (maxDisplays > 0 && count >= maxDisplays) return false;
+
+  if (campaign.frequency === 'every_open') return true;
+  if (campaign.frequency === 'once') return count === 0;
+
+  if (!interaction.lastDisplayedAt) return true;
+
+  const last = new Date(interaction.lastDisplayedAt);
+  if (campaign.frequency === 'daily') return last < startOfDay(now);
+  if (campaign.frequency === 'weekly') return last < startOfWeek(now);
+
+  return true;
+}
+
+function sanitizeCampaignPayload(body) {
+  const title = String(body.title || '').trim();
+  if (!title) throw new Error('Campaign title is required.');
+
+  const startDate = parseOptionalDate(body.startDate, new Date());
+  const endDate = parseOptionalDate(body.endDate, null);
+
+  if (endDate && startDate && endDate <= startDate) {
+    throw new Error('End date must be after start date.');
+  }
+
+  const buttonAction = body.buttonAction || 'open_subscription';
+  const actionValue = String(body.actionValue || '').trim();
+
+  if (buttonAction === 'open_url' && actionValue) {
+    try {
+      const parsed = new URL(actionValue);
+      if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error();
+    } catch (_) {
+      throw new Error('Open URL action requires a valid http/https URL.');
+    }
+  }
+
+  if (buttonAction === 'open_feature' && !actionValue) {
+    throw new Error('Open Feature action requires a feature key/page value.');
+  }
+
+  return {
+    title,
+    campaignType: body.campaignType || 'popup',
+    subtitle: String(body.subtitle || '').trim(),
+    imageUrl: String(body.imageUrl || '').trim(),
+    buttonText: String(body.buttonText || 'View Plans').trim(),
+    buttonAction,
+    actionValue,
+    targetAudience: body.targetAudience || 'free',
+    frequency: body.frequency || 'once',
+    startDate,
+    endDate,
+    active: body.active === true || body.active === 'true',
+    priority: Number(body.priority || 0),
+    maxDisplays: Math.max(0, Number(body.maxDisplays || 0))
+  };
 }
 
 exports.page = async (req, res) => {
@@ -395,24 +518,12 @@ exports.changeSubscriptionPlan = async (req, res) => {
 
 exports.createCampaign = async (req, res) => {
   try {
-    const campaign = await PromoCampaign.create({
-      title: req.body.title,
-      campaignType: req.body.campaignType || 'popup',
-      subtitle: req.body.subtitle || '',
-      imageUrl: req.body.imageUrl || '',
-      buttonText: req.body.buttonText || 'View Plans',
-      buttonAction: req.body.buttonAction || 'open_subscription',
-      actionValue: req.body.actionValue || '',
-      targetAudience: req.body.targetAudience || 'free',
-      frequency: req.body.frequency || 'once',
-      startDate: req.body.startDate || new Date(),
-      endDate: req.body.endDate || null,
-      active: req.body.active === true || req.body.active === 'true',
-      priority: Number(req.body.priority || 0),
-      maxDisplays: Number(req.body.maxDisplays || 1)
-    });
+    const payload = sanitizeCampaignPayload(req.body);
+    const campaign = await PromoCampaign.create(payload);
     res.json({ success: true, data: campaign });
-  } catch (error) { res.status(400).json({ success: false, message: error.message }); }
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
 };
 
 exports.toggleCampaign = async (req, res) => {
@@ -427,6 +538,7 @@ exports.deleteCampaign = async (req, res) => {
   try {
     const item = await PromoCampaign.findByIdAndDelete(req.params.id);
     if (!item) return res.status(404).json({ success: false, message: 'Campaign not found' });
+    await CampaignInteraction.deleteMany({ campaignId: item._id });
     res.json({ success: true });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };
@@ -489,33 +601,196 @@ exports.updateSettings = async (req, res) => {
 exports.activeCampaigns = async (req, res) => {
   try {
     const now = new Date();
-    const campaigns = await PromoCampaign.find({ active: true, startDate: { $lte: now }, $or: [{ endDate: null }, { endDate: { $gte: now } }] }).sort({ priority: -1, createdAt: -1 }).lean();
-    res.json({ success: true, campaigns });
-  } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+    const userId = String(req.query.userId || '').trim();
+    const deviceId = String(req.query.deviceId || '').trim();
+    const campaignType = String(req.query.campaignType || '').trim();
+
+    const audienceInfo = await resolveCampaignAudience(userId);
+    const query = {
+      active: true,
+      startDate: { $lte: now },
+      $or: [{ endDate: null }, { endDate: { $gte: now } }]
+    };
+
+    if (campaignType) query.campaignType = campaignType;
+
+    const campaigns = await PromoCampaign.find(query)
+      .sort({ priority: -1, createdAt: -1 })
+      .lean();
+
+    const eligible = [];
+    for (const campaign of campaigns) {
+      if (!campaignMatchesAudience(campaign, audienceInfo.audience)) continue;
+
+      const identity = campaignIdentityQuery(
+        campaign._id,
+        mongoose.Types.ObjectId.isValid(userId) ? userId : null,
+        deviceId
+      );
+
+      const interaction = await CampaignInteraction.findOne(identity).lean();
+      if (!campaignFrequencyAllows(campaign, interaction, now)) continue;
+
+      eligible.push({
+        ...campaign,
+        userAudience: audienceInfo.audience,
+        userDisplayCount: Number(interaction?.impressionCount || 0)
+      });
+    }
+
+    res.json({
+      success: true,
+      audience: audienceInfo.audience,
+      campaigns: eligible
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
+exports.recordCampaignImpression = async (req, res) => {
+  try {
+    const campaign = await PromoCampaign.findById(req.params.id);
+    if (!campaign || !campaign.active) {
+      return res.status(404).json({ success: false, message: 'Active campaign not found' });
+    }
+
+    const userIdRaw = String(req.body.userId || '').trim();
+    const userId = mongoose.Types.ObjectId.isValid(userIdRaw) ? userIdRaw : null;
+    const deviceId = String(req.body.deviceId || '').trim();
+    const identity = campaignIdentityQuery(campaign._id, userId, deviceId);
+
+    const existing = await CampaignInteraction.findOne(identity).lean();
+    if (!campaignFrequencyAllows(campaign.toObject(), existing, new Date())) {
+      return res.status(409).json({
+        success: false,
+        message: 'Campaign display limit or frequency has already been reached.'
+      });
+    }
+
+    const now = new Date();
+    const interaction = await CampaignInteraction.findOneAndUpdate(
+      identity,
+      {
+        $inc: { impressionCount: 1 },
+        $set: { lastDisplayedAt: now },
+        $setOnInsert: { firstDisplayedAt: now }
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    campaign.displayCount = Number(campaign.displayCount || 0) + 1;
+    campaign.lastDisplayedAt = now;
+    await campaign.save();
+
+    res.json({
+      success: true,
+      displayCount: interaction.impressionCount
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+exports.recordCampaignClick = async (req, res) => {
+  try {
+    const campaign = await PromoCampaign.findById(req.params.id);
+    if (!campaign) return res.status(404).json({ success: false, message: 'Campaign not found' });
+
+    const userIdRaw = String(req.body.userId || '').trim();
+    const userId = mongoose.Types.ObjectId.isValid(userIdRaw) ? userIdRaw : null;
+    const deviceId = String(req.body.deviceId || '').trim();
+    const now = new Date();
+
+    await CampaignInteraction.findOneAndUpdate(
+      campaignIdentityQuery(campaign._id, userId, deviceId),
+      {
+        $inc: { clickCount: 1 },
+        $set: { lastClickedAt: now }
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    campaign.clickCount = Number(campaign.clickCount || 0) + 1;
+    campaign.lastClickedAt = now;
+    await campaign.save();
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+exports.recordCampaignDismiss = async (req, res) => {
+  try {
+    const campaign = await PromoCampaign.findById(req.params.id);
+    if (!campaign) return res.status(404).json({ success: false, message: 'Campaign not found' });
+
+    const userIdRaw = String(req.body.userId || '').trim();
+    const userId = mongoose.Types.ObjectId.isValid(userIdRaw) ? userIdRaw : null;
+    const deviceId = String(req.body.deviceId || '').trim();
+    const now = new Date();
+
+    await CampaignInteraction.findOneAndUpdate(
+      campaignIdentityQuery(campaign._id, userId, deviceId),
+      {
+        $inc: { dismissCount: 1 },
+        $set: { lastDismissedAt: now }
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    campaign.dismissCount = Number(campaign.dismissCount || 0) + 1;
+    await campaign.save();
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+exports.campaignStats = async (req, res) => {
+  try {
+    const campaign = await PromoCampaign.findById(req.params.id).lean();
+    if (!campaign) return res.status(404).json({ success: false, message: 'Campaign not found' });
+
+    const uniqueUsers = await CampaignInteraction.countDocuments({
+      campaignId: campaign._id,
+      impressionCount: { $gt: 0 }
+    });
+
+    const ctr = campaign.displayCount > 0
+      ? Number(((campaign.clickCount || 0) / campaign.displayCount * 100).toFixed(2))
+      : 0;
+
+    res.json({
+      success: true,
+      data: {
+        impressions: Number(campaign.displayCount || 0),
+        clicks: Number(campaign.clickCount || 0),
+        dismissals: Number(campaign.dismissCount || 0),
+        uniqueUsers,
+        ctr
+      }
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
 
 exports.updateCampaign = async (req, res) => {
   try {
-    const item = await PromoCampaign.findByIdAndUpdate(req.params.id, {
-      title: req.body.title,
-      campaignType: req.body.campaignType || 'popup',
-      subtitle: req.body.subtitle || '',
-      imageUrl: req.body.imageUrl || '',
-      buttonText: req.body.buttonText || 'View Plans',
-      buttonAction: req.body.buttonAction || 'open_subscription',
-      actionValue: req.body.actionValue || '',
-      targetAudience: req.body.targetAudience || 'free',
-      frequency: req.body.frequency || 'once',
-      startDate: req.body.startDate || new Date(),
-      endDate: req.body.endDate || null,
-      active: req.body.active === true || req.body.active === 'true',
-      priority: Number(req.body.priority || 0),
-      maxDisplays: Number(req.body.maxDisplays || 1)
-    }, { new: true, runValidators: true });
+    const payload = sanitizeCampaignPayload(req.body);
+    const item = await PromoCampaign.findByIdAndUpdate(
+      req.params.id,
+      payload,
+      { new: true, runValidators: true }
+    );
     if (!item) return res.status(404).json({ success: false, message: 'Campaign not found' });
     res.json({ success: true, data: item });
-  } catch (error) { res.status(400).json({ success: false, message: error.message }); }
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
 };
 
 exports.updateNotification = async (req, res) => {

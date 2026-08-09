@@ -10,6 +10,20 @@
 
     .banner-grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:16px}.banner-card{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fff}.banner-preview{aspect-ratio:12/5;background:#f8fafc;display:flex;align-items:center;justify-content:center;overflow:hidden}.banner-preview img{width:100%;height:100%;object-fit:cover}.banner-body{padding:14px}.banner-meta{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}.banner-empty{padding:34px;text-align:center;color:#64748b;border:1px dashed #cbd5e1;border-radius:12px}.upload-hint{font-size:12px;color:#64748b;margin-top:5px}.preview-new{width:100%;max-width:440px;aspect-ratio:12/5;border:1px dashed #cbd5e1;border-radius:10px;object-fit:cover;background:#f8fafc;margin-top:10px;display:none}
     @media(max-width:1100px){.banner-grid{grid-template-columns:1fr 1fr}.cards{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr 1fr}}@media(max-width:700px){.banner-grid{grid-template-columns:1fr}.sidebar{position:relative;width:100%;height:auto}.main{margin-left:0;width:100%;padding:18px}body{display:block}.cards{grid-template-columns:1fr}.form-grid,.feature-checks{grid-template-columns:1fr}}
+
+    .campaign-kpis{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+    .campaign-kpi{border:1px solid #e5e7eb;border-radius:12px;padding:14px;background:#fbfcfe}
+    .campaign-kpi small{color:#64748b}.campaign-kpi strong{display:block;font-size:22px;margin-top:5px}
+    .campaign-type{display:inline-flex;padding:4px 8px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700}
+    .campaign-preview{border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;background:#fff;min-height:150px}
+    .campaign-preview-image{height:130px;background:#f8fafc;display:flex;align-items:center;justify-content:center;color:#94a3b8;overflow:hidden}
+    .campaign-preview-image img{width:100%;height:100%;object-fit:cover}
+    .campaign-preview-body{padding:16px}.campaign-preview-body h4{font-size:20px;margin-bottom:6px}.campaign-preview-body p{color:#64748b;line-height:1.45}
+    .campaign-preview-button{display:inline-block;margin-top:12px;background:#2563eb;color:#fff;border-radius:9px;padding:9px 14px;font-weight:700;font-size:13px}
+    .campaign-form-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,.7fr);gap:18px}
+    .campaign-actions{display:flex;gap:6px;flex-wrap:wrap}
+    @media(max-width:900px){.campaign-form-layout{grid-template-columns:1fr}.campaign-kpis{grid-template-columns:1fr 1fr}}
+
   </style>
 </head>
 <body>
@@ -103,10 +117,107 @@
 
 
   <section id="campaigns" class="panel">
-    <div class="section-card"><div class="section-head"><div><h3>Campaign Manager</h3><p class="muted">Create professional in-app promotional popups without changing the Android app.</p></div></div>
-      <form onsubmit="createCampaign(event)"><div class="form-grid"><div><label>Title</label><input name="title" required></div><div><label>Campaign Type</label><select name="campaignType"><option value="popup">Popup</option><option value="home_banner">Home Banner</option><option value="full_screen">Full Screen</option><option value="new_feature">New Feature</option><option value="upgrade_banner">Upgrade Banner</option></select></div><div><label>Target Audience</label><select name="targetAudience"><option value="free">Free Users</option><option value="all">All Users</option><option value="premium">Premium Users</option><option value="business">Business Users</option><option value="expired">Expired Users</option></select></div><div><label>Frequency</label><select name="frequency"><option value="once">Once</option><option value="daily">Once Daily</option><option value="weekly">Once Weekly</option><option value="every_open">Every App Open</option></select></div></div><label>Subtitle</label><textarea name="subtitle" rows="2"></textarea><div class="form-grid"><div><label>Image URL</label><input name="imageUrl"></div><div><label>Button Text</label><input name="buttonText" value="View Plans"></div><div><label>Button Action</label><select name="buttonAction"><option value="open_subscription">Open Subscription</option><option value="open_feature">Open Feature</option><option value="open_url">Open URL</option><option value="dismiss">Dismiss</option></select></div><div><label>Action Value</label><input name="actionValue" placeholder="Feature key or URL"></div><div><label>Priority</label><input name="priority" type="number" value="0"></div><div><label>Maximum Displays</label><input name="maxDisplays" type="number" min="0" value="1"></div><div><label>Start Date</label><input name="startDate" type="datetime-local"></div><div><label>End Date</label><input name="endDate" type="datetime-local"></div></div><div class="inline" style="margin-top:12px"><input type="checkbox" name="active" checked> Active</div><div class="form-actions"><button class="btn btn-primary">Create Campaign</button></div></form>
+    <% 
+      const campaignImpressions = campaigns.reduce((s,c)=>s+Number(c.displayCount||0),0);
+      const campaignClicks = campaigns.reduce((s,c)=>s+Number(c.clickCount||0),0);
+      const campaignDismissals = campaigns.reduce((s,c)=>s+Number(c.dismissCount||0),0);
+      const liveCampaigns = campaigns.filter(c => c.active && new Date(c.startDate)<=new Date() && (!c.endDate || new Date(c.endDate)>=new Date())).length;
+    %>
+    <div class="campaign-kpis">
+      <div class="campaign-kpi"><small>Live Campaigns</small><strong><%=liveCampaigns%></strong></div>
+      <div class="campaign-kpi"><small>Total Impressions</small><strong><%=campaignImpressions%></strong></div>
+      <div class="campaign-kpi"><small>Total Clicks</small><strong><%=campaignClicks%></strong></div>
+      <div class="campaign-kpi"><small>Overall CTR</small><strong><%=campaignImpressions ? ((campaignClicks/campaignImpressions)*100).toFixed(1) : '0.0'%>%</strong></div>
     </div>
-    <div class="section-card"><div class="table-wrap"><table><thead><tr><th>Title</th><th>Audience</th><th>Frequency</th><th>Status</th><th>Actions</th></tr></thead><tbody><% campaigns.forEach(c=>{ %><tr><td><strong><%=c.title%></strong><div class="mini"><%=c.subtitle%></div></td><td><%=c.targetAudience%></td><td><%=c.frequency%></td><td><span class="status <%=c.active?'on':'off'%>"><%=c.active?'ACTIVE':'INACTIVE'%></span></td><td><button class="btn btn-sm <%=c.active?'btn-danger':'btn-success'%>" onclick="toggleCampaign('<%=c._id%>',<%=!c.active%>)"><%=c.active?'Disable':'Enable'%></button> <button class="btn btn-sm btn-danger" onclick="deleteCampaign('<%=c._id%>')">Delete</button></td></tr><% }) %></tbody></table></div></div>
+
+    <div class="section-card">
+      <div class="section-head">
+        <div>
+          <h3>Campaign Manager</h3>
+          <p class="muted">Create targeted in-app campaigns. Android can fetch live campaigns without publishing a new APK.</p>
+        </div>
+        <span class="status on">LIVE API READY</span>
+      </div>
+
+      <div class="campaign-form-layout">
+        <form id="campaignForm" onsubmit="saveCampaign(event)">
+          <input type="hidden" name="id" id="campaignId">
+          <div class="form-grid">
+            <div><label>Title</label><input id="campaignTitle" name="title" maxlength="100" placeholder="Unlock EasyLabel Premium" oninput="previewCampaign()" required></div>
+            <div><label>Campaign Type</label><select id="campaignType" name="campaignType" onchange="previewCampaign()"><option value="popup">Popup</option><option value="home_banner">Home Banner</option><option value="full_screen">Full Screen</option><option value="new_feature">New Feature</option><option value="upgrade_banner">Upgrade Banner</option></select></div>
+            <div><label>Target Audience</label><select name="targetAudience"><option value="free">Free Users</option><option value="all">All Users</option><option value="premium">Premium Users</option><option value="business">Business Users</option><option value="expired">Expired Users</option></select></div>
+            <div><label>Frequency</label><select name="frequency"><option value="once">Once per user/device</option><option value="daily">Once Daily</option><option value="weekly">Once Weekly</option><option value="every_open">Every App Open</option></select></div>
+          </div>
+
+          <label>Subtitle</label>
+          <textarea id="campaignSubtitle" name="subtitle" rows="2" maxlength="260" placeholder="Short message shown to the user" oninput="previewCampaign()"></textarea>
+
+          <div class="form-grid">
+            <div><label>Image URL</label><input id="campaignImageUrl" name="imageUrl" placeholder="https://..." oninput="previewCampaign()"></div>
+            <div><label>Button Text</label><input id="campaignButtonText" name="buttonText" value="View Plans" maxlength="40" oninput="previewCampaign()"></div>
+            <div><label>Button Action</label><select name="buttonAction" id="campaignButtonAction" onchange="toggleCampaignActionValue()"><option value="open_subscription">Open Subscription</option><option value="open_feature">Open Feature/Page</option><option value="open_url">Open URL</option><option value="dismiss">Dismiss Only</option></select></div>
+            <div><label>Action Value</label><input name="actionValue" id="campaignActionValue" placeholder="Feature key or https:// URL"></div>
+            <div><label>Priority</label><input name="priority" type="number" value="0"><div class="mini">Higher priority displays first.</div></div>
+            <div><label>Maximum Displays</label><input name="maxDisplays" type="number" min="0" value="1"><div class="mini">Per user/device. 0 = unlimited.</div></div>
+            <div><label>Start Date</label><input name="startDate" type="datetime-local"></div>
+            <div><label>End Date</label><input name="endDate" type="datetime-local"></div>
+          </div>
+
+          <div class="inline" style="margin-top:13px"><input type="checkbox" name="active" id="campaignActive" checked> <label for="campaignActive" style="margin:0">Active</label></div>
+          <div class="form-actions">
+            <button id="campaignSaveButton" class="btn btn-primary">Create Campaign</button>
+            <button type="button" class="btn btn-secondary" onclick="resetCampaignForm()">Clear</button>
+          </div>
+        </form>
+
+        <div>
+          <label>Live Preview</label>
+          <div class="campaign-preview">
+            <div id="campaignPreviewImage" class="campaign-preview-image"><span>No image</span></div>
+            <div class="campaign-preview-body">
+              <span id="campaignPreviewType" class="campaign-type">POPUP</span>
+              <h4 id="campaignPreviewTitle" style="margin-top:10px">Campaign title</h4>
+              <p id="campaignPreviewSubtitle">Your campaign message will appear here.</p>
+              <span id="campaignPreviewButton" class="campaign-preview-button">View Plans</span>
+            </div>
+          </div>
+          <p class="mini" style="margin-top:8px">Preview is for administration. Android controls the final native layout for each campaign type.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-head">
+        <div><h3>Campaigns</h3><p class="muted">Enable, edit, review performance or remove campaigns.</p></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Campaign</th><th>Audience</th><th>Schedule</th><th>Performance</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+          <% if(!campaigns.length){ %><tr><td colspan="6" class="muted">No campaigns created yet.</td></tr><% } %>
+          <% campaigns.forEach(c=>{ 
+             const ctr=Number(c.displayCount||0)>0 ? ((Number(c.clickCount||0)/Number(c.displayCount||0))*100).toFixed(1) : '0.0';
+          %>
+            <tr>
+              <td><strong><%=c.title%></strong><div class="mini"><span class="campaign-type"><%=c.campaignType.replaceAll('_',' ').toUpperCase()%></span> · <%=c.frequency.replaceAll('_',' ')%></div><div class="mini"><%=c.subtitle||''%></div></td>
+              <td><%=c.targetAudience%><div class="mini">Max <%=Number(c.maxDisplays||0)===0?'Unlimited':c.maxDisplays%></div></td>
+              <td class="nowrap"><%=new Date(c.startDate).toLocaleString('en-IN')%><div class="mini">to <%=c.endDate ? new Date(c.endDate).toLocaleString('en-IN') : 'No end date'%></div></td>
+              <td><strong><%=Number(c.displayCount||0)%></strong> views<div class="mini"><%=Number(c.clickCount||0)%> clicks · <%=ctr%>% CTR</div></td>
+              <td><span class="status <%=c.active?'on':'off'%>"><%=c.active?'ACTIVE':'INACTIVE'%></span></td>
+              <td>
+                <div class="campaign-actions">
+                  <button class="btn btn-sm btn-secondary" onclick='editCampaign(<%- JSON.stringify(c) %>)'>Edit</button>
+                  <button class="btn btn-sm <%=c.active?'btn-danger':'btn-success'%>" onclick="toggleCampaign('<%=c._id%>',<%=!c.active%>)"><%=c.active?'Disable':'Enable'%></button>
+                  <button class="btn btn-sm btn-secondary" onclick="showCampaignStats('<%=c._id%>')">Stats</button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteCampaign('<%=c._id%>')">Delete</button>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   <section id="notifications" class="panel">
@@ -230,9 +341,15 @@ function filterSubscriptions(){const q=(document.getElementById('subSearch').val
 
 async function recordPayment(id){const amount=prompt('Enter received amount (₹):');if(amount===null)return;const orderId=prompt('Order ID / reference (optional):')||'';try{await api('/api/premium/subscriptions/'+id+'/payments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount,orderId})});showMessage('Payment recorded successfully.');setTimeout(()=>location.reload(),500)}catch(e){showMessage(e.message,false)}}
 async function deleteSubscription(id){if(!confirm('Permanently delete this subscription record?'))return;try{await api('/api/premium/subscriptions/'+id,{method:'DELETE'});showMessage('Subscription deleted.');setTimeout(()=>location.reload(),500)}catch(e){showMessage(e.message,false)}}
-async function createCampaign(e){e.preventDefault();const f=new FormData(e.target);const data=Object.fromEntries(f.entries());data.active=f.has('active');try{await api('/api/premium/campaigns',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});showMessage('Campaign created successfully.');setTimeout(()=>location.reload(),500)}catch(err){showMessage(err.message,false)}}
-async function toggleCampaign(id,active){try{await api('/api/premium/campaigns/'+id+'/toggle',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({active})});showMessage('Campaign status updated.');setTimeout(()=>location.reload(),500)}catch(err){showMessage(err.message,false)}}
-async function deleteCampaign(id){if(!confirm('Delete this campaign?'))return;try{await api('/api/premium/campaigns/'+id,{method:'DELETE'});showMessage('Campaign deleted.');setTimeout(()=>location.reload(),500)}catch(err){showMessage(err.message,false)}}
+function localDateTimeValue(value){if(!value)return '';const d=new Date(value);if(Number.isNaN(d.getTime()))return '';const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);return local.toISOString().slice(0,16)}
+function toggleCampaignActionValue(){const action=document.getElementById('campaignButtonAction');const field=document.getElementById('campaignActionValue');if(!action||!field)return;const required=action.value==='open_url'||action.value==='open_feature';field.disabled=action.value==='open_subscription'||action.value==='dismiss';field.required=required;if(field.disabled)field.value=''}
+function previewCampaign(){const title=document.getElementById('campaignTitle');if(!title)return;document.getElementById('campaignPreviewTitle').textContent=title.value||'Campaign title';document.getElementById('campaignPreviewSubtitle').textContent=document.getElementById('campaignSubtitle').value||'Your campaign message will appear here.';document.getElementById('campaignPreviewButton').textContent=document.getElementById('campaignButtonText').value||'View Plans';document.getElementById('campaignPreviewType').textContent=(document.getElementById('campaignType').value||'popup').replaceAll('_',' ').toUpperCase();const url=document.getElementById('campaignImageUrl').value.trim();const box=document.getElementById('campaignPreviewImage');box.innerHTML=url?'<img src="'+url.replaceAll('"','&quot;')+'" alt="Campaign image" onerror="this.parentElement.innerHTML=\\'<span>Image unavailable</span>\\'">':'<span>No image</span>'}
+function resetCampaignForm(){const form=document.getElementById('campaignForm');if(!form)return;form.reset();document.getElementById('campaignId').value='';document.getElementById('campaignActive').checked=true;document.getElementById('campaignSaveButton').textContent='Create Campaign';document.getElementById('campaignButtonText').value='View Plans';document.querySelector('#campaignForm [name=priority]').value='0';document.querySelector('#campaignForm [name=maxDisplays]').value='1';toggleCampaignActionValue();previewCampaign()}
+function editCampaign(c){openTab('campaigns',document.querySelector('[onclick*="campaigns"]'));const form=document.getElementById('campaignForm');document.getElementById('campaignId').value=c._id||'';form.elements.title.value=c.title||'';form.elements.campaignType.value=c.campaignType||'popup';form.elements.targetAudience.value=c.targetAudience||'free';form.elements.frequency.value=c.frequency||'once';form.elements.subtitle.value=c.subtitle||'';form.elements.imageUrl.value=c.imageUrl||'';form.elements.buttonText.value=c.buttonText||'View Plans';form.elements.buttonAction.value=c.buttonAction||'open_subscription';form.elements.actionValue.value=c.actionValue||'';form.elements.priority.value=Number(c.priority||0);form.elements.maxDisplays.value=Number(c.maxDisplays||0);form.elements.startDate.value=localDateTimeValue(c.startDate);form.elements.endDate.value=localDateTimeValue(c.endDate);document.getElementById('campaignActive').checked=!!c.active;document.getElementById('campaignSaveButton').textContent='Save Changes';toggleCampaignActionValue();previewCampaign();form.scrollIntoView({behavior:'smooth',block:'start'})}
+async function saveCampaign(e){e.preventDefault();const form=e.target;const f=new FormData(form);const data=Object.fromEntries(f.entries());data.active=f.has('active');const id=document.getElementById('campaignId').value;const url=id?'/api/premium/campaigns/'+id:'/api/premium/campaigns';const method=id?'PUT':'POST';try{await api(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});showMessage(id?'Campaign updated successfully.':'Campaign created successfully.');setTimeout(()=>location.reload(),500)}catch(err){showMessage(err.message,false)}}
+async function toggleCampaign(id,active){try{await api('/api/premium/campaigns/'+id+'/toggle',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({active})});showMessage('Campaign status updated.');setTimeout(()=>location.reload(),400)}catch(err){showMessage(err.message,false)}}
+async function showCampaignStats(id){try{const d=await api('/api/premium/campaigns/'+id+'/stats');const s=d.data||{};alert('Campaign Performance\\n\\nImpressions: '+(s.impressions||0)+'\\nClicks: '+(s.clicks||0)+'\\nDismissals: '+(s.dismissals||0)+'\\nUnique users/devices: '+(s.uniqueUsers||0)+'\\nCTR: '+(s.ctr||0)+'%')}catch(err){showMessage(err.message,false)}}
+async function deleteCampaign(id){if(!confirm('Delete this campaign and its analytics history?'))return;try{await api('/api/premium/campaigns/'+id,{method:'DELETE'});showMessage('Campaign deleted.');setTimeout(()=>location.reload(),400)}catch(err){showMessage(err.message,false)}}
 async function createNotification(e){e.preventDefault();const data=Object.fromEntries(new FormData(e.target).entries());try{await api('/api/premium/notifications',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});showMessage('Notification saved successfully.');setTimeout(()=>location.reload(),500)}catch(err){showMessage(err.message,false)}}
 async function changeNotificationStatus(id,status){if(!status)return;try{await api('/api/premium/notifications/'+id+'/status',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})});showMessage('Notification status updated.');setTimeout(()=>location.reload(),500)}catch(err){showMessage(err.message,false)}}
 async function sendNotification(id){if(!confirm('Mark this notification as sent? Firebase live delivery will be connected in Phase 2.'))return;try{const d=await api('/api/premium/notifications/'+id+'/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});showMessage(d.message||'Notification marked as sent.');setTimeout(()=>location.reload(),500)}catch(e){showMessage(e.message,false)}}
@@ -251,5 +368,7 @@ async function toggleHomeBanner(id,isActive){try{await api('/api/shopping/banner
 async function deleteHomeBanner(id){if(!confirm('Delete this Home banner?'))return;try{await api('/api/shopping/banners/manage/'+id,{method:'DELETE'});showMessage('Banner deleted.');setTimeout(()=>location.reload(),500)}catch(error){showMessage(error.message,false)}}
 
 const date=document.querySelector('input[name="expiryDate"]');if(date){const d=new Date();d.setMonth(d.getMonth()+1);date.value=d.toISOString().slice(0,10)}
+
+try{toggleCampaignActionValue();previewCampaign();}catch(_){ }
 </script>
 </body></html>
