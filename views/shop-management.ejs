@@ -109,7 +109,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 <div class="card">
 <div class="head" style="margin-bottom:12px"><div><h2>Products</h2><div class="muted">Featured products become Best Sellers in the app.</div></div><input style="max-width:360px" id="search" placeholder="Search product, SKU, category..." oninput="filterRows()"></div>
 <div class="tablewrap"><table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Flags</th><th>Order</th><th>Action</th></tr></thead><tbody id="rows">
-<% products.forEach(p=>{ %><tr data-search="<%=(p.name+' '+(p.sku||'')+' '+(p.category?.name||'')).toLowerCase()%>"><td><div style="display:flex;gap:10px;align-items:center"><img class="thumb" src="<%=p.images?.[0]||''%>"><div><strong><%=p.name%></strong><div class="muted" style="font-size:11px"><%=p.sku||'No SKU'%></div></div></div></td><td><span class="pill"><%=p.category?.name||'Other'%></span></td><td><strong>₹<%=p.price%></strong><% if(p.mrp>p.price){ %><div class="muted" style="text-decoration:line-through">₹<%=p.mrp%></div><% } %></td><td><%=p.stock<0?'Unlimited':p.stock%></td><td><span class="pill <%=p.active!==false?'on':'off'%>"><%=p.active!==false?'ACTIVE':'HIDDEN'%></span> <% if(p.featured){ %><span class="pill">BEST SELLER</span><% } %></td><td><%=p.sortOrder||0%></td><td><div class="toolbar"><button class="secondary" onclick='openProduct(<%-JSON.stringify(p)%>)'>Edit</button><button class="danger" onclick="removeProduct('<%=p._id%>')">Delete</button></div></td></tr><% }) %>
+<% products.forEach(p=>{ %><tr data-search="<%=(p.name+' '+(p.sku||'')+' '+(p.category?.name||'')).toLowerCase()%>"><td><div style="display:flex;gap:10px;align-items:center"><img class="thumb" src="<%=p.images?.[0]||''%>"><div><strong><%=p.name%></strong><div class="muted" style="font-size:11px"><%=p.sku||'No SKU'%></div></div></div></td><td><span class="pill"><%=p.category?.name||'Other'%></span></td><td><strong>₹<%=p.price%></strong><% if(p.mrp>p.price){ %><div class="muted" style="text-decoration:line-through">₹<%=p.mrp%></div><% } %></td><td><%=p.stock<0?'Unlimited':p.stock%></td><td><span class="pill <%=p.active!==false?'on':'off'%>"><%=p.active!==false?'ACTIVE':'HIDDEN'%></span> <% if(p.featured){ %><span class="pill">BEST SELLER</span><% } %></td><td><%=p.sortOrder||0%></td><td><div class="toolbar"><button class="secondary" onclick="openProductById('<%=p._id%>')">Edit</button><button class="danger" onclick="removeProduct('<%=p._id%>')">Delete</button></div></td></tr><% }) %>
 </tbody></table></div></div>
 </main></div>
 
@@ -180,6 +180,18 @@ async function call(url,opt={}){
   }
   return d;
 }
+async function openProductById(id){
+  if(!id) return;
+  try{
+    const result=await call('/api/products/'+encodeURIComponent(id));
+    if(!result || !result.data) throw new Error('Product data not found');
+    openProduct(result.data);
+  }catch(err){
+    console.error('Unable to open product editor:',err);
+    alert(err.message||'Unable to open product for editing');
+  }
+}
+
 function openProduct(p){form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';renderUploadedImages(null);renderUploadedAPlusImages(null);if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.externalImages||p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.externalAPlusImages||p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured;renderUploadedImages(p);renderUploadedAPlusImages(p)}modal.classList.add('show')}
 function closeProduct(){modal.classList.remove('show')}
 
