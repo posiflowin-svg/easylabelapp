@@ -200,6 +200,7 @@ let draggedMediaId=null;
 function renderUploadedImages(product){
   const manager=document.getElementById('uploadedImageManager');
   const grid=document.getElementById('uploadedImageGrid');
+  if(!manager || !grid) return;
   grid.innerHTML='';
 
   const media=(product && Array.isArray(product.uploadedMedia))
@@ -231,11 +232,13 @@ function renderUploadedImages(product){
     `;
 
     const selectBox=tile.querySelector('.media-select');
-    selectBox.addEventListener('click',e=>e.stopPropagation());
-    selectBox.addEventListener('change',()=>{
-      tile.classList.toggle('selected',selectBox.checked);
-      updateProductImageSelectionUi();
-    });
+    if(selectBox){
+      selectBox.addEventListener('click',e=>e.stopPropagation());
+      selectBox.addEventListener('change',()=>{
+        tile.classList.toggle('selected',selectBox.checked);
+        if(typeof updateProductImageSelectionUi==='function') updateProductImageSelectionUi();
+      });
+    }
 
     tile.addEventListener('dragstart',()=>{
       draggedMediaId=item._id;
@@ -265,12 +268,12 @@ function renderUploadedImages(product){
       await saveImageSequence(product._id);
     });
 
-    tile.querySelector('.set-main').addEventListener('click',async()=>{
+    tile.querySelector('.set-main')?.addEventListener('click',async()=>{
       grid.insertBefore(tile,grid.firstChild);
       await saveImageSequence(product._id);
     });
 
-    tile.querySelector('.delete-image').addEventListener('click',async()=>{
+    tile.querySelector('.delete-image')?.addEventListener('click',async()=>{
       if(!confirm('Delete this uploaded product image?')) return;
       try{
         await call(`/api/products/${product._id}/media/${item._id}`,{method:'DELETE'});
@@ -307,6 +310,7 @@ let draggedAPlusMediaId=null;
 function renderUploadedAPlusImages(product){
   const manager=document.getElementById('uploadedAPlusImageManager');
   const grid=document.getElementById('uploadedAPlusImageGrid');
+  if(!manager || !grid) return;
   grid.innerHTML='';
 
   const media=(product && Array.isArray(product.uploadedAPlusMedia))
@@ -328,6 +332,7 @@ function renderUploadedAPlusImages(product){
 
     tile.innerHTML=`
       ${index===0?'<span class="main-label">FIRST</span>':''}
+      <input type="checkbox" class="image-select aplus-media-select" aria-label="Select A+ image">
       <img src="${item.url}" alt="A+ image">
       <div class="handle">↕ Drag to reorder</div>
       <div class="image-actions">
@@ -337,11 +342,13 @@ function renderUploadedAPlusImages(product){
     `;
 
     const selectBox=tile.querySelector('.aplus-media-select');
-    selectBox.addEventListener('click',e=>e.stopPropagation());
-    selectBox.addEventListener('change',()=>{
-      tile.classList.toggle('selected',selectBox.checked);
-      updateAPlusImageSelectionUi();
-    });
+    if(selectBox){
+      selectBox.addEventListener('click',e=>e.stopPropagation());
+      selectBox.addEventListener('change',()=>{
+        tile.classList.toggle('selected',selectBox.checked);
+        if(typeof updateAPlusImageSelectionUi==='function') updateAPlusImageSelectionUi();
+      });
+    }
 
     tile.addEventListener('dragstart',()=>{
       draggedAPlusMediaId=item._id;
@@ -365,12 +372,12 @@ function renderUploadedAPlusImages(product){
       await saveAPlusImageSequence(product._id);
     });
 
-    tile.querySelector('.set-main').addEventListener('click',async()=>{
+    tile.querySelector('.set-main')?.addEventListener('click',async()=>{
       grid.insertBefore(tile,grid.firstChild);
       await saveAPlusImageSequence(product._id);
     });
 
-    tile.querySelector('.delete-image').addEventListener('click',async()=>{
+    tile.querySelector('.delete-image')?.addEventListener('click',async()=>{
       if(!confirm('Delete this uploaded A+ image?')) return;
       try{
         await call(`/api/products/${product._id}/aplus-media/${item._id}`,{method:'DELETE'});
