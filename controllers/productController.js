@@ -99,23 +99,38 @@ async function decorateProductsWithUploadedMedia(products, req) {
 async function saveUploadedProductMedia(productId, files = {}) {
   const tasks = [];
 
-  (files.productImages || []).forEach((file, index) => {
+  const productImageFiles = [
+    ...(files.productImageFiles || []),
+    ...(files.productImages || [])
+  ];
+
+  const aPlusImageFiles = [
+    ...(files.aPlusImageFiles || []),
+    ...(files.aPlusImages || [])
+  ];
+
+  const videoFiles = [
+    ...(files.productVideoFile || []),
+    ...(files.productVideo || [])
+  ];
+
+  productImageFiles.forEach((file, index) => {
     tasks.push(ProductMedia.create({
       productId, kind: 'product_image', sortOrder: index,
       originalName: file.originalname || '', contentType: file.mimetype, data: file.buffer
     }));
   });
 
-  (files.aPlusImages || []).forEach((file, index) => {
+  aPlusImageFiles.forEach((file, index) => {
     tasks.push(ProductMedia.create({
       productId, kind: 'aplus_image', sortOrder: index,
       originalName: file.originalname || '', contentType: file.mimetype, data: file.buffer
     }));
   });
 
-  if ((files.productVideo || []).length) {
+  if (videoFiles.length) {
     await ProductMedia.deleteMany({ productId, kind: 'video' });
-    const file = files.productVideo[0];
+    const file = videoFiles[0];
     tasks.push(ProductMedia.create({
       productId, kind: 'video', sortOrder: 0,
       originalName: file.originalname || '', contentType: file.mimetype, data: file.buffer
@@ -278,7 +293,10 @@ exports.getProduct = async (req, res, next) => {
 exports.createProduct = async (req, res, next) => {
   try {
     const payload = normalizeProductPayload(req.body);
-    const uploadedImages = req.files?.productImages || [];
+    const uploadedImages = [
+      ...(req.files?.productImageFiles || []),
+      ...(req.files?.productImages || [])
+    ];
     if (!payload.name) return res.status(400).json({ success: false, message: 'Product name is required' });
     if (!payload.category.name) return res.status(400).json({ success: false, message: 'Category is required' });
     if (!payload.images.length && !uploadedImages.length) {

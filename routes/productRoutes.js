@@ -5,24 +5,58 @@ const controller = require('../controllers/productController');
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 12 * 1024 * 1024, files: 20 },
+  limits: {
+    fileSize: 15 * 1024 * 1024,
+    files: 20,
+    fields: 80
+  },
   fileFilter: (req, file, cb) => {
-    if (file.fieldname === 'productVideo') {
-      return ['video/mp4', 'video/webm'].includes(file.mimetype)
+    const imageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const videoTypes = ['video/mp4', 'video/webm'];
+
+    if (file.fieldname === 'productVideoFile' || file.fieldname === 'productVideo') {
+      return videoTypes.includes(file.mimetype)
         ? cb(null, true)
-        : cb(new Error('Product video must be MP4 or WebM.'));
+        : cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'Product video must be MP4 or WebM'));
     }
-    return ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)
-      ? cb(null, true)
-      : cb(new Error('Images must be JPG, PNG or WebP.'));
+
+    if (!imageTypes.includes(file.mimetype)) {
+      return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'Images must be JPG, PNG or WebP'));
+    }
+
+    cb(null, true);
   }
 });
 
 const productUpload = upload.fields([
+  { name: 'productImageFiles', maxCount: 8 },
+  { name: 'aPlusImageFiles', maxCount: 10 },
+  { name: 'productVideoFile', maxCount: 1 },
+
+  // Backward compatibility with previous Shop Manager builds.
   { name: 'productImages', maxCount: 8 },
   { name: 'aPlusImages', maxCount: 10 },
   { name: 'productVideo', maxCount: 1 }
 ]);
+
+const handleProductUpload = (req, res, next) => {
+  productUpload(req, res, (err) => {
+    if (!err) return next();
+
+    if (err instanceof multer.MulterError) {
+      let message = err.message || 'Upload failed';
+      if (err.code === 'LIMIT_FILE_SIZE') message = 'One of the selected files is too large. Maximum 15 MB per file.';
+      if (err.code === 'LIMIT_FILE_COUNT') message = 'Too many files selected.';
+      if (err.code === 'LIMIT_UNEXPECTED_FILE' && err.field) message = `Unsupported upload field or file type: ${err.field}`;
+      return res.status(400).json({ success: false, message });
+    }
+
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'Unable to upload product media'
+    });
+  });
+};
 
 router.get('/storefront', controller.getStorefront);
 router.get('/settings', controller.getShopSettings);
@@ -43,7 +77,7 @@ router.get('/banners/:id/image', controller.getShopBannerImage);
 
 router.get('/category/:category', controller.getProductsByCategory);
 router.get('/media/:id', controller.getProductMedia);
-router.route('/').get(controller.getAllProducts).post(productUpload, controller.createProduct);
-router.route('/:id').get(controller.getProduct).put(productUpload, controller.updateProduct).delete(controller.deleteProduct);
+router.route('/').get(controller.getAllProducts).post(handleProductUpload, controller.createProduct);
+router.route('/:id').get(controller.getProduct).put(handleProductUpload, controller.updateProduct).delete(controller.deleteProduct);
 
 module.exports = router;
