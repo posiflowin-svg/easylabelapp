@@ -12,7 +12,14 @@ const userSubscriptionSchema = new mongoose.Schema({
   startDate: { type: Date, default: Date.now },
   expiryDate: { type: Date, required: true },
   autoRenew: { type: Boolean, default: false },
-  purchaseToken: { type: String, default: '' },
+  purchaseToken: {
+    type: String,
+    default: undefined,
+    set: value => {
+      const token = String(value || '').trim();
+      return token || undefined;
+    }
+  },
   googleOrderId: { type: String, default: '' },
   googleProductId: { type: String, default: '' },
   verificationMode: { type: String, enum: ['test', 'live', 'manual'], default: 'manual' },

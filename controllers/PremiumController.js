@@ -411,13 +411,31 @@ exports.createSubscription = async (req, res) => {
       { $set: { status: 'cancelled' } }
     );
     const subscription = await UserSubscription.create({
-      userId, planKey, expiryDate,
+      userId,
+      planKey,
+      expiryDate,
       autoRenew: autoRenew === 'true' || autoRenew === true,
-      notes: notes || '', source: 'manual', status: status || 'active',
-      googleOrderId: req.body.googleOrderId || '', deviceCount: Number(req.body.deviceCount || 1)
+      notes: notes || '',
+      source: 'manual',
+      status: status || 'active',
+      googleOrderId: req.body.googleOrderId || '',
+      deviceCount: Number(req.body.deviceCount || 1),
+
+      // Manual subscriptions do not have a Google Play purchase token.
+      // Do not store an empty string because purchaseToken has a sparse
+      // unique index and multiple "" values trigger E11000.
+      purchaseToken: undefined,
+      googleProductId: '',
+      verificationMode: 'manual'
     });
     res.json({ success: true, data: subscription });
   } catch (error) {
+    if (error && error.code === 11000 && error.keyPattern && error.keyPattern.purchaseToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Manual subscription could not be saved because of an old empty purchase-token record. Please retry after deploying the latest subscription fix.'
+      });
+    }
     res.status(400).json({ success: false, message: error.message });
   }
 };
