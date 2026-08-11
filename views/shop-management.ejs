@@ -20,6 +20,18 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 .modal{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}.modal.show{display:flex}.modalbox{background:#fff;border-radius:18px;width:min(920px,100%);max-height:92vh;overflow:auto;padding:22px}
 .preview{width:120px;height:68px;border-radius:10px;object-fit:contain;background:#f8fafc;border:1px solid #e5e7eb}.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .notice{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:10px;padding:10px 12px;font-size:12px}
+
+.image-manager{margin-top:12px}
+.image-grid{display:flex;gap:10px;flex-wrap:wrap;min-height:20px}
+.image-tile{width:132px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;padding:7px;cursor:grab;position:relative}
+.image-tile.dragging{opacity:.45}
+.image-tile.main{border:2px solid #ff2d2d;box-shadow:0 0 0 3px rgba(255,45,45,.08)}
+.image-tile img{width:116px;height:92px;object-fit:contain;border-radius:8px;background:#f8fafc}
+.image-tile .handle{text-align:center;color:#94a3b8;font-size:12px;margin-top:3px}
+.image-actions{display:flex;gap:5px;margin-top:6px}
+.image-actions button{font-size:10px;padding:6px 7px;flex:1}
+.main-label{position:absolute;top:5px;left:5px;background:#ff2d2d;color:#fff;border-radius:99px;padding:3px 7px;font-size:9px;font-weight:800}
+
 @media(max-width:900px){.shell{grid-template-columns:1fr}.side{position:static;height:auto}.main{padding:18px}.grid,.grid2,.stats{grid-template-columns:1fr}}
 </style>
 </head>
@@ -102,15 +114,20 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 <div><label>Badge</label><input name="badge" placeholder="BESTSELLER / NEW"></div><div><label>Product Sort Order</label><input name="sortOrder" type="number" value="0"></div>
 </div>
 <div class="grid2" style="margin-top:12px">
-<div><label>Upload Product Images</label><input name="productImages" type="file" accept="image/png,image/jpeg,image/webp" multiple><div class="muted" style="font-size:11px;margin-top:5px">Up to 8 product images.</div></div>
+<div><label>Upload Product Images</label><input name="productImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple><div class="muted" style="font-size:11px;margin-top:5px">Up to 8 product images.</div></div>
 <div><label>Or Product Image URLs (one per line)</label><textarea name="images" rows="4" placeholder="https://.../main.jpg\nhttps://.../second.jpg"></textarea></div>
+</div>
+<div class="image-manager" id="uploadedImageManager" style="display:none">
+  <label>Uploaded Product Images</label>
+  <div class="muted" style="font-size:11px;margin-bottom:8px">Drag images to change sequence. The first image is the Main Image shown in the Shop.</div>
+  <div class="image-grid" id="uploadedImageGrid"></div>
 </div>
 <div style="margin-top:12px"><label>Key Bullet Points (one point per line)</label><textarea name="bulletPoints" rows="5" placeholder="USB + Bluetooth connectivity\nFast thermal printing\nCompact design"></textarea></div>
 <div style="margin-top:12px"><label>Product Description</label><textarea name="description" rows="5" placeholder="Detailed product information shown on the product page"></textarea></div>
 <div class="card" style="margin-top:14px;background:#f8fafc;box-shadow:none">
 <h3 style="margin-top:0">A+ Product Content</h3>
 <div class="grid2">
-<div><label>Upload A+ Images</label><input name="aPlusImagesUpload" type="file" accept="image/png,image/jpeg,image/webp" multiple><div class="muted" style="font-size:11px;margin-top:5px">Up to 10 A+ images.</div></div>
+<div><label>Upload A+ Images</label><input name="aPlusImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple><div class="muted" style="font-size:11px;margin-top:5px">Up to 10 A+ images.</div></div>
 <div><label>Or A+ Image URLs (one per line)</label><textarea name="aPlusImages" rows="5" placeholder="https://.../feature1.jpg\nhttps://.../feature2.jpg"></textarea></div>
 </div>
 <div style="margin-top:12px"><label>A+ Text Blocks (one per line)</label><textarea name="aPlusTexts" rows="5" placeholder="High-speed printing for busy counters\nBluetooth printing from Android devices"></textarea></div>
@@ -118,7 +135,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 <div class="card" style="margin-top:14px;background:#f8fafc;box-shadow:none">
 <h3 style="margin-top:0">Product Video</h3>
 <div class="grid2">
-<div><label>Upload Product Video</label><input name="productVideo" type="file" accept="video/mp4,video/webm"><div class="muted" style="font-size:11px;margin-top:5px">MP4 or WebM, maximum 12 MB.</div></div>
+<div><label>Upload Product Video</label><input name="productVideoFile" type="file" accept="video/mp4,video/webm"><div class="muted" style="font-size:11px;margin-top:5px">MP4 or WebM, maximum 12 MB.</div></div>
 <div><label>Or Product Video URL</label><input name="productVideoUrl" placeholder="https://.../product-video.mp4"></div>
 </div>
 </div>
@@ -128,23 +145,159 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 
 <script>
 const modal=document.getElementById('modal'),form=document.getElementById('form'),categoryForm=document.getElementById('categoryForm'),bannerForm=document.getElementById('bannerForm');
-async function call(url,opt={}){const r=await fetch(url,opt);let d={};try{d=await r.json()}catch(_){}if(!r.ok||d.success===false)throw new Error(d.message||'Request failed');return d}
-function openProduct(p){form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured}modal.classList.add('show')}
+async function call(url,opt={}){
+  const r=await fetch(url,opt);
+  const contentType=r.headers.get('content-type')||'';
+  let d={};
+  let raw='';
+
+  if(contentType.includes('application/json')){
+    try{ d=await r.json(); }catch(_){}
+  }else{
+    try{ raw=await r.text(); }catch(_){}
+  }
+
+  if(!r.ok || d.success===false){
+    const cleanRaw=(raw||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+    throw new Error(d.message || cleanRaw.slice(0,220) || `Request failed (${r.status})`);
+  }
+  return d;
+}
+function openProduct(p){form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';renderUploadedImages(null);if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured;renderUploadedImages(p)}modal.classList.add('show')}
 function closeProduct(){modal.classList.remove('show')}
+
+let draggedMediaId=null;
+
+function renderUploadedImages(product){
+  const manager=document.getElementById('uploadedImageManager');
+  const grid=document.getElementById('uploadedImageGrid');
+  grid.innerHTML='';
+
+  const media=(product && Array.isArray(product.uploadedMedia))
+    ? [...product.uploadedMedia].sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0))
+    : [];
+
+  if(!product || !product._id || media.length===0){
+    manager.style.display='none';
+    return;
+  }
+
+  manager.style.display='block';
+
+  media.forEach((item,index)=>{
+    const tile=document.createElement('div');
+    tile.className='image-tile'+(index===0?' main':'');
+    tile.draggable=true;
+    tile.dataset.mediaId=item._id;
+
+    tile.innerHTML=`
+      ${index===0?'<span class="main-label">MAIN</span>':''}
+      <img src="${item.url}" alt="Product image">
+      <div class="handle">↕ Drag to reorder</div>
+      <div class="image-actions">
+        <button type="button" class="secondary set-main">Set Main</button>
+        <button type="button" class="danger delete-image">Delete</button>
+      </div>
+    `;
+
+    tile.addEventListener('dragstart',()=>{
+      draggedMediaId=item._id;
+      tile.classList.add('dragging');
+    });
+
+    tile.addEventListener('dragend',()=>{
+      draggedMediaId=null;
+      tile.classList.remove('dragging');
+    });
+
+    tile.addEventListener('dragover',e=>e.preventDefault());
+
+    tile.addEventListener('drop',async e=>{
+      e.preventDefault();
+      if(!draggedMediaId || draggedMediaId===item._id) return;
+
+      const cards=[...grid.querySelectorAll('.image-tile')];
+      const dragged=cards.find(card=>card.dataset.mediaId===draggedMediaId);
+      const target=cards.find(card=>card.dataset.mediaId===item._id);
+      if(!dragged || !target) return;
+
+      const targetRect=target.getBoundingClientRect();
+      const after=e.clientX > targetRect.left + targetRect.width/2;
+      grid.insertBefore(dragged, after ? target.nextSibling : target);
+
+      await saveImageSequence(product._id);
+    });
+
+    tile.querySelector('.set-main').addEventListener('click',async()=>{
+      grid.insertBefore(tile,grid.firstChild);
+      await saveImageSequence(product._id);
+    });
+
+    tile.querySelector('.delete-image').addEventListener('click',async()=>{
+      if(!confirm('Delete this uploaded product image?')) return;
+      try{
+        await call(`/api/products/${product._id}/media/${item._id}`,{method:'DELETE'});
+        tile.remove();
+        await saveImageSequence(product._id);
+      }catch(err){alert(err.message)}
+    });
+
+    grid.appendChild(tile);
+  });
+}
+
+async function saveImageSequence(productId){
+  const grid=document.getElementById('uploadedImageGrid');
+  const orderedIds=[...grid.querySelectorAll('.image-tile')].map(tile=>tile.dataset.mediaId);
+
+  try{
+    const result=await call(`/api/products/${productId}/reorder-images`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({orderedIds})
+    });
+
+    renderUploadedImages(result.data);
+  }catch(err){
+    alert(err.message||'Unable to update image sequence');
+  }
+}
+
 async function saveProduct(e){
   e.preventDefault();
-  const id=form.id.value;
-  const fd=new FormData(form);
-  const uploads=fd.getAll('aPlusImagesUpload');
-  fd.delete('aPlusImagesUpload');
-  uploads.forEach(file=>{ if(file && file.size>0) fd.append('aPlusImages',file); });
-  fd.set('active',form.active.checked?'true':'false');
-  fd.set('featured',form.featured.checked?'true':'false');
+
+  const id = form.id.value;
+  const fd = new FormData(form);
+
+  fd.set('active', form.active.checked ? 'true' : 'false');
+  fd.set('featured', form.featured.checked ? 'true' : 'false');
   fd.delete('id');
-  try{
-    await call('/api/products'+(id?'/'+id:''),{method:id?'PUT':'POST',body:fd});
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  const originalText = submitButton ? submitButton.textContent : '';
+
+  try {
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = 'Uploading...';
+    }
+
+    const result = await call('/api/products' + (id ? '/' + id : ''), {
+      method: id ? 'PUT' : 'POST',
+      body: fd
+    });
+
+    alert(id ? 'Product updated successfully' : 'Product added successfully');
     location.reload();
-  }catch(err){alert(err.message)}
+  } catch (err) {
+    console.error('Product upload failed:', err);
+    alert(err.message || 'Unable to upload product. Please check file size/type and try again.');
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalText || 'Save Product';
+    }
+  }
 }
 async function removeProduct(id){if(!confirm('Delete this product?'))return;try{await call('/api/products/'+id,{method:'DELETE'});location.reload()}catch(err){alert(err.message)}}
 function filterRows(){const q=document.getElementById('search').value.toLowerCase();document.querySelectorAll('#rows tr').forEach(r=>r.style.display=(r.dataset.search||'').includes(q)?'':'none')}

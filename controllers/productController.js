@@ -90,6 +90,15 @@ async function decorateProductsWithUploadedMedia(products, req) {
 
     product.images = [...productImages, ...(Array.isArray(product.images) ? product.images : [])].filter(Boolean);
     product.aPlusImages = [...aPlusImages, ...(Array.isArray(product.aPlusImages) ? product.aPlusImages : [])].filter(Boolean);
+    product.uploadedMedia = items
+      .filter(x => x.kind === 'product_image')
+      .map(x => ({
+        _id: x._id,
+        kind: x.kind,
+        sortOrder: Number(x.sortOrder || 0),
+        originalName: x.originalName || '',
+        url: productMediaUrl(req, x)
+      }));
     if (video) product.productVideoUrl = productMediaUrl(req, video);
   });
 
@@ -507,8 +516,10 @@ exports.page = async (req, res) => {
       ShopCategory.find().sort({ sortOrder: 1, name: 1 }).select('+imageContentType').lean(),
       ShopBanner.find().sort({ sortOrder: 1, createdAt: -1 }).select('+imageContentType').lean()
     ]);
+    const decoratedProducts = await decorateProductsWithUploadedMedia(products, req);
+
     res.render('shop-management', {
-      products,
+      products: decoratedProducts,
       settings: settings || {},
       categories: categories.map(item => publicCategory(item, req)),
       banners: banners.map(item => publicBanner(item, req))
@@ -528,5 +539,73 @@ exports.getProductMedia = async (req, res) => {
     res.send(media.data);
   } catch (_) {
     res.status(404).send('Product media not found');
+  }
+};
+
+
+exports.reorderProductImages = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const orderedIds = Array.isArray(req.body.orderedIds) ? req.body.orderedIds.map(String) : [];
+
+    const media = await ProductMedia.find({
+      productId,
+      kind: 'product_image'
+    }).select('_id sortOrder');
+
+    const validIds = new Set(media.map(item => String(item._id)));
+    const filtered = orderedIds.filter(id => validIds.has(id));
+
+    // Append any uploaded images omitted by the client so no media is lost.
+    media.forEach(item => {
+      const id = String(item._id);
+      if (!filtered.includes(id)) filtered.push(id);
+    });
+
+    await Promise.all(filtered.map((id, index) =>
+      ProductMedia.findOneAndUpdate(
+        { _id: id, productId, kind: 'product_image' },
+        { $set: { sortOrder: index } },
+        { new: true }
+      )
+    ));
+
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    const decorated = await decorateProductsWithUploadedMedia([product], req);
+    res.json({
+      success: true,
+      message: 'Product image sequence updated',
+      data: decorated[0]
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || 'Unable to update image sequence' });
+  }
+};
+
+exports.deleteProductImage = async (req, res) => {
+  try {
+    const { id: productId, mediaId } = req.params;
+    const media = await ProductMedia.findOneAndDelete({
+      _id: mediaId,
+      productId,
+      kind: 'product_image'
+    });
+
+    if (!media) return res.status(404).json({ success: false, message: 'Uploaded image not found' });
+
+    // Compact sequence after delete.
+    const remaining = await ProductMedia.find({ productId, kind: 'product_image' })
+      .sort({ sortOrder: 1, createdAt: 1 })
+      .select('_id');
+
+    await Promise.all(remaining.map((item, index) =>
+      ProductMedia.updateOne({ _id: item._id }, { $set: { sortOrder: index } })
+    ));
+
+    res.json({ success: true, message: 'Image deleted' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || 'Unable to delete image' });
   }
 };

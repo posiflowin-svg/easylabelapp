@@ -75,6 +75,9 @@ router.put('/banners/manage/:id', upload.single('image'), controller.updateShopB
 router.delete('/banners/manage/:id', controller.deleteShopBanner);
 router.get('/banners/:id/image', controller.getShopBannerImage);
 
+router.put('/:id/reorder-images', express.json(), controller.reorderProductImages);
+router.delete('/:id/media/:mediaId', controller.deleteProductImage);
+
 router.get('/category/:category', controller.getProductsByCategory);
 router.get('/media/:id', controller.getProductMedia);
 router.route('/').get(controller.getAllProducts).post(handleProductUpload, controller.createProduct);
