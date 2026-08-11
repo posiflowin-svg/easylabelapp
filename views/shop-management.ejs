@@ -28,6 +28,13 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 .image-tile.main{border:2px solid #ff2d2d;box-shadow:0 0 0 3px rgba(255,45,45,.08)}
 .image-tile img{width:116px;height:92px;object-fit:contain;border-radius:8px;background:#f8fafc}
 .image-tile .handle{text-align:center;color:#94a3b8;font-size:12px;margin-top:3px}
+
+.image-select{position:absolute;top:7px;right:7px;width:22px;height:22px;accent-color:#ff2d2d;cursor:pointer;z-index:3}
+.image-tile.selected{border:2px solid #2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+.bulk-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
+.bulk-toolbar .count{font-size:12px;color:#64748b;font-weight:700}
+.bulk-toolbar button:disabled{opacity:.45;cursor:not-allowed}
+
 .image-actions{display:flex;gap:5px;margin-top:6px}
 .image-actions button{font-size:10px;padding:6px 7px;flex:1}
 .main-label{position:absolute;top:5px;left:5px;background:#ff2d2d;color:#fff;border-radius:99px;padding:3px 7px;font-size:9px;font-weight:800}
@@ -119,7 +126,12 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 </div>
 <div class="image-manager" id="uploadedImageManager" style="display:none">
   <label>Uploaded Product Images</label>
-  <div class="muted" style="font-size:11px;margin-bottom:8px">Drag images to change sequence. The first image is the Main Image shown in the Shop.</div>
+  <div class="muted" style="font-size:11px;margin-bottom:6px">Drag images to change sequence. The first image is the Main Image shown in the Shop.</div>
+  <div class="bulk-toolbar">
+    <button type="button" class="secondary" id="selectAllProductImages" onclick="toggleSelectAllProductImages()">Select All</button>
+    <button type="button" class="danger" id="deleteSelectedProductImages" onclick="deleteSelectedProductImages()" disabled>Delete Selected</button>
+    <span class="count" id="productImageSelectionCount">0 selected</span>
+  </div>
   <div class="image-grid" id="uploadedImageGrid"></div>
 </div>
 <div style="margin-top:12px"><label>Key Bullet Points (one point per line)</label><textarea name="bulletPoints" rows="5" placeholder="USB + Bluetooth connectivity\nFast thermal printing\nCompact design"></textarea></div>
@@ -197,6 +209,7 @@ function renderUploadedImages(product){
 
     tile.innerHTML=`
       ${index===0?'<span class="main-label">MAIN</span>':''}
+      <input type="checkbox" class="image-select media-select" aria-label="Select product image">
       <img src="${item.url}" alt="Product image">
       <div class="handle">↕ Drag to reorder</div>
       <div class="image-actions">
@@ -204,6 +217,13 @@ function renderUploadedImages(product){
         <button type="button" class="danger delete-image">Delete</button>
       </div>
     `;
+
+    const selectBox=tile.querySelector('.media-select');
+    selectBox.addEventListener('click',e=>e.stopPropagation());
+    selectBox.addEventListener('change',()=>{
+      tile.classList.toggle('selected',selectBox.checked);
+      updateProductImageSelectionUi();
+    });
 
     tile.addEventListener('dragstart',()=>{
       draggedMediaId=item._id;
@@ -249,6 +269,7 @@ function renderUploadedImages(product){
 
     grid.appendChild(tile);
   });
+  updateProductImageSelectionUi();
 }
 
 async function saveImageSequence(productId){
@@ -303,6 +324,13 @@ function renderUploadedAPlusImages(product){
       </div>
     `;
 
+    const selectBox=tile.querySelector('.aplus-media-select');
+    selectBox.addEventListener('click',e=>e.stopPropagation());
+    selectBox.addEventListener('change',()=>{
+      tile.classList.toggle('selected',selectBox.checked);
+      updateAPlusImageSelectionUi();
+    });
+
     tile.addEventListener('dragstart',()=>{
       draggedAPlusMediaId=item._id;
       tile.classList.add('dragging');
@@ -355,6 +383,109 @@ async function saveAPlusImageSequence(productId){
     renderUploadedAPlusImages(result.data);
   }catch(err){
     alert(err.message||'Unable to update A+ image sequence');
+  }
+}
+
+
+function selectedProductImageIds(){
+  return [...document.querySelectorAll('#uploadedImageGrid .image-tile')]
+    .filter(tile=>tile.querySelector('.media-select')?.checked)
+    .map(tile=>tile.dataset.mediaId)
+    .filter(Boolean);
+}
+
+function updateProductImageSelectionUi(){
+  const grid=document.getElementById('uploadedImageGrid');
+  const total=grid.querySelectorAll('.image-tile').length;
+  const selected=selectedProductImageIds().length;
+  const count=document.getElementById('productImageSelectionCount');
+  const deleteButton=document.getElementById('deleteSelectedProductImages');
+  const selectAll=document.getElementById('selectAllProductImages');
+  if(count) count.textContent=`${selected} selected`;
+  if(deleteButton) deleteButton.disabled=selected===0;
+  if(selectAll) selectAll.textContent=total>0 && selected===total ? 'Clear Selection' : 'Select All';
+}
+
+function toggleSelectAllProductImages(){
+  const boxes=[...document.querySelectorAll('#uploadedImageGrid .media-select')];
+  const shouldSelect=boxes.some(box=>!box.checked);
+  boxes.forEach(box=>{
+    box.checked=shouldSelect;
+    box.closest('.image-tile')?.classList.toggle('selected',shouldSelect);
+  });
+  updateProductImageSelectionUi();
+}
+
+async function deleteSelectedProductImages(){
+  const productId=form.id.value;
+  const mediaIds=selectedProductImageIds();
+  if(!productId || !mediaIds.length) return;
+  if(!confirm(`Delete ${mediaIds.length} selected product image(s)?`)) return;
+
+  const button=document.getElementById('deleteSelectedProductImages');
+  if(button) button.disabled=true;
+
+  try{
+    const result=await call(`/api/products/${productId}/bulk-delete-images`,{
+      method:'DELETE',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mediaIds})
+    });
+    renderUploadedImages(result.data);
+  }catch(err){
+    alert(err.message||'Unable to delete selected product images');
+    updateProductImageSelectionUi();
+  }
+}
+
+function selectedAPlusImageIds(){
+  return [...document.querySelectorAll('#uploadedAPlusImageGrid .image-tile')]
+    .filter(tile=>tile.querySelector('.aplus-media-select')?.checked)
+    .map(tile=>tile.dataset.mediaId)
+    .filter(Boolean);
+}
+
+function updateAPlusImageSelectionUi(){
+  const grid=document.getElementById('uploadedAPlusImageGrid');
+  const total=grid.querySelectorAll('.image-tile').length;
+  const selected=selectedAPlusImageIds().length;
+  const count=document.getElementById('aPlusImageSelectionCount');
+  const deleteButton=document.getElementById('deleteSelectedAPlusImages');
+  const selectAll=document.getElementById('selectAllAPlusImages');
+  if(count) count.textContent=`${selected} selected`;
+  if(deleteButton) deleteButton.disabled=selected===0;
+  if(selectAll) selectAll.textContent=total>0 && selected===total ? 'Clear Selection' : 'Select All';
+}
+
+function toggleSelectAllAPlusImages(){
+  const boxes=[...document.querySelectorAll('#uploadedAPlusImageGrid .aplus-media-select')];
+  const shouldSelect=boxes.some(box=>!box.checked);
+  boxes.forEach(box=>{
+    box.checked=shouldSelect;
+    box.closest('.image-tile')?.classList.toggle('selected',shouldSelect);
+  });
+  updateAPlusImageSelectionUi();
+}
+
+async function deleteSelectedAPlusImages(){
+  const productId=form.id.value;
+  const mediaIds=selectedAPlusImageIds();
+  if(!productId || !mediaIds.length) return;
+  if(!confirm(`Delete ${mediaIds.length} selected A+ image(s)?`)) return;
+
+  const button=document.getElementById('deleteSelectedAPlusImages');
+  if(button) button.disabled=true;
+
+  try{
+    const result=await call(`/api/products/${productId}/bulk-delete-aplus-images`,{
+      method:'DELETE',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({mediaIds})
+    });
+    renderUploadedAPlusImages(result.data);
+  }catch(err){
+    alert(err.message||'Unable to delete selected A+ images');
+    updateAPlusImageSelectionUi();
   }
 }
 

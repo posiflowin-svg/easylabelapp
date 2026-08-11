@@ -560,6 +560,19 @@ exports.getProductMedia = async (req, res) => {
 };
 
 
+
+async function compactMediaSequence(productId, kind) {
+  const remaining = await ProductMedia.find({ productId, kind })
+    .sort({ sortOrder: 1, createdAt: 1 })
+    .select('_id');
+
+  if (remaining.length) {
+    await Promise.all(remaining.map((item, index) =>
+      ProductMedia.updateOne({ _id: item._id }, { $set: { sortOrder: index } })
+    ));
+  }
+}
+
 exports.reorderProductImages = async (req, res) => {
   try {
     const productId = req.params.id;
@@ -612,14 +625,7 @@ exports.deleteProductImage = async (req, res) => {
 
     if (!media) return res.status(404).json({ success: false, message: 'Uploaded image not found' });
 
-    // Compact sequence after delete.
-    const remaining = await ProductMedia.find({ productId, kind: 'product_image' })
-      .sort({ sortOrder: 1, createdAt: 1 })
-      .select('_id');
-
-    await Promise.all(remaining.map((item, index) =>
-      ProductMedia.updateOne({ _id: item._id }, { $set: { sortOrder: index } })
-    ));
+    await compactMediaSequence(productId, 'product_image');
 
     res.json({ success: true, message: 'Image deleted' });
   } catch (error) {
@@ -671,16 +677,79 @@ exports.deleteAPlusImage = async (req, res) => {
 
     if (!media) return res.status(404).json({ success: false, message: 'Uploaded A+ image not found' });
 
-    const remaining = await ProductMedia.find({ productId, kind: 'aplus_image' })
-      .sort({ sortOrder: 1, createdAt: 1 })
-      .select('_id');
-
-    await Promise.all(remaining.map((item, index) =>
-      ProductMedia.updateOne({ _id: item._id }, { $set: { sortOrder: index } })
-    ));
+    await compactMediaSequence(productId, 'aplus_image');
 
     res.json({ success: true, message: 'A+ image deleted' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message || 'Unable to delete A+ image' });
+  }
+};
+
+
+exports.bulkDeleteProductImages = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const mediaIds = Array.isArray(req.body.mediaIds)
+      ? [...new Set(req.body.mediaIds.map(String).filter(Boolean))]
+      : [];
+
+    if (!mediaIds.length) {
+      return res.status(400).json({ success: false, message: 'Select at least one product image to delete.' });
+    }
+
+    const result = await ProductMedia.deleteMany({
+      _id: { $in: mediaIds },
+      productId,
+      kind: 'product_image'
+    });
+
+    await compactMediaSequence(productId, 'product_image');
+
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
+
+    const decorated = await decorateProductsWithUploadedMedia([product], req);
+    res.json({
+      success: true,
+      deletedCount: Number(result.deletedCount || 0),
+      message: `${Number(result.deletedCount || 0)} product image(s) deleted`,
+      data: decorated[0]
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || 'Unable to delete selected product images.' });
+  }
+};
+
+exports.bulkDeleteAPlusImages = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const mediaIds = Array.isArray(req.body.mediaIds)
+      ? [...new Set(req.body.mediaIds.map(String).filter(Boolean))]
+      : [];
+
+    if (!mediaIds.length) {
+      return res.status(400).json({ success: false, message: 'Select at least one A+ image to delete.' });
+    }
+
+    const result = await ProductMedia.deleteMany({
+      _id: { $in: mediaIds },
+      productId,
+      kind: 'aplus_image'
+    });
+
+    await compactMediaSequence(productId, 'aplus_image');
+
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found.' });
+
+    const decorated = await decorateProductsWithUploadedMedia([product], req);
+    res.json({
+      success: true,
+      deletedCount: Number(result.deletedCount || 0),
+      message: `${Number(result.deletedCount || 0)} A+ image(s) deleted`,
+      data: decorated[0]
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || 'Unable to delete selected A+ images.' });
   }
 };

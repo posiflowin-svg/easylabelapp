@@ -76,8 +76,10 @@ router.delete('/banners/manage/:id', controller.deleteShopBanner);
 router.get('/banners/:id/image', controller.getShopBannerImage);
 
 router.put('/:id/reorder-images', express.json(), controller.reorderProductImages);
+router.delete('/:id/bulk-delete-images', express.json(), controller.bulkDeleteProductImages);
 router.delete('/:id/media/:mediaId', controller.deleteProductImage);
 router.put('/:id/reorder-aplus-images', express.json(), controller.reorderAPlusImages);
+router.delete('/:id/bulk-delete-aplus-images', express.json(), controller.bulkDeleteAPlusImages);
 router.delete('/:id/aplus-media/:mediaId', controller.deleteAPlusImage);
 
 router.get('/category/:category', controller.getProductsByCategory);
