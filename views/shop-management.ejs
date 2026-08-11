@@ -144,7 +144,12 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 </div>
 <div class="image-manager" id="uploadedAPlusImageManager" style="display:none">
   <label>Uploaded A+ Images</label>
-  <div class="muted" style="font-size:11px;margin-bottom:8px">Drag images to change the A+ sequence. The first image is shown first on the Product Detail page. Use Set Main to move any A+ image to the first position.</div>
+  <div class="muted" style="font-size:11px;margin-bottom:6px">Drag images to change the A+ sequence. The first image is shown first on the Product Detail page. Use Set Main to move any A+ image to the first position.</div>
+  <div class="bulk-toolbar">
+    <button type="button" class="secondary" id="selectAllAPlusImages" onclick="toggleSelectAllAPlusImages()">Select All</button>
+    <button type="button" class="danger" id="deleteSelectedAPlusImages" onclick="deleteSelectedAPlusImages()" disabled>Delete Selected</button>
+    <span class="count" id="aPlusImageSelectionCount">0 selected</span>
+  </div>
   <div class="image-grid" id="uploadedAPlusImageGrid"></div>
 </div>
 <div style="margin-top:12px"><label>A+ Text Blocks (one per line)</label><textarea name="aPlusTexts" rows="5" placeholder="High-speed printing for busy counters\nBluetooth printing from Android devices"></textarea></div>
