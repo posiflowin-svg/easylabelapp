@@ -18,6 +18,14 @@ function publicBaseUrl(req) {
   return base;
 }
 
+function normalizeStringArray(value) {
+  if (Array.isArray(value)) return value.map(v => String(v || '').trim()).filter(Boolean);
+  return String(value || '')
+    .split(/\r?\n/)
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
 function normalizeProductPayload(body = {}) {
   const images = Array.isArray(body.images)
     ? body.images.map(v => String(v || '').trim()).filter(Boolean)
@@ -38,6 +46,9 @@ function normalizeProductPayload(body = {}) {
       imageUrl: String(category.imageUrl || '').trim()
     },
     description: String(body.description || '').trim(),
+    bulletPoints: normalizeStringArray(body.bulletPoints),
+    aPlusImages: normalizeStringArray(body.aPlusImages),
+    aPlusTexts: normalizeStringArray(body.aPlusTexts),
     badge: String(body.badge || '').trim(),
     stock: body.stock === '' || body.stock === undefined ? -1 : Number(body.stock),
     active: boolValue(body.active, true),
@@ -103,7 +114,12 @@ exports.getStorefront = async (req, res, next) => {
   try {
     const [settingsDoc, products, categoryDocs, banners] = await Promise.all([
       ShopSettings.findOne({ key: 'default' }).lean(),
-      Product.find({ active: true }).sort({ featured: -1, sortOrder: 1, createdAt: -1 }).lean(),
+      Product.find({
+        $or: [
+          { active: true },
+          { active: { $exists: false } }
+        ]
+      }).sort({ featured: -1, sortOrder: 1, createdAt: -1 }).lean(),
       ShopCategory.find({ active: true }).sort({ sortOrder: 1, name: 1 }).select('+imageContentType').lean(),
       ShopBanner.find({ active: true }).sort({ sortOrder: 1, createdAt: -1 }).select('+imageContentType').lean()
     ]);
@@ -238,7 +254,7 @@ exports.getAllCategories = async (req, res, next) => {
     }
 
     const legacy = await Product.aggregate([
-      { $match: { active: true } },
+      { $match: { $or: [{ active: true }, { active: { $exists: false } }] } },
       { $group: { _id: '$category.name', imageUrl: { $first: '$category.imageUrl' }, count: { $sum: 1 } } },
       { $project: { _id: 0, name: '$_id', imageUrl: 1, count: 1, sortOrder: { $literal: 0 } } },
       { $sort: { name: 1 } }

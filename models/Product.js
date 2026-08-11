@@ -10,7 +10,10 @@ const productSchema = new mongoose.Schema({
     name: { type: String, required: [true, 'Category name is required'], trim: true },
     imageUrl: { type: String, default: '', trim: true }
   },
-  description: { type: String, default: '', maxlength: 4000 },
+  description: { type: String, default: '', maxlength: 8000 },
+  bulletPoints: [{ type: String, trim: true, maxlength: 500 }],
+  aPlusImages: [{ type: String, trim: true }],
+  aPlusTexts: [{ type: String, trim: true, maxlength: 2000 }],
   badge: { type: String, default: '', trim: true, maxlength: 40 },
   stock: { type: Number, default: -1 }, // -1 = unlimited / not tracked
   active: { type: Boolean, default: true, index: true },
