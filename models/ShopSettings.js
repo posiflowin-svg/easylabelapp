@@ -8,7 +8,8 @@ const shopSettingsSchema = new mongoose.Schema({
   heroBadge: { type: String, default: 'EasyLabel Shop' },
   heroImageUrl: { type: String, default: '' },
   shippingText: { type: String, default: 'Fast dispatch • Secure payments • Easy support' },
-  supportText: { type: String, default: 'Need help choosing? Contact our sales team.' }
+  supportText: { type: String, default: 'Need help choosing? Contact our sales team.' },
+  sliderIntervalMs: { type: Number, default: 4500, min: 2000, max: 15000 }
 }, { timestamps: true });
 
 module.exports = mongoose.model('ShopSettings', shopSettingsSchema);
