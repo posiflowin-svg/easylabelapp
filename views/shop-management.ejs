@@ -130,6 +130,11 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 <div><label>Upload A+ Images</label><input name="aPlusImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple><div class="muted" style="font-size:11px;margin-top:5px">Up to 10 A+ images.</div></div>
 <div><label>Or A+ Image URLs (one per line)</label><textarea name="aPlusImages" rows="5" placeholder="https://.../feature1.jpg\nhttps://.../feature2.jpg"></textarea></div>
 </div>
+<div class="image-manager" id="uploadedAPlusImageManager" style="display:none">
+  <label>Uploaded A+ Images</label>
+  <div class="muted" style="font-size:11px;margin-bottom:8px">Drag images to change the A+ sequence. The first image is shown first on the Product Detail page. Use Set Main to move any A+ image to the first position.</div>
+  <div class="image-grid" id="uploadedAPlusImageGrid"></div>
+</div>
 <div style="margin-top:12px"><label>A+ Text Blocks (one per line)</label><textarea name="aPlusTexts" rows="5" placeholder="High-speed printing for busy counters\nBluetooth printing from Android devices"></textarea></div>
 </div>
 <div class="card" style="margin-top:14px;background:#f8fafc;box-shadow:none">
@@ -163,7 +168,7 @@ async function call(url,opt={}){
   }
   return d;
 }
-function openProduct(p){form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';renderUploadedImages(null);if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured;renderUploadedImages(p)}modal.classList.add('show')}
+function openProduct(p){form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';renderUploadedImages(null);renderUploadedAPlusImages(null);if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.externalImages||p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.externalAPlusImages||p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured;renderUploadedImages(p);renderUploadedAPlusImages(p)}modal.classList.add('show')}
 function closeProduct(){modal.classList.remove('show')}
 
 let draggedMediaId=null;
@@ -260,6 +265,96 @@ async function saveImageSequence(productId){
     renderUploadedImages(result.data);
   }catch(err){
     alert(err.message||'Unable to update image sequence');
+  }
+}
+
+
+let draggedAPlusMediaId=null;
+
+function renderUploadedAPlusImages(product){
+  const manager=document.getElementById('uploadedAPlusImageManager');
+  const grid=document.getElementById('uploadedAPlusImageGrid');
+  grid.innerHTML='';
+
+  const media=(product && Array.isArray(product.uploadedAPlusMedia))
+    ? [...product.uploadedAPlusMedia].sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0))
+    : [];
+
+  if(!product || !product._id || media.length===0){
+    manager.style.display='none';
+    return;
+  }
+
+  manager.style.display='block';
+
+  media.forEach((item,index)=>{
+    const tile=document.createElement('div');
+    tile.className='image-tile'+(index===0?' main':'');
+    tile.draggable=true;
+    tile.dataset.mediaId=item._id;
+
+    tile.innerHTML=`
+      ${index===0?'<span class="main-label">FIRST</span>':''}
+      <img src="${item.url}" alt="A+ image">
+      <div class="handle">↕ Drag to reorder</div>
+      <div class="image-actions">
+        <button type="button" class="secondary set-main">Set Main</button>
+        <button type="button" class="danger delete-image">Delete</button>
+      </div>
+    `;
+
+    tile.addEventListener('dragstart',()=>{
+      draggedAPlusMediaId=item._id;
+      tile.classList.add('dragging');
+    });
+    tile.addEventListener('dragend',()=>{
+      draggedAPlusMediaId=null;
+      tile.classList.remove('dragging');
+    });
+    tile.addEventListener('dragover',e=>e.preventDefault());
+    tile.addEventListener('drop',async e=>{
+      e.preventDefault();
+      if(!draggedAPlusMediaId || draggedAPlusMediaId===item._id) return;
+      const cards=[...grid.querySelectorAll('.image-tile')];
+      const dragged=cards.find(card=>card.dataset.mediaId===draggedAPlusMediaId);
+      const target=cards.find(card=>card.dataset.mediaId===item._id);
+      if(!dragged || !target) return;
+      const rect=target.getBoundingClientRect();
+      const after=e.clientX > rect.left + rect.width/2;
+      grid.insertBefore(dragged,after?target.nextSibling:target);
+      await saveAPlusImageSequence(product._id);
+    });
+
+    tile.querySelector('.set-main').addEventListener('click',async()=>{
+      grid.insertBefore(tile,grid.firstChild);
+      await saveAPlusImageSequence(product._id);
+    });
+
+    tile.querySelector('.delete-image').addEventListener('click',async()=>{
+      if(!confirm('Delete this uploaded A+ image?')) return;
+      try{
+        await call(`/api/products/${product._id}/aplus-media/${item._id}`,{method:'DELETE'});
+        tile.remove();
+        await saveAPlusImageSequence(product._id);
+      }catch(err){alert(err.message)}
+    });
+
+    grid.appendChild(tile);
+  });
+}
+
+async function saveAPlusImageSequence(productId){
+  const grid=document.getElementById('uploadedAPlusImageGrid');
+  const orderedIds=[...grid.querySelectorAll('.image-tile')].map(tile=>tile.dataset.mediaId);
+  try{
+    const result=await call(`/api/products/${productId}/reorder-aplus-images`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({orderedIds})
+    });
+    renderUploadedAPlusImages(result.data);
+  }catch(err){
+    alert(err.message||'Unable to update A+ image sequence');
   }
 }
 

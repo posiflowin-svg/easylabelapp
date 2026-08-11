@@ -88,8 +88,14 @@ async function decorateProductsWithUploadedMedia(products, req) {
     const aPlusImages = items.filter(x => x.kind === 'aplus_image').map(x => productMediaUrl(req, x));
     const video = items.find(x => x.kind === 'video');
 
-    product.images = [...productImages, ...(Array.isArray(product.images) ? product.images : [])].filter(Boolean);
-    product.aPlusImages = [...aPlusImages, ...(Array.isArray(product.aPlusImages) ? product.aPlusImages : [])].filter(Boolean);
+    // Keep URL-entered media separate from uploaded media so the admin edit form
+    // does not copy generated /api/products/media URLs back into URL textareas.
+    product.externalImages = Array.isArray(product.images) ? [...product.images] : [];
+    product.externalAPlusImages = Array.isArray(product.aPlusImages) ? [...product.aPlusImages] : [];
+
+    product.images = [...productImages, ...product.externalImages].filter(Boolean);
+    product.aPlusImages = [...aPlusImages, ...product.externalAPlusImages].filter(Boolean);
+
     product.uploadedMedia = items
       .filter(x => x.kind === 'product_image')
       .map(x => ({
@@ -99,6 +105,17 @@ async function decorateProductsWithUploadedMedia(products, req) {
         originalName: x.originalName || '',
         url: productMediaUrl(req, x)
       }));
+
+    product.uploadedAPlusMedia = items
+      .filter(x => x.kind === 'aplus_image')
+      .map(x => ({
+        _id: x._id,
+        kind: x.kind,
+        sortOrder: Number(x.sortOrder || 0),
+        originalName: x.originalName || '',
+        url: productMediaUrl(req, x)
+      }));
+
     if (video) product.productVideoUrl = productMediaUrl(req, video);
   });
 
@@ -607,5 +624,63 @@ exports.deleteProductImage = async (req, res) => {
     res.json({ success: true, message: 'Image deleted' });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message || 'Unable to delete image' });
+  }
+};
+
+
+exports.reorderAPlusImages = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const orderedIds = Array.isArray(req.body.orderedIds) ? req.body.orderedIds.map(String) : [];
+
+    const media = await ProductMedia.find({ productId, kind: 'aplus_image' })
+      .select('_id sortOrder');
+
+    const validIds = new Set(media.map(item => String(item._id)));
+    const filtered = orderedIds.filter(id => validIds.has(id));
+    media.forEach(item => {
+      const id = String(item._id);
+      if (!filtered.includes(id)) filtered.push(id);
+    });
+
+    await Promise.all(filtered.map((id, index) =>
+      ProductMedia.findOneAndUpdate(
+        { _id: id, productId, kind: 'aplus_image' },
+        { $set: { sortOrder: index } },
+        { new: true }
+      )
+    ));
+
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+    const decorated = await decorateProductsWithUploadedMedia([product], req);
+    res.json({ success: true, message: 'A+ image sequence updated', data: decorated[0] });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || 'Unable to update A+ image sequence' });
+  }
+};
+
+exports.deleteAPlusImage = async (req, res) => {
+  try {
+    const { id: productId, mediaId } = req.params;
+    const media = await ProductMedia.findOneAndDelete({
+      _id: mediaId,
+      productId,
+      kind: 'aplus_image'
+    });
+
+    if (!media) return res.status(404).json({ success: false, message: 'Uploaded A+ image not found' });
+
+    const remaining = await ProductMedia.find({ productId, kind: 'aplus_image' })
+      .sort({ sortOrder: 1, createdAt: 1 })
+      .select('_id');
+
+    await Promise.all(remaining.map((item, index) =>
+      ProductMedia.updateOne({ _id: item._id }, { $set: { sortOrder: index } })
+    ));
+
+    res.json({ success: true, message: 'A+ image deleted' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || 'Unable to delete A+ image' });
   }
 };
