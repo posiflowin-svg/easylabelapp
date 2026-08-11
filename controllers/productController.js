@@ -753,3 +753,64 @@ exports.bulkDeleteAPlusImages = async (req, res) => {
     res.status(400).json({ success: false, message: error.message || 'Unable to delete selected A+ images.' });
   }
 };
+
+
+// Reliable Shop Manager media delete endpoint.
+// Uses POST so browsers/proxies do not drop DELETE request bodies.
+exports.deleteProductMediaSelection = async (req, res) => {
+  try {
+    const productId = String(req.params.id || '').trim();
+    const kind = String(req.body.kind || '').trim();
+    const mediaIds = Array.isArray(req.body.mediaIds)
+      ? [...new Set(req.body.mediaIds.map(id => String(id || '').trim()).filter(Boolean))]
+      : [];
+
+    if (!['product_image', 'aplus_image'].includes(kind)) {
+      return res.status(400).json({ success: false, message: 'Invalid image type.' });
+    }
+
+    if (!mediaIds.length) {
+      return res.status(400).json({ success: false, message: 'Select at least one image to delete.' });
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Product not found.' });
+    }
+
+    const existing = await ProductMedia.find({
+      _id: { $in: mediaIds },
+      productId,
+      kind
+    }).select('_id');
+
+    if (!existing.length) {
+      return res.status(404).json({ success: false, message: 'Selected uploaded image(s) were not found.' });
+    }
+
+    const validIds = existing.map(item => item._id);
+    const result = await ProductMedia.deleteMany({
+      _id: { $in: validIds },
+      productId,
+      kind
+    });
+
+    await compactMediaSequence(productId, kind);
+
+    const refreshedProduct = await Product.findById(productId);
+    const decorated = await decorateProductsWithUploadedMedia([refreshedProduct], req);
+
+    return res.json({
+      success: true,
+      deletedCount: Number(result.deletedCount || 0),
+      message: `${Number(result.deletedCount || 0)} image(s) deleted successfully`,
+      data: decorated[0]
+    });
+  } catch (error) {
+    console.error('Shop Manager image delete failed:', error);
+    return res.status(400).json({
+      success: false,
+      message: error && error.message ? error.message : 'Unable to delete selected image(s).'
+    });
+  }
+};

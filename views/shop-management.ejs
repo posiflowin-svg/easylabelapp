@@ -200,6 +200,18 @@ async function openProductById(id){
 function openProduct(p){form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';renderUploadedImages(null);renderUploadedAPlusImages(null);if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.externalImages||p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.externalAPlusImages||p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured;renderUploadedImages(p);renderUploadedAPlusImages(p)}modal.classList.add('show')}
 function closeProduct(){modal.classList.remove('show')}
 
+
+async function deleteUploadedMedia(productId, kind, mediaIds){
+  const ids=[...new Set((mediaIds||[]).map(id=>String(id||'').trim()).filter(Boolean))];
+  if(!productId || !ids.length) throw new Error('No image selected.');
+
+  return await call(`/api/products/${productId}/media/delete-selection`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({kind,mediaIds:ids})
+  });
+}
+
 let draggedMediaId=null;
 
 function renderUploadedImages(product){
@@ -280,11 +292,15 @@ function renderUploadedImages(product){
 
     tile.querySelector('.delete-image')?.addEventListener('click',async()=>{
       if(!confirm('Delete this uploaded product image?')) return;
+      const button=tile.querySelector('.delete-image');
+      if(button){button.disabled=true;button.textContent='Deleting...';}
       try{
-        await call(`/api/products/${product._id}/media/${item._id}`,{method:'DELETE'});
-        tile.remove();
-        await saveImageSequence(product._id);
-      }catch(err){alert(err.message)}
+        const result=await deleteUploadedMedia(product._id,'product_image',[item._id]);
+        renderUploadedImages(result.data);
+      }catch(err){
+        alert(err.message||'Unable to delete product image');
+        if(button){button.disabled=false;button.textContent='Delete';}
+      }
     });
 
     grid.appendChild(tile);
@@ -384,11 +400,15 @@ function renderUploadedAPlusImages(product){
 
     tile.querySelector('.delete-image')?.addEventListener('click',async()=>{
       if(!confirm('Delete this uploaded A+ image?')) return;
+      const button=tile.querySelector('.delete-image');
+      if(button){button.disabled=true;button.textContent='Deleting...';}
       try{
-        await call(`/api/products/${product._id}/aplus-media/${item._id}`,{method:'DELETE'});
-        tile.remove();
-        await saveAPlusImageSequence(product._id);
-      }catch(err){alert(err.message)}
+        const result=await deleteUploadedMedia(product._id,'aplus_image',[item._id]);
+        renderUploadedAPlusImages(result.data);
+      }catch(err){
+        alert(err.message||'Unable to delete A+ image');
+        if(button){button.disabled=false;button.textContent='Delete';}
+      }
     });
 
     grid.appendChild(tile);
@@ -450,11 +470,7 @@ async function deleteSelectedProductImages(){
   if(button) button.disabled=true;
 
   try{
-    const result=await call(`/api/products/${productId}/bulk-delete-images`,{
-      method:'DELETE',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({mediaIds})
-    });
+    const result=await deleteUploadedMedia(productId,'product_image',mediaIds);
     renderUploadedImages(result.data);
   }catch(err){
     alert(err.message||'Unable to delete selected product images');
@@ -501,11 +517,7 @@ async function deleteSelectedAPlusImages(){
   if(button) button.disabled=true;
 
   try{
-    const result=await call(`/api/products/${productId}/bulk-delete-aplus-images`,{
-      method:'DELETE',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({mediaIds})
-    });
+    const result=await deleteUploadedMedia(productId,'aplus_image',mediaIds);
     renderUploadedAPlusImages(result.data);
   }catch(err){
     alert(err.message||'Unable to delete selected A+ images');
