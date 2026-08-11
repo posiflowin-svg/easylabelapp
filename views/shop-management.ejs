@@ -95,22 +95,32 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 </main></div>
 
 <div class="modal" id="modal"><div class="modalbox"><div class="head"><div><h2 id="modalTitle">Add Product</h2><div class="muted">Changes go live in Android after save.</div></div><button class="secondary" onclick="closeProduct()">✕</button></div>
-<form id="form" onsubmit="saveProduct(event)"><input type="hidden" name="id"><div class="grid">
+<form id="form" enctype="multipart/form-data" onsubmit="saveProduct(event)"><input type="hidden" name="id"><div class="grid">
 <div><label>Product Name *</label><input name="name" required></div><div><label>SKU / Model</label><input name="sku"></div>
 <div><label>Category *</label><input name="categoryName" list="cats" required><datalist id="cats"><% categories.forEach(c=>{ %><option value="<%=c.name%>"><% }) %></datalist></div>
 <div><label>Selling Price ₹ *</label><input name="price" type="number" min="0" required></div><div><label>MRP ₹</label><input name="mrp" type="number" min="0"></div><div><label>Stock</label><input name="stock" type="number" value="-1"></div>
 <div><label>Badge</label><input name="badge" placeholder="BESTSELLER / NEW"></div><div><label>Product Sort Order</label><input name="sortOrder" type="number" value="0"></div>
 </div>
-<div style="margin-top:12px"><label>Product Image URLs * (one per line)</label><textarea name="images" rows="4" required placeholder="Main image\nSecond image\nThird image..."></textarea></div>
+<div class="grid2" style="margin-top:12px">
+<div><label>Upload Product Images</label><input name="productImages" type="file" accept="image/png,image/jpeg,image/webp" multiple><div class="muted" style="font-size:11px;margin-top:5px">Up to 8 product images.</div></div>
+<div><label>Or Product Image URLs (one per line)</label><textarea name="images" rows="4" placeholder="https://.../main.jpg\nhttps://.../second.jpg"></textarea></div>
+</div>
 <div style="margin-top:12px"><label>Key Bullet Points (one point per line)</label><textarea name="bulletPoints" rows="5" placeholder="USB + Bluetooth connectivity\nFast thermal printing\nCompact design"></textarea></div>
 <div style="margin-top:12px"><label>Product Description</label><textarea name="description" rows="5" placeholder="Detailed product information shown on the product page"></textarea></div>
 <div class="card" style="margin-top:14px;background:#f8fafc;box-shadow:none">
-  <h3 style="margin-top:0">A+ Product Content</h3>
-  <div class="muted" style="margin-bottom:10px">Add premium A+ images and text blocks. Put one image URL and one text block per line in matching order.</div>
-  <div class="grid2">
-    <div><label>A+ Image URLs (one per line)</label><textarea name="aPlusImages" rows="6" placeholder="https://.../feature1.jpg\nhttps://.../feature2.jpg"></textarea></div>
-    <div><label>A+ Text Blocks (one per line)</label><textarea name="aPlusTexts" rows="6" placeholder="High-speed printing for busy counters\nBluetooth printing from Android devices"></textarea></div>
-  </div>
+<h3 style="margin-top:0">A+ Product Content</h3>
+<div class="grid2">
+<div><label>Upload A+ Images</label><input name="aPlusImagesUpload" type="file" accept="image/png,image/jpeg,image/webp" multiple><div class="muted" style="font-size:11px;margin-top:5px">Up to 10 A+ images.</div></div>
+<div><label>Or A+ Image URLs (one per line)</label><textarea name="aPlusImages" rows="5" placeholder="https://.../feature1.jpg\nhttps://.../feature2.jpg"></textarea></div>
+</div>
+<div style="margin-top:12px"><label>A+ Text Blocks (one per line)</label><textarea name="aPlusTexts" rows="5" placeholder="High-speed printing for busy counters\nBluetooth printing from Android devices"></textarea></div>
+</div>
+<div class="card" style="margin-top:14px;background:#f8fafc;box-shadow:none">
+<h3 style="margin-top:0">Product Video</h3>
+<div class="grid2">
+<div><label>Upload Product Video</label><input name="productVideo" type="file" accept="video/mp4,video/webm"><div class="muted" style="font-size:11px;margin-top:5px">MP4 or WebM, maximum 12 MB.</div></div>
+<div><label>Or Product Video URL</label><input name="productVideoUrl" placeholder="https://.../product-video.mp4"></div>
+</div>
 </div>
 <div class="toolbar" style="margin-top:14px"><label><input name="active" type="checkbox" style="width:auto" checked> Active</label><label><input name="featured" type="checkbox" style="width:auto"> Best Seller</label></div>
 <div class="toolbar" style="margin-top:16px"><button class="primary">Save Product</button><button type="button" class="secondary" onclick="closeProduct()">Cancel</button></div></form>
@@ -119,9 +129,23 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 <script>
 const modal=document.getElementById('modal'),form=document.getElementById('form'),categoryForm=document.getElementById('categoryForm'),bannerForm=document.getElementById('bannerForm');
 async function call(url,opt={}){const r=await fetch(url,opt);let d={};try{d=await r.json()}catch(_){}if(!r.ok||d.success===false)throw new Error(d.message||'Request failed');return d}
-function openProduct(p){form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.active.checked=p.active!==false;form.featured.checked=!!p.featured}modal.classList.add('show')}
+function openProduct(p){form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured}modal.classList.add('show')}
 function closeProduct(){modal.classList.remove('show')}
-async function saveProduct(e){e.preventDefault();const fd=new FormData(form),id=fd.get('id');const data=Object.fromEntries(fd.entries());data.active=form.active.checked;data.featured=form.featured.checked;data.images=String(data.images||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);data.bulletPoints=String(data.bulletPoints||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);data.aPlusImages=String(data.aPlusImages||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);data.aPlusTexts=String(data.aPlusTexts||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);delete data.id;try{await call('/api/products'+(id?'/'+id:''),{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});location.reload()}catch(err){alert(err.message)}}
+async function saveProduct(e){
+  e.preventDefault();
+  const id=form.id.value;
+  const fd=new FormData(form);
+  const uploads=fd.getAll('aPlusImagesUpload');
+  fd.delete('aPlusImagesUpload');
+  uploads.forEach(file=>{ if(file && file.size>0) fd.append('aPlusImages',file); });
+  fd.set('active',form.active.checked?'true':'false');
+  fd.set('featured',form.featured.checked?'true':'false');
+  fd.delete('id');
+  try{
+    await call('/api/products'+(id?'/'+id:''),{method:id?'PUT':'POST',body:fd});
+    location.reload();
+  }catch(err){alert(err.message)}
+}
 async function removeProduct(id){if(!confirm('Delete this product?'))return;try{await call('/api/products/'+id,{method:'DELETE'});location.reload()}catch(err){alert(err.message)}}
 function filterRows(){const q=document.getElementById('search').value.toLowerCase();document.querySelectorAll('#rows tr').forEach(r=>r.style.display=(r.dataset.search||'').includes(q)?'':'none')}
 async function saveSettings(){const data={enabled:document.getElementById('shopEnabled').checked,heroBadge:document.getElementById('heroBadge').value,heroTitle:document.getElementById('heroTitle').value,heroSubtitle:document.getElementById('heroSubtitle').value,shippingText:document.getElementById('shippingText').value,supportText:document.getElementById('supportText').value,sliderIntervalMs:document.getElementById('sliderIntervalMs').value};try{await call('/api/products/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});alert('Storefront saved')}catch(err){alert(err.message)}}

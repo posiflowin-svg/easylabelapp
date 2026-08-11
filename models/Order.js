@@ -8,6 +8,7 @@ const OrderSchema = new mongoose.Schema({
     customer: {
         name: { type: String, required: true },
         phone: { type: String, required: true },
+        alternatePhone: { type: String, default: '', trim: true },
         gstin: { 
             type: String, 
             trim: true,

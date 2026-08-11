@@ -14,6 +14,7 @@ const productSchema = new mongoose.Schema({
   bulletPoints: [{ type: String, trim: true, maxlength: 500 }],
   aPlusImages: [{ type: String, trim: true }],
   aPlusTexts: [{ type: String, trim: true, maxlength: 2000 }],
+  productVideoUrl: { type: String, default: '', trim: true },
   badge: { type: String, default: '', trim: true, maxlength: 40 },
   stock: { type: Number, default: -1 }, // -1 = unlimited / not tracked
   active: { type: Boolean, default: true, index: true },

@@ -5,15 +5,24 @@ const controller = require('../controllers/productController');
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: 12 * 1024 * 1024, files: 20 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!allowed.includes(file.mimetype)) {
-      return cb(new Error('Only JPG, PNG and WebP images are supported.'));
+    if (file.fieldname === 'productVideo') {
+      return ['video/mp4', 'video/webm'].includes(file.mimetype)
+        ? cb(null, true)
+        : cb(new Error('Product video must be MP4 or WebM.'));
     }
-    cb(null, true);
+    return ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)
+      ? cb(null, true)
+      : cb(new Error('Images must be JPG, PNG or WebP.'));
   }
 });
+
+const productUpload = upload.fields([
+  { name: 'productImages', maxCount: 8 },
+  { name: 'aPlusImages', maxCount: 10 },
+  { name: 'productVideo', maxCount: 1 }
+]);
 
 router.get('/storefront', controller.getStorefront);
 router.get('/settings', controller.getShopSettings);
@@ -33,7 +42,8 @@ router.delete('/banners/manage/:id', controller.deleteShopBanner);
 router.get('/banners/:id/image', controller.getShopBannerImage);
 
 router.get('/category/:category', controller.getProductsByCategory);
-router.route('/').get(controller.getAllProducts).post(controller.createProduct);
-router.route('/:id').get(controller.getProduct).put(controller.updateProduct).delete(controller.deleteProduct);
+router.get('/media/:id', controller.getProductMedia);
+router.route('/').get(controller.getAllProducts).post(productUpload, controller.createProduct);
+router.route('/:id').get(controller.getProduct).put(productUpload, controller.updateProduct).delete(controller.deleteProduct);
 
 module.exports = router;

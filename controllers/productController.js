@@ -2,6 +2,7 @@ const Product = require('../models/Product');
 const ShopSettings = require('../models/ShopSettings');
 const ShopCategory = require('../models/ShopCategory');
 const ShopBanner = require('../models/ShopBanner');
+const ProductMedia = require('../models/ProductMedia');
 const ErrorResponse = require('../utils/errorResponse');
 
 function boolValue(value, fallback = false) {
@@ -49,12 +50,79 @@ function normalizeProductPayload(body = {}) {
     bulletPoints: normalizeStringArray(body.bulletPoints),
     aPlusImages: normalizeStringArray(body.aPlusImages),
     aPlusTexts: normalizeStringArray(body.aPlusTexts),
+    productVideoUrl: String(body.productVideoUrl || '').trim(),
     badge: String(body.badge || '').trim(),
     stock: body.stock === '' || body.stock === undefined ? -1 : Number(body.stock),
     active: boolValue(body.active, true),
     featured: boolValue(body.featured, false),
     sortOrder: Number(body.sortOrder || 0)
   };
+}
+
+function productMediaUrl(req, media) {
+  const base = publicBaseUrl(req);
+  const version = media.updatedAt ? new Date(media.updatedAt).getTime() : Date.now();
+  return `${base}/api/products/media/${media._id}?v=${version}`;
+}
+
+async function decorateProductsWithUploadedMedia(products, req) {
+  const plain = products.map(item => item && typeof item.toObject === 'function' ? item.toObject() : { ...item });
+  const ids = plain.map(item => item._id).filter(Boolean);
+  if (!ids.length) return plain;
+
+  const media = await ProductMedia.find({ productId: { $in: ids } })
+    .select('-data')
+    .sort({ kind: 1, sortOrder: 1, createdAt: 1 })
+    .lean();
+
+  const byProduct = new Map();
+  media.forEach(item => {
+    const key = String(item.productId);
+    if (!byProduct.has(key)) byProduct.set(key, []);
+    byProduct.get(key).push(item);
+  });
+
+  plain.forEach(product => {
+    const items = byProduct.get(String(product._id)) || [];
+    const productImages = items.filter(x => x.kind === 'product_image').map(x => productMediaUrl(req, x));
+    const aPlusImages = items.filter(x => x.kind === 'aplus_image').map(x => productMediaUrl(req, x));
+    const video = items.find(x => x.kind === 'video');
+
+    product.images = [...productImages, ...(Array.isArray(product.images) ? product.images : [])].filter(Boolean);
+    product.aPlusImages = [...aPlusImages, ...(Array.isArray(product.aPlusImages) ? product.aPlusImages : [])].filter(Boolean);
+    if (video) product.productVideoUrl = productMediaUrl(req, video);
+  });
+
+  return plain;
+}
+
+async function saveUploadedProductMedia(productId, files = {}) {
+  const tasks = [];
+
+  (files.productImages || []).forEach((file, index) => {
+    tasks.push(ProductMedia.create({
+      productId, kind: 'product_image', sortOrder: index,
+      originalName: file.originalname || '', contentType: file.mimetype, data: file.buffer
+    }));
+  });
+
+  (files.aPlusImages || []).forEach((file, index) => {
+    tasks.push(ProductMedia.create({
+      productId, kind: 'aplus_image', sortOrder: index,
+      originalName: file.originalname || '', contentType: file.mimetype, data: file.buffer
+    }));
+  });
+
+  if ((files.productVideo || []).length) {
+    await ProductMedia.deleteMany({ productId, kind: 'video' });
+    const file = files.productVideo[0];
+    tasks.push(ProductMedia.create({
+      productId, kind: 'video', sortOrder: 0,
+      originalName: file.originalname || '', contentType: file.mimetype, data: file.buffer
+    }));
+  }
+
+  if (tasks.length) await Promise.all(tasks);
 }
 
 function publicCategory(category, req) {
@@ -106,7 +174,8 @@ exports.getAllProducts = async (req, res, next) => {
       ];
     }
     const products = await Product.find(query).sort({ featured: -1, sortOrder: 1, createdAt: -1 });
-    res.status(200).json({ success: true, count: products.length, data: products });
+    const decorated = await decorateProductsWithUploadedMedia(products, req);
+    res.status(200).json({ success: true, count: decorated.length, data: decorated });
   } catch (err) { next(err); }
 };
 
@@ -154,13 +223,14 @@ exports.getStorefront = async (req, res, next) => {
       categories = Array.from(map.values());
     }
 
+    const decoratedProducts = await decorateProductsWithUploadedMedia(products, req);
     res.json({
       success: true,
       settings,
       banners: banners.map(item => publicBanner(item, req)),
       categories,
-      count: products.length,
-      data: products
+      count: decoratedProducts.length,
+      data: decoratedProducts
     });
   } catch (err) { next(err); }
 };
@@ -200,18 +270,25 @@ exports.getProduct = async (req, res, next) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return next(new ErrorResponse(`Product not found with id of ${req.params.id}`, 404));
-    res.status(200).json({ success: true, data: product });
+    const decorated = await decorateProductsWithUploadedMedia([product], req);
+    res.status(200).json({ success: true, data: decorated[0] });
   } catch (err) { next(err); }
 };
 
 exports.createProduct = async (req, res, next) => {
   try {
     const payload = normalizeProductPayload(req.body);
+    const uploadedImages = req.files?.productImages || [];
     if (!payload.name) return res.status(400).json({ success: false, message: 'Product name is required' });
     if (!payload.category.name) return res.status(400).json({ success: false, message: 'Category is required' });
-    if (!payload.images.length) return res.status(400).json({ success: false, message: 'At least one image URL is required' });
+    if (!payload.images.length && !uploadedImages.length) {
+      return res.status(400).json({ success: false, message: 'Upload at least one product image or add an image URL' });
+    }
+
     const product = await Product.create(payload);
-    res.status(201).json({ success: true, data: product });
+    await saveUploadedProductMedia(product._id, req.files || {});
+    const decorated = await decorateProductsWithUploadedMedia([product], req);
+    res.status(201).json({ success: true, data: decorated[0] });
   } catch (err) { next(err); }
 };
 
@@ -221,7 +298,9 @@ exports.updateProduct = async (req, res, next) => {
       new: true, runValidators: true
     });
     if (!product) return next(new ErrorResponse(`Product not found with id of ${req.params.id}`, 404));
-    res.status(200).json({ success: true, data: product });
+    await saveUploadedProductMedia(product._id, req.files || {});
+    const decorated = await decorateProductsWithUploadedMedia([product], req);
+    res.status(200).json({ success: true, data: decorated[0] });
   } catch (err) { next(err); }
 };
 
@@ -229,6 +308,7 @@ exports.deleteProduct = async (req, res, next) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
     if (!product) return next(new ErrorResponse(`Product not found with id of ${req.params.id}`, 404));
+    await ProductMedia.deleteMany({ productId: product._id });
     res.status(200).json({ success: true, data: {} });
   } catch (err) { next(err); }
 };
@@ -417,5 +497,18 @@ exports.page = async (req, res) => {
     });
   } catch (error) {
     res.status(500).send(error.message);
+  }
+};
+
+exports.getProductMedia = async (req, res) => {
+  try {
+    const media = await ProductMedia.findById(req.params.id).select('+data');
+    if (!media || !media.data) return res.status(404).send('Product media not found');
+    res.set('Content-Type', media.contentType || 'application/octet-stream');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.set('Accept-Ranges', 'bytes');
+    res.send(media.data);
+  } catch (_) {
+    res.status(404).send('Product media not found');
   }
 };
