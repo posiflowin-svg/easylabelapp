@@ -128,8 +128,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
   <label>Uploaded Product Images</label>
   <div class="muted" style="font-size:11px;margin-bottom:6px">Drag images to change sequence. The first image is the Main Image shown in the Shop.</div>
   <div class="bulk-toolbar">
-    <button type="button" class="secondary" id="selectAllProductImages" onclick="toggleSelectAllProductImages()">Select All</button>
-    <button type="button" class="danger" id="deleteSelectedProductImages" onclick="deleteSelectedProductImages()" disabled>Delete Selected</button>
+    <button type="button" class="secondary" id="selectAllProductImages">Select All</button>
+    <button type="button" class="danger" id="deleteSelectedProductImages" disabled>Delete Selected</button>
     <span class="count" id="productImageSelectionCount">0 selected</span>
   </div>
   <div class="image-grid" id="uploadedImageGrid"></div>
@@ -146,8 +146,8 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
   <label>Uploaded A+ Images</label>
   <div class="muted" style="font-size:11px;margin-bottom:6px">Drag images to change the A+ sequence. The first image is shown first on the Product Detail page. Use Set Main to move any A+ image to the first position.</div>
   <div class="bulk-toolbar">
-    <button type="button" class="secondary" id="selectAllAPlusImages" onclick="toggleSelectAllAPlusImages()">Select All</button>
-    <button type="button" class="danger" id="deleteSelectedAPlusImages" onclick="deleteSelectedAPlusImages()" disabled>Delete Selected</button>
+    <button type="button" class="secondary" id="selectAllAPlusImages">Select All</button>
+    <button type="button" class="danger" id="deleteSelectedAPlusImages" disabled>Delete Selected</button>
     <span class="count" id="aPlusImageSelectionCount">0 selected</span>
   </div>
   <div class="image-grid" id="uploadedAPlusImageGrid"></div>
@@ -197,7 +197,7 @@ async function openProductById(id){
   }
 }
 
-function openProduct(p){form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';renderUploadedImages(null);renderUploadedAPlusImages(null);if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.externalImages||p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.externalAPlusImages||p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured;renderUploadedImages(p);renderUploadedAPlusImages(p)}modal.classList.add('show')}
+function openProduct(p){form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';renderUploadedImages(null);renderUploadedAPlusImages(null);if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.externalImages||p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.externalAPlusImages||p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured;renderUploadedImages(p);renderUploadedAPlusImages(p)}modal.classList.add('show');bindBulkImageDeleteControls();}
 function closeProduct(){modal.classList.remove('show')}
 
 
@@ -413,6 +413,7 @@ function renderUploadedAPlusImages(product){
 
     grid.appendChild(tile);
   });
+  if(typeof updateAPlusImageSelectionUi==='function') updateAPlusImageSelectionUi();
 }
 
 async function saveAPlusImageSequence(productId){
@@ -452,6 +453,10 @@ function updateProductImageSelectionUi(){
 
 function toggleSelectAllProductImages(){
   const boxes=[...document.querySelectorAll('#uploadedImageGrid .media-select')];
+  if(!boxes.length){
+    alert('No uploaded product images available.');
+    return;
+  }
   const shouldSelect=boxes.some(box=>!box.checked);
   boxes.forEach(box=>{
     box.checked=shouldSelect;
@@ -461,9 +466,16 @@ function toggleSelectAllProductImages(){
 }
 
 async function deleteSelectedProductImages(){
-  const productId=form.id.value;
+  const productId=form?.id?.value || '';
   const mediaIds=selectedProductImageIds();
-  if(!productId || !mediaIds.length) return;
+  if(!productId){
+    alert('Product ID not found. Close Edit Product and open it again.');
+    return;
+  }
+  if(!mediaIds.length){
+    alert('Please select at least one product image.');
+    return;
+  }
   if(!confirm(`Delete ${mediaIds.length} selected product image(s)?`)) return;
 
   const button=document.getElementById('deleteSelectedProductImages');
@@ -475,6 +487,8 @@ async function deleteSelectedProductImages(){
   }catch(err){
     alert(err.message||'Unable to delete selected product images');
     updateProductImageSelectionUi();
+    const button=document.getElementById('deleteSelectedProductImages');
+    if(button) button.disabled=selectedProductImageIds().length===0;
   }
 }
 
@@ -499,6 +513,10 @@ function updateAPlusImageSelectionUi(){
 
 function toggleSelectAllAPlusImages(){
   const boxes=[...document.querySelectorAll('#uploadedAPlusImageGrid .aplus-media-select')];
+  if(!boxes.length){
+    alert('No uploaded A+ images available.');
+    return;
+  }
   const shouldSelect=boxes.some(box=>!box.checked);
   boxes.forEach(box=>{
     box.checked=shouldSelect;
@@ -508,9 +526,16 @@ function toggleSelectAllAPlusImages(){
 }
 
 async function deleteSelectedAPlusImages(){
-  const productId=form.id.value;
+  const productId=form?.id?.value || '';
   const mediaIds=selectedAPlusImageIds();
-  if(!productId || !mediaIds.length) return;
+  if(!productId){
+    alert('Product ID not found. Close Edit Product and open it again.');
+    return;
+  }
+  if(!mediaIds.length){
+    alert('Please select at least one A+ image.');
+    return;
+  }
   if(!confirm(`Delete ${mediaIds.length} selected A+ image(s)?`)) return;
 
   const button=document.getElementById('deleteSelectedAPlusImages');
@@ -522,7 +547,59 @@ async function deleteSelectedAPlusImages(){
   }catch(err){
     alert(err.message||'Unable to delete selected A+ images');
     updateAPlusImageSelectionUi();
+    const button=document.getElementById('deleteSelectedAPlusImages');
+    if(button) button.disabled=selectedAPlusImageIds().length===0;
   }
+}
+
+
+function bindBulkImageDeleteControls(){
+  const selectAllProduct=document.getElementById('selectAllProductImages');
+  const deleteProduct=document.getElementById('deleteSelectedProductImages');
+  const selectAllAPlus=document.getElementById('selectAllAPlusImages');
+  const deleteAPlus=document.getElementById('deleteSelectedAPlusImages');
+
+  if(selectAllProduct && !selectAllProduct.dataset.bound){
+    selectAllProduct.dataset.bound='1';
+    selectAllProduct.addEventListener('click',e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      toggleSelectAllProductImages();
+    });
+  }
+
+  if(deleteProduct && !deleteProduct.dataset.bound){
+    deleteProduct.dataset.bound='1';
+    deleteProduct.addEventListener('click',async e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      await deleteSelectedProductImages();
+    });
+  }
+
+  if(selectAllAPlus && !selectAllAPlus.dataset.bound){
+    selectAllAPlus.dataset.bound='1';
+    selectAllAPlus.addEventListener('click',e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      toggleSelectAllAPlusImages();
+    });
+  }
+
+  if(deleteAPlus && !deleteAPlus.dataset.bound){
+    deleteAPlus.dataset.bound='1';
+    deleteAPlus.addEventListener('click',async e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      await deleteSelectedAPlusImages();
+    });
+  }
+}
+
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',bindBulkImageDeleteControls);
+}else{
+  bindBulkImageDeleteControls();
 }
 
 async function saveProduct(e){
