@@ -55,6 +55,11 @@ app.use(session({
 app.use(morgan('dev'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json({ limit: process.env.JSON_BODY_LIMIT || '15mb' }));
+// Border files uploaded from the admin are persisted in MongoDB.
+// Keep the same public URL used by existing Android builds.
+app.get('/border-assets/:filename', BorderController.assetFile);
+
+// Static fallback remains for any border assets that are packaged with the source.
 app.use('/border-assets', express.static(path.join(__dirname, 'public', 'border-assets')));
 app.use('/template-assets-v2', express.static(path.join(__dirname, 'public', 'template-assets-v2')));
 

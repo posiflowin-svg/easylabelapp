@@ -4,12 +4,53 @@ const crypto = require('crypto');
 const AdmZip = require('adm-zip');
 const Border = require('../models/Border');
 const BorderCategory = require('../models/BorderCategory');
+const BorderAsset = require('../models/BorderAsset');
 
 const DEFAULT_CATEGORIES = ['new', 'hot', 'fancy', 'plant', 'holiday', 'animal'];
 const SUPPORTED_SIZES = [
   '50x25','50x30','50x50','50x12','38x38','38x25','38x15',
   '75x25','75x50','100x50','100x150','100x15'
 ];
+
+function borderAssetDirectory() {
+  const directory = path.join(__dirname, '..', 'public', 'border-assets');
+  fs.mkdirSync(directory, { recursive: true });
+  return directory;
+}
+
+function borderMimeType(filename) {
+  const extension = path.extname(String(filename || '')).toLowerCase();
+  if (extension === '.svg') return 'image/svg+xml';
+  if (extension === '.png') return 'image/png';
+  if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg';
+  return 'application/octet-stream';
+}
+
+async function persistBorderAsset(filename, data) {
+  await BorderAsset.updateOne(
+    { filename },
+    {
+      $set: {
+        contentType: borderMimeType(filename),
+        data,
+        size: data.length
+      }
+    },
+    { upsert: true }
+  );
+}
+
+function borderFilenameFromUrl(url) {
+  try {
+    if (!url || !String(url).includes('/border-assets/')) return '';
+    return path.basename(
+      decodeURIComponent(String(url).split('/border-assets/').pop().split('?')[0])
+    );
+  } catch (_) {
+    return '';
+  }
+}
+
 
 function publicBaseUrl(req) {
   const forwardedProto = String(req.get('x-forwarded-proto') || '').split(',')[0].trim();
@@ -30,10 +71,18 @@ function categoryKey(value) {
 
 function removeLocalAsset(url) {
   try {
-    if (!url || !url.includes('/border-assets/')) return;
-    const filename = decodeURIComponent(url.split('/border-assets/').pop().split('?')[0]);
-    const filePath = path.join(__dirname, '..', 'public', 'border-assets', path.basename(filename));
+    const filename = borderFilenameFromUrl(url);
+    if (!filename) return;
+
+    // Remove the local cache copy when present.
+    const filePath = path.join(borderAssetDirectory(), filename);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    // The Mongo copy is the persistent source of truth. Fire-and-forget is safe
+    // here because cleanup must never block the admin response.
+    BorderAsset.deleteOne({ filename }).catch(error => {
+      console.warn('Unable to remove persisted border asset:', error.message);
+    });
   } catch (error) {
     console.warn('Unable to remove old border asset:', error.message);
   }
@@ -71,11 +120,11 @@ function detectSupportedSize(filename) {
   return '';
 }
 
-function extractZipVariants(req) {
+async function extractZipVariants(req) {
   if (!req.file) throw new Error('Please choose one ZIP file containing the border sizes.');
 
   const zipPath = req.file.path;
-  const destination = path.join(__dirname, '..', 'public', 'border-assets');
+  const destination = borderAssetDirectory();
   const base = publicBaseUrl(req);
   const created = [];
 
@@ -113,7 +162,12 @@ function extractZipVariants(req) {
       if (totalBytes > 50 * 1024 * 1024) throw new Error('Extracted ZIP content is larger than 50 MB.');
 
       const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}-${sanitiseBaseName(req.body.name)}-${size}${extension}`;
+      // Keep a local copy for fast serving during the current process, but also
+      // persist the exact asset bytes in MongoDB so Render deploys/restarts do not
+      // make fresh Android installs show blank border cards.
       fs.writeFileSync(path.join(destination, filename), data);
+      await persistBorderAsset(filename, data);
+
       created.push(filename);
       variants[size] = `${base}/border-assets/${filename}`;
     }
@@ -166,6 +220,46 @@ function serializeBorder(border) {
   };
 }
 
+
+/**
+ * Persistent public border asset endpoint.
+ *
+ * Border URLs stored in Mongo remain /border-assets/<filename>, so no Android
+ * change is required. Assets are read from Mongo first; a local filesystem copy
+ * is used only as a backward-compatible fallback.
+ */
+exports.assetFile = async (req, res) => {
+  try {
+    const filename = path.basename(String(req.params.filename || ''));
+    if (!filename) return res.status(404).end();
+
+    const asset = await BorderAsset.findOne({ filename }).lean();
+    if (asset && asset.data) {
+      res.set('Content-Type', asset.contentType || borderMimeType(filename));
+      res.set('Content-Length', String(asset.size || asset.data.length || 0));
+      res.set('Cache-Control', 'public, max-age=31536000, immutable');
+      res.set('X-Content-Type-Options', 'nosniff');
+      return res.send(asset.data);
+    }
+
+    // Backward compatibility for assets that still physically exist in an old
+    // deployment or in source-controlled public/border-assets.
+    const localPath = path.join(borderAssetDirectory(), filename);
+    if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+      res.set('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.sendFile(localPath);
+    }
+
+    return res.status(404).json({
+      success: false,
+      message: 'Border asset not found. Re-upload this border once from Border Management.'
+    });
+  } catch (error) {
+    console.error('Unable to serve border asset:', error);
+    return res.status(500).json({ success: false, message: 'Unable to load border asset.' });
+  }
+};
+
 exports.list = async (req, res) => {
   try {
     const query = { active: true };
@@ -206,7 +300,7 @@ exports.page = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const zipResult = extractZipVariants(req);
+    const zipResult = await extractZipVariants(req);
     const variants = zipResult.variants;
 
     const category = categoryKey(req.body.category) || 'new';
@@ -248,7 +342,7 @@ exports.update = async (req, res) => {
     const existing = mapToObject(border.variants);
     let ignored = [];
     if (req.file) {
-      const zipResult = extractZipVariants(req);
+      const zipResult = await extractZipVariants(req);
       ignored = zipResult.ignored;
       for (const [size, url] of Object.entries(zipResult.variants)) {
         if (existing[size]) removeLocalAsset(existing[size]);
