@@ -121,7 +121,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 <div><label>Badge</label><input name="badge" placeholder="BESTSELLER / NEW"></div><div><label>Product Sort Order</label><input name="sortOrder" type="number" value="0"></div>
 </div>
 <div class="grid2" style="margin-top:12px">
-<div><label>Upload Product Images</label><input name="productImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple><div class="muted" style="font-size:11px;margin-top:5px">Up to 8 product images.</div></div>
+<div><label>Upload Product Images</label><input name="productImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple><div class="muted" style="font-size:11px;margin-top:5px">Up to 8 product images. Max 15 MB each.</div></div>
 <div><label>Or Product Image URLs (one per line)</label><textarea name="images" rows="4" placeholder="https://.../main.jpg\nhttps://.../second.jpg"></textarea></div>
 </div>
 <div class="image-manager" id="uploadedImageManager" style="display:none">
@@ -139,7 +139,7 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 <div class="card" style="margin-top:14px;background:#f8fafc;box-shadow:none">
 <h3 style="margin-top:0">A+ Product Content</h3>
 <div class="grid2">
-<div><label>Upload A+ Images</label><input name="aPlusImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple><div class="muted" style="font-size:11px;margin-top:5px">Up to 10 A+ images.</div></div>
+<div><label>Upload A+ Images</label><input name="aPlusImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple><div class="muted" style="font-size:11px;margin-top:5px">Up to 10 A+ images. Max 15 MB each.</div></div>
 <div><label>Or A+ Image URLs (one per line)</label><textarea name="aPlusImages" rows="5" placeholder="https://.../feature1.jpg\nhttps://.../feature2.jpg"></textarea></div>
 </div>
 <div class="image-manager" id="uploadedAPlusImageManager" style="display:none">
@@ -614,6 +614,25 @@ async function saveProduct(e){
 
   const submitButton = form.querySelector('button[type="submit"]');
   const originalText = submitButton ? submitButton.textContent : '';
+
+  // Fail fast in the browser instead of waiting for Render to reject a very
+  // large multipart request.
+  const selectedFiles = [
+    ...Array.from(form.productImageFiles?.files || []),
+    ...Array.from(form.aPlusImageFiles?.files || []),
+    ...Array.from(form.productVideoFile?.files || [])
+  ];
+  const totalUploadBytes = selectedFiles.reduce((sum,file)=>sum+(file.size||0),0);
+  const tooLargeFile = selectedFiles.find(file => (file.size||0) > 15*1024*1024);
+
+  if(tooLargeFile){
+    alert(`${tooLargeFile.name} is too large. Maximum size is 15 MB per file.`);
+    return;
+  }
+  if(totalUploadBytes > 45*1024*1024){
+    alert(`Selected media is ${(totalUploadBytes/1024/1024).toFixed(1)} MB. Maximum total upload is 45 MB. Please upload fewer images at a time.`);
+    return;
+  }
 
   try {
     if (submitButton) {

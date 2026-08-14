@@ -4,6 +4,7 @@ const ShopCategory = require('../models/ShopCategory');
 const ShopBanner = require('../models/ShopBanner');
 const ProductMedia = require('../models/ProductMedia');
 const ErrorResponse = require('../utils/errorResponse');
+const fs = require('fs');
 
 function boolValue(value, fallback = false) {
   if (value === undefined || value === null || value === '') return fallback;
@@ -122,9 +123,57 @@ async function decorateProductsWithUploadedMedia(products, req) {
   return plain;
 }
 
-async function saveUploadedProductMedia(productId, files = {}) {
-  const tasks = [];
+async function fileBuffer(file) {
+  if (file && Buffer.isBuffer(file.buffer)) return file.buffer;
+  if (file && file.path) return fs.promises.readFile(file.path);
+  throw new Error(`Uploaded file data is unavailable: ${file?.originalname || 'unknown file'}`);
+}
 
+async function removeTempUpload(file) {
+  if (!file || !file.path) return;
+  try { await fs.promises.unlink(file.path); } catch (_) {}
+}
+
+async function nextMediaSortOrder(productId, kind) {
+  const last = await ProductMedia.findOne({ productId, kind })
+    .sort({ sortOrder: -1 })
+    .select('sortOrder')
+    .lean();
+  return last ? Number(last.sortOrder || 0) + 1 : 0;
+}
+
+async function saveMediaFilesSequentially(productId, kind, files, startOrder) {
+  let sortOrder = startOrder;
+
+  for (const file of files) {
+    try {
+      const data = await fileBuffer(file);
+
+      // One Mongo document is limited to ~16 MB. Multer already limits each
+      // upload to 15 MB; keep an explicit guard so the admin gets a useful error.
+      if (data.length > 15 * 1024 * 1024) {
+        throw new Error(`${file.originalname || 'File'} is larger than 15 MB.`);
+      }
+
+      await ProductMedia.create({
+        productId,
+        kind,
+        sortOrder,
+        originalName: file.originalname || '',
+        contentType: file.mimetype || 'application/octet-stream',
+        data
+      });
+
+      sortOrder += 1;
+    } finally {
+      // Release both disk space and the single in-memory buffer before moving
+      // to the next file. This avoids the previous Render memory spike.
+      await removeTempUpload(file);
+    }
+  }
+}
+
+async function saveUploadedProductMedia(productId, files = {}) {
   const productImageFiles = [
     ...(files.productImageFiles || []),
     ...(files.productImages || [])
@@ -140,30 +189,29 @@ async function saveUploadedProductMedia(productId, files = {}) {
     ...(files.productVideo || [])
   ];
 
-  productImageFiles.forEach((file, index) => {
-    tasks.push(ProductMedia.create({
-      productId, kind: 'product_image', sortOrder: index,
-      originalName: file.originalname || '', contentType: file.mimetype, data: file.buffer
-    }));
-  });
+  // IMPORTANT: process sequentially. The previous Promise.all() held several
+  // large Mongo write buffers at the same time and could exhaust Render memory.
+  if (productImageFiles.length) {
+    const startOrder = await nextMediaSortOrder(productId, 'product_image');
+    await saveMediaFilesSequentially(
+      productId, 'product_image', productImageFiles, startOrder
+    );
+  }
 
-  aPlusImageFiles.forEach((file, index) => {
-    tasks.push(ProductMedia.create({
-      productId, kind: 'aplus_image', sortOrder: index,
-      originalName: file.originalname || '', contentType: file.mimetype, data: file.buffer
-    }));
-  });
+  if (aPlusImageFiles.length) {
+    const startOrder = await nextMediaSortOrder(productId, 'aplus_image');
+    await saveMediaFilesSequentially(
+      productId, 'aplus_image', aPlusImageFiles, startOrder
+    );
+  }
 
   if (videoFiles.length) {
     await ProductMedia.deleteMany({ productId, kind: 'video' });
-    const file = videoFiles[0];
-    tasks.push(ProductMedia.create({
-      productId, kind: 'video', sortOrder: 0,
-      originalName: file.originalname || '', contentType: file.mimetype, data: file.buffer
-    }));
-  }
+    await saveMediaFilesSequentially(productId, 'video', [videoFiles[0]], 0);
 
-  if (tasks.length) await Promise.all(tasks);
+    // Clean any unexpected extra video temp files defensively.
+    for (const extra of videoFiles.slice(1)) await removeTempUpload(extra);
+  }
 }
 
 function publicCategory(category, req) {
@@ -317,6 +365,7 @@ exports.getProduct = async (req, res, next) => {
 };
 
 exports.createProduct = async (req, res, next) => {
+  let product = null;
   try {
     const payload = normalizeProductPayload(req.body);
     const uploadedImages = [
@@ -329,11 +378,30 @@ exports.createProduct = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Upload at least one product image or add an image URL' });
     }
 
-    const product = await Product.create(payload);
+    product = await Product.create(payload);
     await saveUploadedProductMedia(product._id, req.files || {});
     const decorated = await decorateProductsWithUploadedMedia([product], req);
-    res.status(201).json({ success: true, data: decorated[0] });
-  } catch (err) { next(err); }
+    return res.status(201).json({ success: true, data: decorated[0] });
+  } catch (err) {
+    console.error('Shop product create/upload failed:', err);
+
+    // Do not leave a half-created empty product if media persistence failed.
+    if (product && product._id) {
+      try {
+        await ProductMedia.deleteMany({ productId: product._id });
+        await Product.findByIdAndDelete(product._id);
+      } catch (_) {}
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: `Product upload failed: ${err.message || 'Unable to save product media.'}`
+    });
+  } finally {
+    if (typeof req.cleanupProductTempFiles === 'function') {
+      try { req.cleanupProductTempFiles(); } catch (_) {}
+    }
+  }
 };
 
 exports.updateProduct = async (req, res, next) => {
@@ -341,11 +409,27 @@ exports.updateProduct = async (req, res, next) => {
     const product = await Product.findByIdAndUpdate(req.params.id, normalizeProductPayload(req.body), {
       new: true, runValidators: true
     });
-    if (!product) return next(new ErrorResponse(`Product not found with id of ${req.params.id}`, 404));
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: `Product not found with id of ${req.params.id}`
+      });
+    }
+
     await saveUploadedProductMedia(product._id, req.files || {});
     const decorated = await decorateProductsWithUploadedMedia([product], req);
-    res.status(200).json({ success: true, data: decorated[0] });
-  } catch (err) { next(err); }
+    return res.status(200).json({ success: true, data: decorated[0] });
+  } catch (err) {
+    console.error('Shop product update/upload failed:', err);
+    return res.status(500).json({
+      success: false,
+      message: `Product update failed: ${err.message || 'Unable to save product media.'}`
+    });
+  } finally {
+    if (typeof req.cleanupProductTempFiles === 'function') {
+      try { req.cleanupProductTempFiles(); } catch (_) {}
+    }
+  }
 };
 
 exports.deleteProduct = async (req, res, next) => {
