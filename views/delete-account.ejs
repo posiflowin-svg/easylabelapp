@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Delete EasyLabel Account</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f6f7fb;color:#111827;font-family:Inter,Arial,sans-serif}.wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 16px}.card{width:min(620px,100%);background:#fff;border:1px solid #e5e7eb;border-radius:22px;box-shadow:0 18px 55px rgba(15,23,42,.08);overflow:hidden}.head{padding:28px 28px 20px;background:linear-gradient(135deg,#fff7f7,#fff)}.brand{display:inline-flex;align-items:center;gap:10px;font-size:14px;font-weight:800;color:#ff2d2d;text-transform:uppercase;letter-spacing:.05em}.logo{width:32px;height:32px;border-radius:10px;background:#ff2d2d;color:#fff;display:grid;place-items:center;font-weight:900}.head h1{font-size:30px;line-height:1.15;margin:18px 0 8px}.muted{color:#667085;line-height:1.55}.body{padding:24px 28px 30px}.info{background:#f8fafc;border:1px solid #e7ebf0;border-radius:14px;padding:15px 16px;margin-bottom:20px}.info strong{display:block;margin-bottom:6px}.info ul{padding-left:20px;margin:7px 0 0;color:#475467;line-height:1.55}.field{margin-bottom:15px}label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}input,textarea{width:100%;border:1px solid #d9dee8;border-radius:11px;padding:12px 13px;font:inherit;outline:none}input:focus,textarea:focus{border-color:#ff2d2d;box-shadow:0 0 0 3px rgba(255,45,45,.08)}button{width:100%;border:0;border-radius:12px;padding:13px 16px;background:#ff2d2d;color:#fff;font-size:15px;font-weight:800;cursor:pointer}.error{background:#fff1f2;border:1px solid #fecdd3;color:#be123c;border-radius:11px;padding:11px 12px;margin-bottom:16px}.success{text-align:center;padding:18px 0 8px}.success .tick{width:64px;height:64px;border-radius:50%;background:#dcfce7;color:#15803d;display:grid;place-items:center;margin:0 auto 16px;font-size:30px;font-weight:900}.success h2{margin:0 0 8px}.foot{text-align:center;color:#98a2b3;font-size:12px;margin-top:18px}@media(max-width:560px){.head,.body{padding-left:20px;padding-right:20px}.head h1{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="wrap"><main class="card">
+<section class="head"><div class="brand"><span class="logo">E</span>EasyLabel</div><h1>Delete your EasyLabel account</h1><div class="muted">Use this page to request deletion of your EasyLabel account and associated account data.</div></section>
+<section class="body">
+<% if (submitted) { %>
+<div class="success"><div class="tick">✓</div><h2>Request received</h2><p class="muted">Your account deletion request has been submitted. Our team will process the request and remove the account data that is eligible for deletion.</p><p class="muted">Some records may be retained where required for legal, fraud-prevention, security, or accounting obligations.</p></div>
+<% } else { %>
+<div class="info"><strong>Before you submit</strong><ul><li>You must verify the request using your registered email/mobile number and account password.</li><li>Your EasyLabel account and associated profile data will be scheduled for deletion.</li><li>Records that must be retained for legal, accounting, fraud-prevention, or security purposes may be kept only for the required period.</li></ul></div>
+<% if (error) { %><div class="error"><%= error %></div><% } %>
+<form method="post" action="/delete-account">
+<div class="field"><label>Registered email or mobile number</label><input name="identifier" value="<%= identifier || '' %>" autocomplete="username" required placeholder="Email address or 10-digit mobile number"></div>
+<div class="field"><label>Account password</label><input type="password" name="password" autocomplete="current-password" required placeholder="Enter your EasyLabel password"></div>
+<div class="field"><label>Reason (optional)</label><textarea name="reason" rows="3" maxlength="1000" placeholder="Tell us why you want to delete your account"></textarea></div>
+<button type="submit">Request Account Deletion</button>
+</form>
+<% } %>
+<div class="foot">POSIFLOW Retail Pvt Ltd • EasyLabel account privacy request</div>
+</section>
+</main></div>
+</body></html>

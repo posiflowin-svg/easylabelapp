@@ -28,6 +28,8 @@ const CloudBackupRoute = require('./routes/cloudBackup');
 const BorderController = require('./controllers/BorderController');
 const PremiumController = require('./controllers/PremiumController');
 const ProductController = require('./controllers/productController');
+const AccountDeletionController = require('./controllers/AccountDeletionController');
+const AccountDeletionRoute = require('./routes/accountDeletion');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 const walletUserController = require('./controllers/walletUserController');
@@ -85,6 +87,11 @@ app.get('/users', (req, res) => {
     res.render('users');
 });
 
+// Public Google Play account deletion page. No admin session or app login is required
+// to open it; the request itself is verified using the user's EasyLabel password.
+app.get('/delete-account', AccountDeletionController.page);
+app.post('/delete-account', AccountDeletionController.submit);
+
 app.get('/sells_users', (req, res) => {
     res.render('sells_users');
 });
@@ -126,6 +133,7 @@ app.use('/api/ai', AIRoute);
 app.use('/api/borders', BorderRoute);
 app.use('/api/usage', UsageAnalyticsRoute);
 app.use('/api/cloud-backup', CloudBackupRoute);
+app.use('/api/account-deletion', AccountDeletionRoute);
 
 // Import users CSV route
 app.post('/api/import-users', upload.single('file'), walletUserController.importUsers);
