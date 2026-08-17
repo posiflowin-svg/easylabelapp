@@ -51,7 +51,7 @@
     <button class="rangeBtn active" id="rangeToday" onclick="setDateRange('today',this)">Today</button>
     <button class="rangeBtn" id="rangeThisMonth" onclick="setDateRange('thisMonth',this)">This Month</button>
     <button class="rangeBtn" id="rangeLastMonth" onclick="setDateRange('lastMonth',this)">Last Month</button>
-    <button class="rangeBtn" id="range30" onclick="setDateRange('last30',this)">Last 30 Days</button>
+    <button class="rangeBtn" id="rangeAllTime" onclick="setDateRange('allTime',this)">All Time</button>
     <button class="rangeBtn" id="rangeCustom" onclick="setDateRange('custom',this)">Custom Date</button>
   </div>
 
@@ -160,9 +160,12 @@ function setDateRange(kind,btn){
   }else if(kind==='lastMonth'){
     start=new Date(now.getFullYear(),now.getMonth()-1,1);
     end=new Date(now.getFullYear(),now.getMonth(),0);
-  }else if(kind==='last30'){
-    start=new Date(now);start.setDate(start.getDate()-29);
-    end=new Date(now);
+  }else if(kind==='allTime'){
+    // Empty From/To means the backend returns complete lifetime data.
+    from.value='';
+    to.value='';
+    applyFilter();
+    return;
   }else if(kind==='custom'){
     from.focus();
     return;
