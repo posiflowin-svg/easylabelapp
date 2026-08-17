@@ -323,6 +323,129 @@
         border-radius: 6px;
       }
 
+
+
+      /* ===== EasyLabel Admin Sidebar Layout Fix =====
+         Keep the left navigation pinned to the viewport and independently scrollable.
+         This prevents Subscription Management / Users from falling into the page body
+         when the main dashboard becomes taller than one screen. */
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        display: block;
+        min-height: 100vh;
+        background-color: #f4f4f9;
+        overflow-x: hidden;
+      }
+
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 250px;
+        height: 100vh;
+        min-height: 100vh;
+        z-index: 1000;
+        padding: 22px 18px;
+        background: #2c3e50;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-shadow: 2px 0 8px rgba(0,0,0,.14);
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255,255,255,.22) transparent;
+      }
+
+      .sidebar::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .sidebar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .sidebar::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,.22);
+        border-radius: 10px;
+      }
+
+      .sidebar h1 {
+        flex: 0 0 auto;
+        margin: 0 0 24px;
+        padding: 4px 8px 10px;
+        color: #fff;
+        font-size: 25px;
+        line-height: 1.2;
+        text-align: center;
+      }
+
+      .sidebar .nav-links {
+        width: 100%;
+        display: flex;
+        flex: 0 0 auto;
+        flex-direction: column;
+        gap: 6px;
+        padding: 0 0 18px;
+      }
+
+      .sidebar .nav-links a {
+        width: 100%;
+        min-height: 46px;
+        margin: 0;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        border-radius: 9px;
+        color: #d8e0e7;
+        font-size: 16px;
+        line-height: 1.25;
+        text-align: left;
+        white-space: normal;
+        opacity: 1;
+      }
+
+      .sidebar .nav-links a:hover {
+        background: #34495e;
+        color: #fff;
+      }
+
+      .sidebar .nav-links a.active {
+        background: #1abc9c;
+        color: #fff;
+        font-weight: 700;
+      }
+
+      .main-content {
+        width: calc(100% - 250px);
+        min-height: 100vh;
+        margin-left: 250px;
+        padding: 32px 40px;
+        overflow: visible;
+      }
+
+      @media (max-width: 900px) {
+        .sidebar {
+          width: 220px;
+        }
+        .main-content {
+          width: calc(100% - 220px);
+          margin-left: 220px;
+          padding: 24px;
+        }
+        .sidebar .nav-links a {
+          font-size: 15px;
+        }
+      }
+
     </style>
   </head>
   <body>
