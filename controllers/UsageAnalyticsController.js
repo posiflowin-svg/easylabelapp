@@ -38,8 +38,21 @@ function filtersFromQuery(q) {
   if (q.type && ['LABEL_PRINT','BILL_PRINT','INVENTORY_SNAPSHOT'].includes(q.type)) match.eventType = q.type;
   const customer = clean(q.customer);
   if (customer) {
-    const rx = new RegExp(customer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    match.$or = [{ customerName: rx }, { customerMobile: rx }, { customerEmail: rx }];
+    const escaped = customer.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = new RegExp(escaped, 'i');
+    const digits = customer.replace(/\D/g, '');
+    const mobileRx = digits
+      ? new RegExp(digits.split('').join('\\D*'), 'i')
+      : rx;
+
+    // IMPORTANT: this match is applied BEFORE grouping, sorting, skip and limit,
+    // so Name / Mobile / Email search scans the complete filtered UsageEvent dataset,
+    // not only the 100 customers currently visible in the browser.
+    match.$or = [
+      { customerName: rx },
+      { customerMobile: mobileRx },
+      { customerEmail: rx }
+    ];
   }
   const mobile = clean(q.mobile);
   if (mobile) match.customerMobile = new RegExp(mobile.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');

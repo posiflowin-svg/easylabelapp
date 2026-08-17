@@ -10,6 +10,12 @@
 .side{width:252px;background:var(--nav);color:#fff;padding:30px 20px;position:fixed;inset:0 auto 0 0;overflow-y:auto}.brand{font-size:29px;font-weight:800;margin:2px 12px 48px}.side a{display:block;color:#e2e9f0;text-decoration:none;padding:14px 16px;margin:7px 0;border-radius:11px;font-size:16px}.side a.active,.side a:hover{background:var(--nav2);color:#fff}
 .main{margin-left:252px;width:calc(100% - 252px);padding:32px 38px 60px;max-width:1680px}.head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px}.head h1{font-size:30px;margin:0 0 7px}.sub{color:var(--muted);font-size:14px}
 .filters,.panel,.metric{background:#fff;border:1px solid var(--line);box-shadow:0 2px 8px rgba(22,32,51,.035)}.filters{display:grid;grid-template-columns:1.4fr .8fr .8fr .8fr auto;gap:12px;padding:16px;border-radius:16px;margin-bottom:16px}.field label{display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-weight:800;color:#858c99;margin-bottom:7px}.field input,.field select{height:43px;width:100%;border:1px solid #dfe3e9;border-radius:9px;padding:0 12px;font-size:14px;background:#fff}.apply{height:43px;align-self:end;border:0;border-radius:9px;background:var(--red);color:#fff;padding:0 22px;font-weight:800;cursor:pointer}
+.rangeBar{display:flex;gap:8px;align-items:center;margin:-4px 0 14px;flex-wrap:wrap}
+.rangeLabel{font-size:11px;font-weight:800;color:#818997;text-transform:uppercase;letter-spacing:.04em;margin-right:2px}
+.rangeBtn{height:34px;border:1px solid #dfe3e9;background:#fff;color:#596273;border-radius:8px;padding:0 12px;font-size:12px;font-weight:800;cursor:pointer}
+.rangeBtn.active{background:#172033;border-color:#172033;color:#fff}
+.searchHint{font-size:11px;color:#8c94a1;margin-top:6px}
+.searchState{display:none;font-size:11px;color:#2d67b3;font-weight:700;margin-top:6px}.searchState.show{display:block}
 .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:16px}.metric{border-radius:14px;padding:16px 18px}.metric .k{font-size:11px;font-weight:800;color:#7c8492;letter-spacing:.04em}.metric .v{font-size:26px;font-weight:800;margin-top:8px}.metric .hint{font-size:11px;color:#9aa2ad;margin-top:5px}
 .analytics{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-bottom:17px}.panel{border-radius:15px;padding:19px}.panelTitle{font-size:17px;font-weight:800;margin-bottom:15px}.trend{height:155px;display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid #edf0f3}.barWrap{height:100%;flex:1;display:flex;align-items:flex-end;min-width:5px}.bar{width:100%;background:#ff454c;border-radius:4px 4px 0 0;min-height:2px}.hint{font-size:11px;color:#9aa2ad}.sizeRow{display:grid;grid-template-columns:90px 1fr 58px;gap:10px;align-items:center;margin:10px 0;font-size:12px}.track{height:7px;background:#f0f2f5;border-radius:9px;overflow:hidden}.fill{height:100%;background:#ff454c;border-radius:9px}
 .tabsWrap{background:#fff;border:1px solid var(--line);border-radius:15px;overflow:hidden;box-shadow:0 2px 8px rgba(22,32,51,.035)}.tabs{display:flex;gap:5px;padding:10px 12px;border-bottom:1px solid var(--line);background:#fbfcfd}.tab{border:0;background:transparent;color:#6f7886;padding:11px 17px;border-radius:9px;font-size:14px;font-weight:800;cursor:pointer}.tab.active{background:#172033;color:#fff}.tabCount{font-size:11px;margin-left:6px;opacity:.72}
@@ -33,11 +39,20 @@
   <div class="head"><div><h1>Usage Analytics</h1><div class="sub">Lifetime activity remains stored. Use the date filters to analyse any period without losing historical data.</div></div></div>
 
   <div class="filters">
-    <div class="field"><label>Customer</label><input id="customer" placeholder="Name, mobile or email"></div>
+    <div class="field"><label>Customer</label><input id="customer" autocomplete="off" placeholder="Search entire database by name, mobile or email"><div class="searchHint">Searches all recorded customers, not only the current page.</div><div class="searchState" id="searchState">Searching entire database…</div></div>
     <div class="field"><label>From</label><input id="from" type="date"></div>
     <div class="field"><label>To</label><input id="to" type="date"></div>
     <div class="field"><label>Activity</label><select id="type"><option value="">All activity</option><option value="LABEL_PRINT">Label Printing</option><option value="BILL_PRINT">Quick Billing</option><option value="INVENTORY_SNAPSHOT">Inventory</option></select></div>
     <button class="apply" onclick="applyFilter()">Apply Filter</button>
+  </div>
+
+  <div class="rangeBar">
+    <span class="rangeLabel">Date Range</span>
+    <button class="rangeBtn active" id="rangeToday" onclick="setDateRange('today',this)">Today</button>
+    <button class="rangeBtn" id="rangeThisMonth" onclick="setDateRange('thisMonth',this)">This Month</button>
+    <button class="rangeBtn" id="rangeLastMonth" onclick="setDateRange('lastMonth',this)">Last Month</button>
+    <button class="rangeBtn" id="range30" onclick="setDateRange('last30',this)">Last 30 Days</button>
+    <button class="rangeBtn" id="rangeCustom" onclick="setDateRange('custom',this)">Custom Date</button>
   </div>
 
   <div class="metrics">
@@ -100,7 +115,7 @@
 const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const dt=v=>v?new Date(v).toLocaleString('en-IN'):'—';
 const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-let customerPage=1,recentPage=1,customerPages=1,recentPages=1,activeTab='customerTab';
+let customerPage=1,recentPage=1,customerPages=1,recentPages=1,activeTab='customerTab',searchTimer=null,currentRange='today';
 
 function query(extra={}){
   const q=new URLSearchParams();
@@ -116,7 +131,51 @@ function switchTab(id,btn){
   if(id==='recentTab')loadRecent();
   if(id==='modelTab')loadModels();
 }
-function applyFilter(){customerPage=1;recentPage=1;loadSummary();if(activeTab==='customerTab')loadCustomers();else if(activeTab==='recentTab')loadRecent();else loadModels()}
+function applyFilter(){
+  customerPage=1;recentPage=1;
+  loadSummary();
+  if(activeTab==='customerTab')loadCustomers();
+  else if(activeTab==='recentTab')loadRecent();
+  else loadModels();
+}
+
+function localDateValue(d){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function markRangeButton(btn){
+  document.querySelectorAll('.rangeBtn').forEach(x=>x.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+}
+function setDateRange(kind,btn){
+  currentRange=kind;markRangeButton(btn);
+  const now=new Date();
+  let start=new Date(now),end=new Date(now);
+
+  if(kind==='today'){
+    start=new Date(now);end=new Date(now);
+  }else if(kind==='thisMonth'){
+    start=new Date(now.getFullYear(),now.getMonth(),1);
+    end=new Date(now);
+  }else if(kind==='lastMonth'){
+    start=new Date(now.getFullYear(),now.getMonth()-1,1);
+    end=new Date(now.getFullYear(),now.getMonth(),0);
+  }else if(kind==='last30'){
+    start=new Date(now);start.setDate(start.getDate()-29);
+    end=new Date(now);
+  }else if(kind==='custom'){
+    from.focus();
+    return;
+  }
+
+  from.value=localDateValue(start);
+  to.value=localDateValue(end);
+  applyFilter();
+}
+function setCustomRangeActive(){
+  currentRange='custom';
+  markRangeButton(document.getElementById('rangeCustom'));
+}
 async function loadSummary(){
   const r=await fetch('/api/usage/summary?'+query()),j=await r.json();if(!j.success)return;
   const t=j.totals||{};labels.textContent=(t.labelsPrinted||0).toLocaleString('en-IN');labelJobs.textContent=(t.labelPrintJobs||0).toLocaleString('en-IN');bills.textContent=(t.billsPrinted||0).toLocaleString('en-IN');sales.textContent=money(t.totalSales);users.textContent=(t.activeCustomers||0).toLocaleString('en-IN');
@@ -125,6 +184,7 @@ async function loadSummary(){
 }
 async function loadCustomers(){
   customers.innerHTML='<tr><td colspan="8" class="empty">Loading customers…</td></tr>';
+  if(customer.value.trim())searchState.classList.add('show');
   const r=await fetch('/api/usage/customers?'+query({page:customerPage})),j=await r.json();if(!j.success)return;
   const p=j.pagination||{};customerPage=p.page||1;customerPages=p.pages||1;customerCount.textContent=p.total?`(${Number(p.total).toLocaleString('en-IN')})`:'';
   customers.innerHTML=(j.data||[]).length?(j.data||[]).map((x,i)=>`<tr>
@@ -135,6 +195,7 @@ async function loadCustomers(){
   </tr>`).join(''):'<tr><td colspan="8" class="empty">No customers found</td></tr>';
   customerPageInfo.textContent=`Page ${customerPage} of ${customerPages} · ${Number(p.total||0).toLocaleString('en-IN')} customers`;
   customerPrev.disabled=customerPage<=1;customerNext.disabled=customerPage>=customerPages;
+  searchState.classList.remove('show');
 }
 function changeCustomerPage(d){const n=customerPage+d;if(n>=1&&n<=customerPages){customerPage=n;loadCustomers();document.getElementById('customerTab').scrollIntoView({behavior:'smooth',block:'start'})}}
 async function loadRecent(){
@@ -160,6 +221,35 @@ async function openCustomer(mobile,id,name){
   const rows=(j.data||[]).map(x=>`<tr><td>${dt(x.occurredAt)}</td><td><span class="badge ${x.eventType==='LABEL_PRINT'?'label':'bill'}">${x.eventType==='LABEL_PRINT'?'LABEL PRINT':'QUICK BILLING'}</span></td><td>${x.eventType==='LABEL_PRINT'?`${x.labelWidthMm||0}×${x.labelHeightMm||0} mm · ${Number(x.copies||0).toLocaleString('en-IN')} copies`:`${esc(x.billNo||'Bill')} · ${money(x.billAmount)}`}</td><td>${esc(x.printerModel||'—')}</td></tr>`).join('');
   modalBody.innerHTML=`<div class="miniMetrics"><div class="mini"><span>Labels</span><b>${Number(t.labels||0).toLocaleString('en-IN')}</b></div><div class="mini"><span>Print Commands</span><b>${Number(t.printJobs||0).toLocaleString('en-IN')}</b></div><div class="mini"><span>Bills</span><b>${Number(t.bills||0).toLocaleString('en-IN')}</b></div><div class="mini"><span>Sales</span><b>${money(t.sales)}</b></div></div><div class="scroll"><table style="min-width:720px"><thead><tr><th>Date & Time</th><th>Activity</th><th>Details</th><th>Printer</th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">No activity in selected date range</td></tr>'}</tbody></table></div><div class="hint" style="margin-top:10px">Showing latest 100 records for the selected date filter.</div>`;
 }
-(function(){const d=new Date(),toV=d.toISOString().slice(0,10);d.setDate(d.getDate()-29);to.value=toV;from.value=d.toISOString().slice(0,10);loadSummary();loadCustomers()})();
+(function(){
+  const now=new Date();
+  from.value=localDateValue(now);
+  to.value=localDateValue(now);
+
+  from.addEventListener('change',setCustomRangeActive);
+  to.addEventListener('change',setCustomRangeActive);
+
+  customer.addEventListener('input',()=>{
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(()=>{
+      customerPage=1;
+      recentPage=1;
+      loadSummary();
+      if(activeTab==='customerTab')loadCustomers();
+      else if(activeTab==='recentTab')loadRecent();
+      else loadModels();
+    },350);
+  });
+
+  customer.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      clearTimeout(searchTimer);
+      customerPage=1;recentPage=1;applyFilter();
+    }
+  });
+
+  loadSummary();
+  loadCustomers();
+})();
 </script>
 </body></html>
