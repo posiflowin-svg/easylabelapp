@@ -11,6 +11,7 @@ const usageEventSchema = new Schema({
   deviceId: { type: String, default: '' },
   appVersion: { type: String, default: '' },
   printerModel: { type: String, default: '' },
+  printerModelNormalized: { type: String, default: '', index: true },
   source: { type: String, default: '' },
   occurredAt: { type: Date, required: true, index: true },
   labelWidthMm: { type: Number, default: 0 },
@@ -26,5 +27,6 @@ const usageEventSchema = new Schema({
 
 usageEventSchema.index({ customerMobile: 1, occurredAt: -1 });
 usageEventSchema.index({ eventType: 1, occurredAt: -1 });
+usageEventSchema.index({ printerModelNormalized: 1, occurredAt: -1 });
 
 module.exports = mongoose.model('UsageEvent', usageEventSchema);

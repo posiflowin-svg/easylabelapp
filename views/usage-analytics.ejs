@@ -1,19 +1,165 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Usage Analytics | EasyLabel</title>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Usage Analytics | EasyLabel</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f7f8fb;color:#172033;font-family:Inter,Arial,sans-serif}.layout{display:flex;min-height:100vh}.side{width:252px;background:#2d4358;color:#fff;padding:30px 20px;position:fixed;inset:0 auto 0 0}.brand{font-size:29px;font-weight:800;margin:2px 12px 48px}.side a{display:block;color:#e2e9f0;text-decoration:none;padding:14px 16px;margin:7px 0;border-radius:11px;font-size:16px}.side a.active,.side a:hover{background:#405a72;color:#fff}.main{margin-left:252px;width:calc(100% - 252px);padding:34px 38px 56px;max-width:1600px}.head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px}.head h1{font-size:30px;margin:0 0 7px}.sub{color:#778091;font-size:14px}.filters,.panel,.metric{background:#fff;border:1px solid #e7eaf0;box-shadow:0 2px 8px rgba(22,32,51,.035)}.filters{display:grid;grid-template-columns:1.4fr .8fr .8fr .8fr auto;gap:12px;padding:17px;border-radius:16px;margin-bottom:18px}.field label{display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-weight:800;color:#858c99;margin-bottom:7px}.field input,.field select{height:44px;width:100%;border:1px solid #dfe3e9;border-radius:10px;padding:0 12px;font-size:14px;background:#fff}.apply{height:44px;align-self:end;border:0;border-radius:10px;background:#ff343b;color:#fff;padding:0 24px;font-weight:800;cursor:pointer}.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}.metric{border-radius:15px;padding:18px}.metric .k{font-size:11px;font-weight:800;color:#7c8492;letter-spacing:.04em}.metric .v{font-size:27px;font-weight:800;margin-top:8px}.metric .hint{font-size:11px;color:#a0a6b0;margin-top:5px}.analytics{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;margin-bottom:18px}.panel{border-radius:16px;padding:20px}.panelTitle{font-size:17px;font-weight:800;margin-bottom:16px}.trend{height:190px;display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid #edf0f3}.barWrap{height:100%;flex:1;display:flex;align-items:flex-end;min-width:5px}.bar{width:100%;background:#ff4148;border-radius:4px 4px 0 0;min-height:2px}.sizeRow{display:grid;grid-template-columns:90px 1fr 54px;gap:10px;align-items:center;margin:12px 0;font-size:13px}.track{height:7px;background:#f0f2f5;border-radius:9px;overflow:hidden}.fill{height:100%;background:#ff4148;border-radius:9px}.tablePanel{padding:0;overflow:hidden;margin-bottom:18px}.tableTitle{padding:20px 22px;border-bottom:1px solid #edf0f3;font-size:18px;font-weight:800}.scroll{overflow:auto}table{border-collapse:collapse;width:100%;min-width:930px}th,td{padding:14px 18px;text-align:left;border-bottom:1px solid #f0f2f5;font-size:13px}th{background:#fafbfc;color:#727b89;font-size:11px;text-transform:uppercase;letter-spacing:.04em}.name{font-weight:800}.email{font-size:12px;color:#9299a5;margin-top:3px}.clickCount{border:0;background:#fff0f1;color:#e82f37;border-radius:8px;padding:6px 10px;font-weight:800;cursor:pointer}.clickCount.green{background:#edf9f3;color:#158a57}.clickCount.blue{background:#eef5ff;color:#2d67b3}.badge{display:inline-block;padding:5px 8px;border-radius:7px;font-size:10px;font-weight:800}.badge.label{background:#fff0f1;color:#e52f37}.badge.bill{background:#edf9f3;color:#168a58}.empty{text-align:center;padding:28px;color:#989faa}.modalBack{display:none;position:fixed;inset:0;background:rgba(17,24,39,.42);z-index:50;align-items:center;justify-content:center;padding:20px}.modal{background:#fff;border-radius:18px;width:min(760px,96vw);max-height:82vh;overflow:hidden;box-shadow:0 22px 70px rgba(0,0,0,.2)}.modalHead{padding:20px 22px;border-bottom:1px solid #edf0f3;display:flex;justify-content:space-between;align-items:center}.modalHead h3{margin:0;font-size:19px}.close{border:0;background:#f3f4f6;width:34px;height:34px;border-radius:9px;font-size:20px;cursor:pointer}.modalBody{padding:18px 22px;overflow:auto;max-height:68vh}.detailRow{display:grid;grid-template-columns:1fr auto;gap:12px;padding:13px 2px;border-bottom:1px solid #f0f2f4}.detailMain{font-weight:700}.detailSub{font-size:12px;color:#89919e;margin-top:4px}.pill{align-self:center;background:#f5f6f8;border-radius:8px;padding:6px 9px;font-weight:800}.money{font-variant-numeric:tabular-nums}@media(max-width:1200px){.metrics{grid-template-columns:repeat(3,1fr)}.filters{grid-template-columns:repeat(2,1fr)}.analytics{grid-template-columns:1fr}}@media(max-width:800px){.side{display:none}.main{margin:0;width:100%;padding:20px}.metrics{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr}}
-</style></head><body><div class="layout"><aside class="side"><div class="brand">EasyLabel</div><a href="/">Dashboard</a><a href="/sells_users">Users Wallet</a><a href="/orderspage">Orders</a><a class="active" href="/usage-analytics">Usage Analytics</a><a href="/premium-management">Subscription Management</a></aside><main class="main">
-<div class="head"><div><h1>Usage Analytics</h1><div class="sub">Customer printing, billing and inventory activity in one clean view.</div></div></div>
-<div class="filters"><div class="field"><label>Customer</label><input id="customer" placeholder="Name, mobile or email"></div><div class="field"><label>From</label><input id="from" type="date"></div><div class="field"><label>To</label><input id="to" type="date"></div><div class="field"><label>Activity</label><select id="type"><option value="">All activity</option><option value="LABEL_PRINT">Label Printing</option><option value="BILL_PRINT">Quick Billing</option><option value="INVENTORY_SNAPSHOT">Inventory</option></select></div><button class="apply" onclick="loadData()">Apply Filter</button></div>
-<div class="metrics"><div class="metric"><div class="k">LABELS PRINTED</div><div class="v" id="labels">0</div><div class="hint">Copies, not just print jobs</div></div><div class="metric"><div class="k">PRINT JOBS</div><div class="v" id="labelJobs">0</div><div class="hint">Label print commands</div></div><div class="metric"><div class="k">BILLS PRINTED</div><div class="v" id="bills">0</div><div class="hint">Quick Billing receipts</div></div><div class="metric"><div class="k">TOTAL SALES</div><div class="v money" id="sales">₹0</div><div class="hint">From printed bills</div></div><div class="metric"><div class="k">ACTIVE CUSTOMERS</div><div class="v" id="users">0</div><div class="hint">In selected period</div></div></div>
-<div class="analytics"><section class="panel"><div class="panelTitle">Label Printing Trend</div><div class="trend" id="bars"></div><div class="hint" style="margin-top:9px">Daily label copies · hover bars for details</div></section><section class="panel"><div class="panelTitle">Labels by Size</div><div id="sizes"></div></section></div>
-<section class="panel tablePanel"><div class="tableTitle">Customer Summary</div><div class="scroll"><table><thead><tr><th>Customer</th><th>Mobile</th><th>Labels</th><th>Bills</th><th>Inventory Items</th><th>Sales</th><th>Last Activity</th></tr></thead><tbody id="customers"></tbody></table></div></section>
-<section class="panel tablePanel"><div class="tableTitle">Recent Activity</div><div class="scroll"><table><thead><tr><th>Date & Time</th><th>Customer</th><th>Mobile</th><th>Activity</th><th>Details</th><th>Printer</th></tr></thead><tbody id="recent"></tbody></table></div></section>
-</main></div><div class="modalBack" id="modalBack" onclick="if(event.target===this)closeModal()"><div class="modal"><div class="modalHead"><h3 id="modalTitle">Details</h3><button class="close" onclick="closeModal()">×</button></div><div class="modalBody" id="modalBody"></div></div></div>
+:root{--nav:#2d4358;--nav2:#405a72;--ink:#172033;--muted:#7b8492;--line:#e6eaf0;--bg:#f6f7fa;--card:#fff;--red:#ff343b;--green:#168a58;--blue:#2d67b3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,sans-serif}.layout{display:flex;min-height:100vh}
+.side{width:252px;background:var(--nav);color:#fff;padding:30px 20px;position:fixed;inset:0 auto 0 0;overflow-y:auto}.brand{font-size:29px;font-weight:800;margin:2px 12px 48px}.side a{display:block;color:#e2e9f0;text-decoration:none;padding:14px 16px;margin:7px 0;border-radius:11px;font-size:16px}.side a.active,.side a:hover{background:var(--nav2);color:#fff}
+.main{margin-left:252px;width:calc(100% - 252px);padding:32px 38px 60px;max-width:1680px}.head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px}.head h1{font-size:30px;margin:0 0 7px}.sub{color:var(--muted);font-size:14px}
+.filters,.panel,.metric{background:#fff;border:1px solid var(--line);box-shadow:0 2px 8px rgba(22,32,51,.035)}.filters{display:grid;grid-template-columns:1.4fr .8fr .8fr .8fr auto;gap:12px;padding:16px;border-radius:16px;margin-bottom:16px}.field label{display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-weight:800;color:#858c99;margin-bottom:7px}.field input,.field select{height:43px;width:100%;border:1px solid #dfe3e9;border-radius:9px;padding:0 12px;font-size:14px;background:#fff}.apply{height:43px;align-self:end;border:0;border-radius:9px;background:var(--red);color:#fff;padding:0 22px;font-weight:800;cursor:pointer}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:16px}.metric{border-radius:14px;padding:16px 18px}.metric .k{font-size:11px;font-weight:800;color:#7c8492;letter-spacing:.04em}.metric .v{font-size:26px;font-weight:800;margin-top:8px}.metric .hint{font-size:11px;color:#9aa2ad;margin-top:5px}
+.analytics{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-bottom:17px}.panel{border-radius:15px;padding:19px}.panelTitle{font-size:17px;font-weight:800;margin-bottom:15px}.trend{height:155px;display:flex;align-items:flex-end;gap:6px;border-bottom:1px solid #edf0f3}.barWrap{height:100%;flex:1;display:flex;align-items:flex-end;min-width:5px}.bar{width:100%;background:#ff454c;border-radius:4px 4px 0 0;min-height:2px}.hint{font-size:11px;color:#9aa2ad}.sizeRow{display:grid;grid-template-columns:90px 1fr 58px;gap:10px;align-items:center;margin:10px 0;font-size:12px}.track{height:7px;background:#f0f2f5;border-radius:9px;overflow:hidden}.fill{height:100%;background:#ff454c;border-radius:9px}
+.tabsWrap{background:#fff;border:1px solid var(--line);border-radius:15px;overflow:hidden;box-shadow:0 2px 8px rgba(22,32,51,.035)}.tabs{display:flex;gap:5px;padding:10px 12px;border-bottom:1px solid var(--line);background:#fbfcfd}.tab{border:0;background:transparent;color:#6f7886;padding:11px 17px;border-radius:9px;font-size:14px;font-weight:800;cursor:pointer}.tab.active{background:#172033;color:#fff}.tabCount{font-size:11px;margin-left:6px;opacity:.72}
+.tabBody{display:none}.tabBody.active{display:block}.tableHead{display:flex;justify-content:space-between;align-items:center;padding:18px 20px 12px}.tableHead h2{font-size:18px;margin:0}.tableHead .note{font-size:12px;color:#9198a4}.scroll{overflow:auto}table{border-collapse:collapse;width:100%;min-width:980px}th,td{padding:13px 17px;text-align:left;border-bottom:1px solid #f0f2f5;font-size:13px}th{background:#fafbfc;color:#727b89;font-size:10px;text-transform:uppercase;letter-spacing:.055em;position:sticky;top:0}.nameLink{border:0;background:none;padding:0;font-weight:800;color:#172033;cursor:pointer;text-align:left}.mobileLink{border:0;background:none;padding:0;color:#2d67b3;cursor:pointer;font-weight:700}.email{font-size:11px;color:#9299a5;margin-top:3px}.num{font-variant-numeric:tabular-nums;font-weight:700}.badge{display:inline-block;padding:5px 8px;border-radius:7px;font-size:10px;font-weight:800}.badge.label{background:#fff0f1;color:#e52f37}.badge.bill{background:#edf9f3;color:#168a58}.modelBadge{display:inline-flex;background:#eef2f7;border-radius:8px;padding:6px 10px;font-weight:800;color:#32465c}.empty{text-align:center;padding:36px;color:#989faa}
+.pager{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-top:1px solid var(--line);background:#fff}.pageBtns{display:flex;gap:7px}.pageBtn{height:34px;min-width:34px;border:1px solid #dfe3e9;background:#fff;border-radius:8px;padding:0 10px;font-weight:700;cursor:pointer}.pageBtn:disabled{opacity:.4;cursor:not-allowed}.pageInfo{font-size:12px;color:#858d99}
+.modalBack{display:none;position:fixed;inset:0;background:rgba(17,24,39,.45);z-index:50;align-items:center;justify-content:center;padding:20px}.modal{background:#fff;border-radius:18px;width:min(920px,96vw);max-height:88vh;overflow:hidden;box-shadow:0 22px 70px rgba(0,0,0,.2)}.modalHead{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.modalHead h3{margin:0;font-size:19px}.close{border:0;background:#f3f4f6;width:34px;height:34px;border-radius:9px;font-size:20px;cursor:pointer}.modalBody{padding:18px 20px;overflow:auto;max-height:74vh}.miniMetrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:15px}.mini{border:1px solid var(--line);border-radius:11px;padding:11px}.mini b{display:block;font-size:18px;margin-top:4px}.mini span{font-size:10px;color:#858d99;text-transform:uppercase;font-weight:800}
+@media(max-width:1200px){.metrics{grid-template-columns:repeat(3,1fr)}.filters{grid-template-columns:repeat(2,1fr)}.analytics{grid-template-columns:1fr}}@media(max-width:800px){.side{display:none}.main{margin:0;width:100%;padding:18px}.metrics{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:1fr}.tabs{overflow:auto}.miniMetrics{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="side">
+  <div class="brand">EasyLabel</div>
+  <a href="/">Dashboard</a>
+  <a href="/sells_users">Users Wallet</a>
+  <a href="/orderspage">Orders</a>
+  <a class="active" href="/usage-analytics">Usage Analytics</a>
+  <a href="/premium-management">Subscription Management</a>
+</aside>
+<main class="main">
+  <div class="head"><div><h1>Usage Analytics</h1><div class="sub">Lifetime activity remains stored. Use the date filters to analyse any period without losing historical data.</div></div></div>
+
+  <div class="filters">
+    <div class="field"><label>Customer</label><input id="customer" placeholder="Name, mobile or email"></div>
+    <div class="field"><label>From</label><input id="from" type="date"></div>
+    <div class="field"><label>To</label><input id="to" type="date"></div>
+    <div class="field"><label>Activity</label><select id="type"><option value="">All activity</option><option value="LABEL_PRINT">Label Printing</option><option value="BILL_PRINT">Quick Billing</option><option value="INVENTORY_SNAPSHOT">Inventory</option></select></div>
+    <button class="apply" onclick="applyFilter()">Apply Filter</button>
+  </div>
+
+  <div class="metrics">
+    <div class="metric"><div class="k">LABELS PRINTED</div><div class="v" id="labels">0</div><div class="hint">Total copies in selected period</div></div>
+    <div class="metric"><div class="k">PRINT COMMANDS</div><div class="v" id="labelJobs">0</div><div class="hint">Label print jobs</div></div>
+    <div class="metric"><div class="k">BILLS PRINTED</div><div class="v" id="bills">0</div><div class="hint">Quick Billing receipts</div></div>
+    <div class="metric"><div class="k">TOTAL SALES</div><div class="v" id="sales">₹0</div><div class="hint">From printed bills</div></div>
+    <div class="metric"><div class="k">ACTIVE CUSTOMERS</div><div class="v" id="users">0</div><div class="hint">In selected period</div></div>
+  </div>
+
+  <div class="analytics">
+    <section class="panel"><div class="panelTitle">Label Printing Trend</div><div class="trend" id="bars"></div><div class="hint" style="margin-top:8px">Daily label copies</div></section>
+    <section class="panel"><div class="panelTitle">Labels by Size</div><div id="sizes"></div></section>
+  </div>
+
+  <section class="tabsWrap">
+    <div class="tabs">
+      <button class="tab active" data-tab="customerTab" onclick="switchTab('customerTab',this)">Customer Summary <span class="tabCount" id="customerCount"></span></button>
+      <button class="tab" data-tab="recentTab" onclick="switchTab('recentTab',this)">Recent Activity</button>
+      <button class="tab" data-tab="modelTab" onclick="switchTab('modelTab',this)">Printer Models</button>
+    </div>
+
+    <div class="tabBody active" id="customerTab">
+      <div class="tableHead"><div><h2>Customer Summary</h2><div class="note">Sorted by highest labels printed · 100 customers per page</div></div></div>
+      <div class="scroll"><table>
+        <thead><tr><th>#</th><th>Customer</th><th>Mobile</th><th>Labels Printed</th><th>Print Commands</th><th>Bills</th><th>Sales</th><th>Last Activity</th></tr></thead>
+        <tbody id="customers"></tbody>
+      </table></div>
+      <div class="pager"><div class="pageInfo" id="customerPageInfo"></div><div class="pageBtns"><button class="pageBtn" id="customerPrev" onclick="changeCustomerPage(-1)">Previous</button><button class="pageBtn" id="customerNext" onclick="changeCustomerPage(1)">Next</button></div></div>
+    </div>
+
+    <div class="tabBody" id="recentTab">
+      <div class="tableHead"><div><h2>Recent Activity</h2><div class="note">Most recent printing and billing activity first</div></div></div>
+      <div class="scroll"><table>
+        <thead><tr><th>Date & Time</th><th>Customer</th><th>Mobile</th><th>Activity</th><th>Details</th><th>Printer Model</th></tr></thead>
+        <tbody id="recent"></tbody>
+      </table></div>
+      <div class="pager"><div class="pageInfo" id="recentPageInfo"></div><div class="pageBtns"><button class="pageBtn" id="recentPrev" onclick="changeRecentPage(-1)">Previous</button><button class="pageBtn" id="recentNext" onclick="changeRecentPage(1)">Next</button></div></div>
+    </div>
+
+    <div class="tabBody" id="modelTab">
+      <div class="tableHead"><div><h2>Printer Models</h2><div class="note">Bluetooth serial/address suffixes are merged into the base model name</div></div></div>
+      <div class="scroll"><table>
+        <thead><tr><th>#</th><th>Model</th><th>Unique Customers</th><th>Print Commands</th><th>Copies Printed</th><th>Last Used</th></tr></thead>
+        <tbody id="models"></tbody>
+      </table></div>
+    </div>
+  </section>
+</main>
+</div>
+
+<div class="modalBack" id="modalBack" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modalHead"><h3 id="modalTitle">Customer Activity</h3><button class="close" onclick="closeModal()">×</button></div>
+    <div class="modalBody" id="modalBody"></div>
+  </div>
+</div>
+
 <script>
-const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}),dt=v=>v?new Date(v).toLocaleString('en-IN'):'—';let customerRows=[];
-function closeModal(){modalBack.style.display='none'}function openModal(title,html){modalTitle.textContent=title;modalBody.innerHTML=html||'<div class="empty">No data available</div>';modalBack.style.display='flex'}
-async function detail(i,kind){const x=customerRows[i],q=new URLSearchParams({mobile:x._id.mobile||'',id:x._id.id||'',from:from.value,to:to.value});openModal('Loading…','<div class="empty">Loading details…</div>');const r=await fetch('/api/usage/customer-detail?'+q),j=await r.json();if(!j.success)return openModal('Details','<div class="empty">Unable to load details</div>');if(kind==='labels'){openModal('Label Sizes · '+(x.name||'Customer'),(j.labels||[]).map(a=>`<div class="detailRow"><div><div class="detailMain">${a._id.w||0} × ${a._id.h||0} mm</div><div class="detailSub">${a.jobs||0} print job${a.jobs===1?'':'s'}</div></div><div class="pill">${a.copies||0} copies</div></div>`).join(''))}else if(kind==='bills'){openModal('Bills · '+(x.name||'Customer'),(j.bills||[]).map(a=>`<div class="detailRow"><div><div class="detailMain">${a.billNo||'Bill'}</div><div class="detailSub">${dt(a.occurredAt)} · ${a.itemCount||0} sold items · ${a.paymentMode||'Payment mode not set'}</div></div><div class="pill">${money(a.billAmount)}</div></div>`).join(''))}else{const inv=j.inventory||{};openModal('Inventory · '+(x.name||'Customer'),`<div class="detailSub" style="margin-bottom:10px">${inv.count||0} saved products · latest synced inventory</div>`+(inv.items||[]).map(a=>`<div class="detailRow"><div><div class="detailMain">${escapeHtml(a.name||'Unnamed item')}</div><div class="detailSub">Category: ${escapeHtml(a.category||'Uncategorized')}</div></div></div>`).join(''))}}
-function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-async function loadData(){const q=new URLSearchParams();['customer','from','to','type'].forEach(id=>{const v=document.getElementById(id).value;if(v)q.set(id,v)});const r=await fetch('/api/usage/summary?'+q),j=await r.json();if(!j.success)return;const t=j.totals||{};labels.textContent=(t.labelsPrinted||0).toLocaleString('en-IN');labelJobs.textContent=(t.labelPrintJobs||0).toLocaleString('en-IN');bills.textContent=(t.billsPrinted||0).toLocaleString('en-IN');sales.textContent=money(t.totalSales);users.textContent=(t.activeCustomers||0).toLocaleString('en-IN');const max=Math.max(1,...(j.daily||[]).map(x=>x.labels||0));bars.innerHTML=(j.daily||[]).length?(j.daily||[]).map(x=>`<div class="barWrap" title="${x._id.day}: ${x.labels||0} labels"><div class="bar" style="height:${Math.max(2,(x.labels||0)/max*100)}%"></div></div>`).join(''):'<div class="empty">No printing activity</div>';const maxS=Math.max(1,...(j.sizeWise||[]).map(x=>x.copies||0));sizes.innerHTML=(j.sizeWise||[]).length?(j.sizeWise||[]).map(x=>`<div class="sizeRow"><b>${x._id.w||0}×${x._id.h||0} mm</b><div class="track"><div class="fill" style="width:${(x.copies||0)/maxS*100}%"></div></div><b>${x.copies||0}</b></div>`).join(''):'<div class="empty">No label-size data</div>';customerRows=j.customers||[];customers.innerHTML=customerRows.length?customerRows.map((x,i)=>`<tr><td><div class="name">${escapeHtml(x.name||'Unknown')}</div><div class="email">${escapeHtml(x.email||'')}</div></td><td>${escapeHtml(x._id.mobile||'—')}</td><td><button class="clickCount" onclick="detail(${i},'labels')">${x.labels||0}</button></td><td><button class="clickCount green" onclick="detail(${i},'bills')">${x.bills||0}</button></td><td><button class="clickCount blue" onclick="detail(${i},'items')">${x.items||0}</button></td><td>${money(x.sales)}</td><td>${dt(x.lastActivity)}</td></tr>`).join(''):'<tr><td colspan="7" class="empty">No customers found</td></tr>';recent.innerHTML=(j.recent||[]).filter(x=>x.eventType!=='INVENTORY_SNAPSHOT').map(x=>`<tr><td>${dt(x.occurredAt)}</td><td>${escapeHtml(x.customerName||'Unknown')}</td><td>${escapeHtml(x.customerMobile||'—')}</td><td><span class="badge ${x.eventType==='LABEL_PRINT'?'label':'bill'}">${x.eventType==='LABEL_PRINT'?'LABEL PRINT':'QUICK BILLING'}</span></td><td>${x.eventType==='LABEL_PRINT'?`${x.labelWidthMm||0}×${x.labelHeightMm||0} mm · ${x.copies||0} copies`:`${escapeHtml(x.billNo||'')} · ${x.itemCount||0} sold items · ${money(x.billAmount)}`}</td><td>${escapeHtml(x.printerModel||'—')}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No activity found</td></tr>'}
-(function(){const d=new Date(),toV=d.toISOString().slice(0,10);d.setDate(d.getDate()-29);to.value=toV;from.value=d.toISOString().slice(0,10);loadData()})();
-</script></body></html>
+const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const dt=v=>v?new Date(v).toLocaleString('en-IN'):'—';
+const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+let customerPage=1,recentPage=1,customerPages=1,recentPages=1,activeTab='customerTab';
+
+function query(extra={}){
+  const q=new URLSearchParams();
+  ['customer','from','to','type'].forEach(id=>{const v=document.getElementById(id).value;if(v)q.set(id,v)});
+  Object.entries(extra).forEach(([k,v])=>{if(v!==undefined&&v!==null&&v!=='')q.set(k,v)});
+  return q;
+}
+function switchTab(id,btn){
+  activeTab=id;
+  document.querySelectorAll('.tabBody').forEach(x=>x.classList.toggle('active',x.id===id));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));
+  if(id==='customerTab')loadCustomers();
+  if(id==='recentTab')loadRecent();
+  if(id==='modelTab')loadModels();
+}
+function applyFilter(){customerPage=1;recentPage=1;loadSummary();if(activeTab==='customerTab')loadCustomers();else if(activeTab==='recentTab')loadRecent();else loadModels()}
+async function loadSummary(){
+  const r=await fetch('/api/usage/summary?'+query()),j=await r.json();if(!j.success)return;
+  const t=j.totals||{};labels.textContent=(t.labelsPrinted||0).toLocaleString('en-IN');labelJobs.textContent=(t.labelPrintJobs||0).toLocaleString('en-IN');bills.textContent=(t.billsPrinted||0).toLocaleString('en-IN');sales.textContent=money(t.totalSales);users.textContent=(t.activeCustomers||0).toLocaleString('en-IN');
+  const max=Math.max(1,...(j.daily||[]).map(x=>x.labels||0));bars.innerHTML=(j.daily||[]).length?(j.daily||[]).map(x=>`<div class="barWrap" title="${x._id.day}: ${(x.labels||0).toLocaleString('en-IN')} labels"><div class="bar" style="height:${Math.max(2,(x.labels||0)/max*100)}%"></div></div>`).join(''):'<div class="empty">No printing activity</div>';
+  const maxS=Math.max(1,...(j.sizeWise||[]).map(x=>x.copies||0));sizes.innerHTML=(j.sizeWise||[]).length?(j.sizeWise||[]).map(x=>`<div class="sizeRow"><b>${x._id.w||0}×${x._id.h||0} mm</b><div class="track"><div class="fill" style="width:${(x.copies||0)/maxS*100}%"></div></div><b>${(x.copies||0).toLocaleString('en-IN')}</b></div>`).join(''):'<div class="empty">No label-size data</div>';
+}
+async function loadCustomers(){
+  customers.innerHTML='<tr><td colspan="8" class="empty">Loading customers…</td></tr>';
+  const r=await fetch('/api/usage/customers?'+query({page:customerPage})),j=await r.json();if(!j.success)return;
+  const p=j.pagination||{};customerPage=p.page||1;customerPages=p.pages||1;customerCount.textContent=p.total?`(${Number(p.total).toLocaleString('en-IN')})`:'';
+  customers.innerHTML=(j.data||[]).length?(j.data||[]).map((x,i)=>`<tr>
+    <td>${(customerPage-1)*100+i+1}</td>
+    <td><button class="nameLink" onclick='openCustomer(${JSON.stringify(x._id.mobile||"")},${JSON.stringify(x._id.id||"")},${JSON.stringify(x.name||"Customer")})'>${esc(x.name||'Unknown')}</button><div class="email">${esc(x.email||'')}</div></td>
+    <td><button class="mobileLink" onclick='openCustomer(${JSON.stringify(x._id.mobile||"")},${JSON.stringify(x._id.id||"")},${JSON.stringify(x.name||"Customer")})'>${esc(x._id.mobile||'—')}</button></td>
+    <td class="num">${Number(x.labels||0).toLocaleString('en-IN')}</td><td class="num">${Number(x.printJobs||0).toLocaleString('en-IN')}</td><td class="num">${Number(x.bills||0).toLocaleString('en-IN')}</td><td class="num">${money(x.sales)}</td><td>${dt(x.lastActivity)}</td>
+  </tr>`).join(''):'<tr><td colspan="8" class="empty">No customers found</td></tr>';
+  customerPageInfo.textContent=`Page ${customerPage} of ${customerPages} · ${Number(p.total||0).toLocaleString('en-IN')} customers`;
+  customerPrev.disabled=customerPage<=1;customerNext.disabled=customerPage>=customerPages;
+}
+function changeCustomerPage(d){const n=customerPage+d;if(n>=1&&n<=customerPages){customerPage=n;loadCustomers();document.getElementById('customerTab').scrollIntoView({behavior:'smooth',block:'start'})}}
+async function loadRecent(){
+  recent.innerHTML='<tr><td colspan="6" class="empty">Loading activity…</td></tr>';
+  const r=await fetch('/api/usage/recent?'+query({page:recentPage})),j=await r.json();if(!j.success)return;
+  const p=j.pagination||{};recentPage=p.page||1;recentPages=p.pages||1;
+  recent.innerHTML=(j.data||[]).length?(j.data||[]).map(x=>`<tr><td>${dt(x.occurredAt)}</td><td><b>${esc(x.customerName||'Unknown')}</b></td><td>${esc(x.customerMobile||'—')}</td><td><span class="badge ${x.eventType==='LABEL_PRINT'?'label':'bill'}">${x.eventType==='LABEL_PRINT'?'LABEL PRINT':x.eventType==='BILL_PRINT'?'QUICK BILLING':'INVENTORY'}</span></td><td>${x.eventType==='LABEL_PRINT'?`${x.labelWidthMm||0}×${x.labelHeightMm||0} mm · ${Number(x.copies||0).toLocaleString('en-IN')} copies`:`${esc(x.billNo||'Bill')} · ${x.itemCount||0} items · ${money(x.billAmount)}`}</td><td>${esc(x.printerModel||'—')}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">No recent activity found</td></tr>';
+  recentPageInfo.textContent=`Page ${recentPage} of ${recentPages} · ${Number(p.total||0).toLocaleString('en-IN')} activities`;
+  recentPrev.disabled=recentPage<=1;recentNext.disabled=recentPage>=recentPages;
+}
+function changeRecentPage(d){const n=recentPage+d;if(n>=1&&n<=recentPages){recentPage=n;loadRecent();document.getElementById('recentTab').scrollIntoView({behavior:'smooth',block:'start'})}}
+async function loadModels(){
+  models.innerHTML='<tr><td colspan="6" class="empty">Loading printer models…</td></tr>';
+  const r=await fetch('/api/usage/models?'+query()),j=await r.json();if(!j.success)return;
+  models.innerHTML=(j.data||[]).length?(j.data||[]).map((x,i)=>`<tr><td>${i+1}</td><td><span class="modelBadge">${esc(x.model)}</span></td><td class="num">${Number(x.uniqueCustomers||0).toLocaleString('en-IN')}</td><td class="num">${Number(x.commands||0).toLocaleString('en-IN')}</td><td class="num">${Number(x.copies||0).toLocaleString('en-IN')}</td><td>${dt(x.lastUsed)}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">No printer model activity found</td></tr>';
+}
+function closeModal(){modalBack.style.display='none'}
+async function openCustomer(mobile,id,name){
+  modalTitle.textContent=`Recent Activity · ${name||'Customer'}`;modalBody.innerHTML='<div class="empty">Loading customer activity…</div>';modalBack.style.display='flex';
+  const r=await fetch('/api/usage/customer-activity?'+query({mobile,id,page:1})),j=await r.json();
+  if(!j.success){modalBody.innerHTML='<div class="empty">Unable to load customer activity</div>';return}
+  const t=j.totals||{};
+  const rows=(j.data||[]).map(x=>`<tr><td>${dt(x.occurredAt)}</td><td><span class="badge ${x.eventType==='LABEL_PRINT'?'label':'bill'}">${x.eventType==='LABEL_PRINT'?'LABEL PRINT':'QUICK BILLING'}</span></td><td>${x.eventType==='LABEL_PRINT'?`${x.labelWidthMm||0}×${x.labelHeightMm||0} mm · ${Number(x.copies||0).toLocaleString('en-IN')} copies`:`${esc(x.billNo||'Bill')} · ${money(x.billAmount)}`}</td><td>${esc(x.printerModel||'—')}</td></tr>`).join('');
+  modalBody.innerHTML=`<div class="miniMetrics"><div class="mini"><span>Labels</span><b>${Number(t.labels||0).toLocaleString('en-IN')}</b></div><div class="mini"><span>Print Commands</span><b>${Number(t.printJobs||0).toLocaleString('en-IN')}</b></div><div class="mini"><span>Bills</span><b>${Number(t.bills||0).toLocaleString('en-IN')}</b></div><div class="mini"><span>Sales</span><b>${money(t.sales)}</b></div></div><div class="scroll"><table style="min-width:720px"><thead><tr><th>Date & Time</th><th>Activity</th><th>Details</th><th>Printer</th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">No activity in selected date range</td></tr>'}</tbody></table></div><div class="hint" style="margin-top:10px">Showing latest 100 records for the selected date filter.</div>`;
+}
+(function(){const d=new Date(),toV=d.toISOString().slice(0,10);d.setDate(d.getDate()-29);to.value=toV;from.value=d.toISOString().slice(0,10);loadSummary();loadCustomers()})();
+</script>
+</body></html>

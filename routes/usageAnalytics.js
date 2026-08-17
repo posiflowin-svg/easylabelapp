@@ -3,4 +3,8 @@ const router = express.Router();
 const c = require('../controllers/UsageAnalyticsController');
 router.post('/events', c.ingest);
 router.get('/summary', c.summary);
+router.get('/customers', c.customers);
+router.get('/recent', c.recent);
+router.get('/models', c.models);
+router.get('/customer-activity', c.customerActivity);
 module.exports = router;
