@@ -169,7 +169,9 @@ async function extractZipVariants(req) {
       await persistBorderAsset(filename, data);
 
       created.push(filename);
-      variants[size] = `${base}/border-assets/${filename}`;
+      // Store a host-independent URL. This prevents stale http/old-host URLs from
+      // breaking the admin preview and Android import after Render redeploys.
+      variants[size] = `/border-assets/${encodeURIComponent(filename)}`;
     }
 
     if (!Object.keys(variants).length) {
@@ -205,16 +207,25 @@ async function ensureDefaultCategories() {
   })), { ordered: false }).catch(() => {});
 }
 
+function normaliseAssetUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const filename = borderFilenameFromUrl(raw);
+  return filename ? `/border-assets/${encodeURIComponent(filename)}` : raw;
+}
+
 function serializeBorder(border) {
-  const variants = mapToObject(border.variants);
-  const previewUrl = border.previewUrl || border.thumbnailUrl || variants['50x25'] || border.imageUrl || firstVariant(variants);
+  const rawVariants = mapToObject(border.variants);
+  const variants = {};
+  for (const [size, url] of Object.entries(rawVariants)) variants[size] = normaliseAssetUrl(url);
+  const previewUrl = normaliseAssetUrl(border.previewUrl) || normaliseAssetUrl(border.thumbnailUrl) || variants['50x25'] || normaliseAssetUrl(border.imageUrl) || firstVariant(variants);
   return {
     ...border,
     variants,
     files: variants,
     previewUrl,
     thumbnailUrl: previewUrl,
-    imageUrl: border.imageUrl || firstVariant(variants) || previewUrl,
+    imageUrl: normaliseAssetUrl(border.imageUrl) || firstVariant(variants) || previewUrl,
     accessLevel: normaliseAccessLevel(border.accessLevel, border.isVip),
     isVip: normaliseAccessLevel(border.accessLevel, border.isVip) !== 'free'
   };
@@ -235,11 +246,19 @@ exports.assetFile = async (req, res) => {
 
     const asset = await BorderAsset.findOne({ filename }).lean();
     if (asset && asset.data) {
+      // Mongoose normally returns a Node Buffer. Buffer.from also safely handles
+      // BSON Binary/Uint8Array shapes from different Mongo/Mongoose versions.
+      let bytes = asset.data;
+      if (!Buffer.isBuffer(bytes)) {
+        if (bytes.buffer && Buffer.isBuffer(bytes.buffer)) bytes = bytes.buffer;
+        else if (bytes.buffer instanceof ArrayBuffer) bytes = Buffer.from(bytes.buffer);
+        else bytes = Buffer.from(bytes);
+      }
       res.set('Content-Type', asset.contentType || borderMimeType(filename));
-      res.set('Content-Length', String(asset.size || asset.data.length || 0));
+      res.set('Content-Length', String(bytes.length));
       res.set('Cache-Control', 'public, max-age=31536000, immutable');
       res.set('X-Content-Type-Options', 'nosniff');
-      return res.send(asset.data);
+      return res.end(bytes);
     }
 
     // Backward compatibility for assets that still physically exist in an old
