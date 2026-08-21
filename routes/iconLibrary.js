@@ -1,0 +1,3 @@
+const router=require('express').Router(); const multer=require('multer'); const c=require('../controllers/IconLibraryController');
+const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024},fileFilter:(r,f,cb)=>cb(null,['image/png','image/jpeg','image/webp'].includes(f.mimetype))});
+router.get('/',c.list); router.post('/admin/category',c.createCategory); router.post('/admin/:id/upload',upload.single('icon'),c.upload); router.post('/admin/:id/toggle',c.toggleCategory); router.post('/admin/:id/delete',c.deleteCategory); router.post('/admin/:id/icon/:iconId/delete',c.deleteIcon); module.exports=router;

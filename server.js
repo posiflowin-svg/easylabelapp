@@ -23,6 +23,8 @@ const BillingRoute = require('./routes/billing');
 const NotificationsApiRoute = require('./routes/notificationsApi');
 const AIRoute = require('./routes/ai');
 const BorderRoute = require('./routes/border');
+const IconLibraryRoute = require('./routes/iconLibrary');
+const IconLibraryController = require('./controllers/IconLibraryController');
 const UsageAnalyticsRoute = require('./routes/usageAnalytics');
 const CloudBackupRoute = require('./routes/cloudBackup');
 const BorderController = require('./controllers/BorderController');
@@ -99,6 +101,8 @@ app.get('/sells_users', (req, res) => {
 app.get('/premium-management', PremiumController.page);
 app.get('/shop-management', ProductController.page);
 app.get('/border-management', BorderController.page);
+app.get('/icon-library', IconLibraryController.page);
+app.get('/icon-assets/:categoryId/:iconId', IconLibraryController.asset);
 app.get('/api/usage/customer-detail', require('./controllers/UsageAnalyticsController').customerDetail);
 app.get('/usage-analytics', require('./controllers/UsageAnalyticsController').page);
 // Add the password verification route directly to app
@@ -131,6 +135,7 @@ app.use('/api/billing/google', BillingRoute);
 app.use('/api/notifications', NotificationsApiRoute);
 app.use('/api/ai', AIRoute);
 app.use('/api/borders', BorderRoute);
+app.use('/api/icon-library', IconLibraryRoute);
 app.use('/api/usage', UsageAnalyticsRoute);
 app.use('/api/cloud-backup', CloudBackupRoute);
 app.use('/api/account-deletion', AccountDeletionRoute);
