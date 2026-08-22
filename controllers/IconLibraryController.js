@@ -6,32 +6,59 @@ function toNodeBuffer(value) {
   if (!value) return null;
   if (Buffer.isBuffer(value)) return Buffer.from(value);
 
-  // Mongoose/BSON buffer variants.
-  if (value.buffer && Buffer.isBuffer(value.buffer)) {
-    return Buffer.from(value.buffer);
-  }
-  if (value.value && typeof value.value === 'function') {
-    try {
+  // Mongoose Buffer document can expose the real Buffer through value().
+  try {
+    if (typeof value.value === 'function') {
       const v = value.value();
-      if (Buffer.isBuffer(v)) return Buffer.from(v);
-    } catch (_) {}
-  }
+      if (v && v !== value) {
+        const b = toNodeBuffer(v);
+        if (b && b.length) return b;
+      }
+    }
+  } catch (_) {}
 
-  // JSON-serialized Node Buffer fallback.
+  // Node's JSON Buffer shape.
   if (value.type === 'Buffer' && Array.isArray(value.data)) {
     return Buffer.from(value.data);
   }
 
-  // MongoDB Binary/BSON style.
-  if (value._bsontype === 'Binary' && value.buffer) {
-    try { return Buffer.from(value.buffer); } catch (_) {}
-  }
-
-  // Last safe fallback for Uint8Array-like values.
+  // BSON Binary returned by lean().  Depending on bson/mongoose version the
+  // payload can be Buffer, Uint8Array or available via value(true).
   try {
-    if (ArrayBuffer.isView(value)) return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+    if (value._bsontype === 'Binary') {
+      if (typeof value.value === 'function') {
+        const v = value.value(true);
+        if (v) return Buffer.from(v);
+      }
+      if (value.buffer) return Buffer.from(value.buffer);
+    }
   } catch (_) {}
 
+  if (value.buffer) {
+    try {
+      if (Buffer.isBuffer(value.buffer)) return Buffer.from(value.buffer);
+      if (ArrayBuffer.isView(value.buffer)) {
+        return Buffer.from(value.buffer.buffer, value.buffer.byteOffset, value.buffer.byteLength);
+      }
+      if (value.buffer instanceof ArrayBuffer) return Buffer.from(value.buffer);
+      if (Array.isArray(value.buffer)) return Buffer.from(value.buffer);
+    } catch (_) {}
+  }
+
+  if (ArrayBuffer.isView(value)) {
+    return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+  }
+  if (value instanceof ArrayBuffer) return Buffer.from(value);
+  if (Array.isArray(value)) return Buffer.from(value);
+
+  // Legacy/base64 value fallback.
+  if (typeof value === 'string') {
+    try {
+      const clean = value.replace(/^data:[^;]+;base64,/, '');
+      const b = Buffer.from(clean, 'base64');
+      if (b.length) return b;
+    } catch (_) {}
+  }
   return null;
 }
 
@@ -98,13 +125,12 @@ exports.asset=async(req,res)=>{
      * "Unsupported icon image".
      */
     const c = await IconLibrary.findOne(
-      {_id:req.params.categoryId, 'icons._id':req.params.iconId, active:true},
-      {icons:{$elemMatch:{_id:req.params.iconId,active:true}}}
+      {_id:req.params.categoryId, active:true}
     ).lean();
 
-    if(!c || !c.icons || !c.icons.length) return res.sendStatus(404);
-
-    const i = c.icons[0];
+    if(!c || !Array.isArray(c.icons)) return res.sendStatus(404);
+    const i = c.icons.find(x => x && String(x._id) === String(req.params.iconId) && x.active !== false);
+    if(!i) return res.sendStatus(404);
     const buffer = toNodeBuffer(i.data);
     if(!buffer || !buffer.length) {
       console.error('Icon asset has no binary data', req.params.categoryId, req.params.iconId);
@@ -117,7 +143,7 @@ exports.asset=async(req,res)=>{
       'Content-Type': mime,
       'Content-Length': String(buffer.length),
       'Content-Disposition': `inline; filename="${String(i.filename || 'icon').replace(/"/g,'')}"`,
-      'Cache-Control': 'public, max-age=3600, no-transform',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, no-transform',
       'X-Content-Type-Options': 'nosniff',
       'X-EasyLabel-Icon-Bytes': String(buffer.length)
     });
