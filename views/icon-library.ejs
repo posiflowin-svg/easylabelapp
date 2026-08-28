@@ -1,1 +1,131 @@
-<!doctype html><html><head><meta charset="utf-8"><title>EasyLabel Icon Library</title><style>body{font-family:Arial;background:#f5f7fb;margin:0;padding:32px;color:#111827}.wrap{max-width:1200px;margin:auto}.card{background:white;border:1px solid #e5e7eb;border-radius:16px;padding:22px;margin:18px 0}.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}input,button{padding:11px 13px;border:1px solid #d1d5db;border-radius:9px}button{cursor:pointer;font-weight:700}.primary{background:#ff3b43;color:#fff;border:0}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;margin-top:18px}.icon{border:1px solid #e5e7eb;border-radius:12px;padding:10px;text-align:center}.icon img{width:100%;height:100px;object-fit:contain;background:#fafafa}.muted{color:#6b7280}</style></head><body><div class="wrap"><h1>Icon Library</h1><p class="muted">Create categories and upload thermal-friendly black & white icons. New categories appear in the app dynamically.</p><% if(message){%><div class="card"><%=message%></div><%}%><div class="card"><h2>New Category</h2><form class="row" method="post" action="/api/icon-library/admin/category"><input name="name" required placeholder="Laundry"><input name="displayOrder" type="number" value="0" placeholder="Order"><button class="primary">Create Category</button></form></div><% categories.forEach(c=>{%><div class="card"><div class="row"><h2 style="margin-right:auto"><%=c.name%></h2><form method="post" action="/api/icon-library/admin/<%=c._id%>/toggle"><button><%=c.active?'Disable':'Enable'%></button></form><form method="post" action="/api/icon-library/admin/<%=c._id%>/delete" onsubmit="return confirm('Delete category?')"><button>Delete</button></form></div><form class="row" method="post" enctype="multipart/form-data" action="/api/icon-library/admin/<%=c._id%>/upload"><input name="name" placeholder="Icon name"><input name="displayOrder" type="number" value="0"><input name="icon" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg" required><button class="primary">Upload Icon</button></form><div class="grid"><% (c.icons||[]).forEach(i=>{%><div class="icon"><img src="/icon-assets/<%=c._id%>/<%=i._id%>"><b><%=i.name%></b><form method="post" action="/api/icon-library/admin/<%=c._id%>/icon/<%=i._id%>/delete"><button>Delete</button></form></div><%})%></div></div><%})%></div></body></html>
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>EasyLabel Icon Library</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#f5f7fb;margin:0;padding:32px;color:#111827}
+.wrap{max-width:1280px;margin:auto}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;margin:18px 0}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.field{display:flex;flex-direction:column;gap:6px;min-width:220px}
+label{font-size:13px;font-weight:700;color:#4b5563}
+input,select,button{min-height:44px;padding:10px 13px;border:1px solid #d1d5db;border-radius:8px;background:#fff;font-size:14px}
+select{min-width:250px}
+button{cursor:pointer;font-weight:700}
+.primary{background:#ff3b43;color:#fff;border-color:#ff3b43}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;margin-top:18px}
+.icon{border:1px solid #e5e7eb;border-radius:12px;padding:10px;text-align:center}
+.icon img{width:100%;height:100px;object-fit:contain;background:#fafafa}
+.muted{color:#6b7280}
+.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#fff1f2;color:#e11d48;font-size:12px;font-weight:700}
+.category-title{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.info{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:12px 14px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Icon Library</h1>
+  <p class="muted">Upload thermal-friendly icons using the same Main Category and Sub Category structure used in the Easy Label app.</p>
+
+  <% if(message){ %><div class="card"><%=message%></div><% } %>
+
+  <div class="card">
+    <h2>Upload Icon</h2>
+    <form class="row" method="post" enctype="multipart/form-data" action="/api/icon-library/admin/upload">
+      <div class="field">
+        <label>Main Category</label>
+        <select id="mainCategory" name="mainCategory" required>
+          <option value="">Select Main Category</option>
+          <% taxonomy.forEach(main=>{ %>
+            <option value="<%=main.name%>"><%=main.name%></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Sub Category</label>
+        <select id="subCategory" name="subCategory" required disabled>
+          <option value="">Select Sub Category</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Icon Name</label>
+        <input name="name" placeholder="e.g. T-Shirt">
+      </div>
+
+      <div class="field" style="min-width:110px">
+        <label>Order</label>
+        <input name="displayOrder" type="number" value="0" style="width:110px">
+      </div>
+
+      <div class="field">
+        <label>Icon File</label>
+        <input name="icon" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg" required>
+      </div>
+
+      <button class="primary" type="submit" style="margin-top:19px">Upload Icon</button>
+    </form>
+
+    <div class="info">Categories are fixed to the same 10 Main Categories and 100 business Sub Categories used by the Android app. This prevents spelling mismatches between backend and app.</div>
+  </div>
+
+  <% categories.forEach(c=>{ %>
+    <div class="card">
+      <div class="row">
+        <div style="margin-right:auto">
+          <div class="category-title">
+            <h2 style="margin:0"><%=c.name%></h2>
+            <% if(c.mainCategory){ %><span class="badge"><%=c.mainCategory%></span><% } %>
+          </div>
+        </div>
+        <form method="post" action="/api/icon-library/admin/<%=c._id%>/toggle">
+          <button><%=c.active?'Disable':'Enable'%></button>
+        </form>
+        <form method="post" action="/api/icon-library/admin/<%=c._id%>/delete" onsubmit="return confirm('Delete this sub category and all its icons?')">
+          <button>Delete</button>
+        </form>
+      </div>
+
+      <div class="grid">
+        <% (c.icons||[]).forEach(i=>{ %>
+          <div class="icon">
+            <img src="/icon-assets/<%=c._id%>/<%=i._id%>">
+            <b><%=i.name%></b>
+            <form method="post" action="/api/icon-library/admin/<%=c._id%>/icon/<%=i._id%>/delete">
+              <button>Delete</button>
+            </form>
+          </div>
+        <% }) %>
+      </div>
+    </div>
+  <% }) %>
+</div>
+
+<script>
+const taxonomy = <%- JSON.stringify(taxonomy) %>;
+const mainSelect = document.getElementById('mainCategory');
+const subSelect = document.getElementById('subCategory');
+
+mainSelect.addEventListener('change', function(){
+  const selected = taxonomy.find(x => x.name === this.value);
+  subSelect.innerHTML = '<option value="">Select Sub Category</option>';
+
+  if (!selected) {
+    subSelect.disabled = true;
+    return;
+  }
+
+  selected.subcategories.forEach(name => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    subSelect.appendChild(option);
+  });
+  subSelect.disabled = false;
+});
+</script>
+</body>
+</html>

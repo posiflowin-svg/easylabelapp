@@ -1,4 +1,5 @@
 const IconLibrary = require('../models/IconLibrary');
+const ICON_TAXONOMY = require('../config/iconTaxonomy');
 
 function slugify(s){return String(s||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
 
@@ -88,8 +89,12 @@ function detectImageMime(buffer, suppliedMime) {
 }
 
 exports.page=async(req,res)=>{
-  const categories=await IconLibrary.find().sort({displayOrder:1,name:1}).lean();
-  res.render('icon-library',{categories,message:req.query.message||''});
+  const categories=await IconLibrary.find().sort({mainCategory:1,displayOrder:1,name:1}).lean();
+  res.render('icon-library',{
+    categories,
+    taxonomy:ICON_TAXONOMY,
+    message:req.query.message||''
+  });
 };
 
 exports.list=async(req,res)=>{
@@ -101,6 +106,8 @@ exports.list=async(req,res)=>{
       id:String(c._id),
       name:c.name,
       slug:c.slug,
+      mainCategory:c.mainCategory || '',
+      subCategory:c.name,
       displayOrder:c.displayOrder,
       icons:(c.icons||[])
         .filter(i=>i.active)
@@ -154,6 +161,65 @@ exports.asset=async(req,res)=>{
   }
 };
 
+
+function resolveTaxonomy(mainCategory, subCategory) {
+  const main = ICON_TAXONOMY.find(x => x.name === mainCategory);
+  if (!main) throw new Error('Please select a valid main category');
+  if (!main.subcategories.includes(subCategory)) {
+    throw new Error('Please select a valid sub category');
+  }
+  return main;
+}
+
+exports.uploadByTaxonomy=async(req,res)=>{
+  try{
+    const mainCategory=String(req.body.mainCategory||'').trim();
+    const subCategory=String(req.body.subCategory||'').trim();
+    resolveTaxonomy(mainCategory, subCategory);
+
+    if(!req.file) throw new Error('Choose an icon file');
+
+    const buffer = Buffer.from(req.file.buffer);
+    const mime = detectImageMime(buffer, req.file.mimetype);
+    if(!['image/png','image/jpeg','image/webp','image/svg+xml'].includes(mime)) {
+      throw new Error('Unsupported icon image. Upload PNG, JPG, WebP or SVG.');
+    }
+
+    let c = await IconLibrary.findOne({name:subCategory});
+    if(!c) {
+      const mainIndex = ICON_TAXONOMY.findIndex(x => x.name === mainCategory);
+      const subIndex = ICON_TAXONOMY[mainIndex].subcategories.indexOf(subCategory);
+      c = await IconLibrary.create({
+        name:subCategory,
+        slug:slugify(subCategory),
+        mainCategory,
+        displayOrder:(mainIndex * 100) + subIndex,
+        active:true,
+        icons:[]
+      });
+    } else if(c.mainCategory !== mainCategory) {
+      c.mainCategory = mainCategory;
+    }
+
+    if (req.body.mainCategory) c.mainCategory = String(req.body.mainCategory).trim();
+    c.icons.push({
+      name:req.body.name||req.file.originalname,
+      filename:req.file.originalname,
+      mimeType:mime,
+      data:buffer,
+      displayOrder:Number(req.body.displayOrder)||0,
+      active:true
+    });
+    await c.save();
+
+    res.redirect('/icon-library?message='+encodeURIComponent(
+      `Icon uploaded to ${mainCategory} > ${subCategory}`
+    ));
+  }catch(e){
+    res.redirect('/icon-library?message='+encodeURIComponent(e.message));
+  }
+};
+
 exports.createCategory=async(req,res)=>{
   try{
     let slug=slugify(req.body.name);
@@ -180,6 +246,7 @@ exports.upload=async(req,res)=>{
       throw new Error('Unsupported icon image. Upload PNG, JPG, WebP or SVG.');
     }
 
+    if (req.body.mainCategory) c.mainCategory = String(req.body.mainCategory).trim();
     c.icons.push({
       name:req.body.name||req.file.originalname,
       filename:req.file.originalname,

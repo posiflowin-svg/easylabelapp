@@ -17,6 +17,7 @@ const upload=multer({
 
 router.get('/',c.list);
 router.post('/admin/category',c.createCategory);
+router.post('/admin/upload',upload.single('icon'),c.uploadByTaxonomy);
 router.post('/admin/:id/upload',upload.single('icon'),c.upload);
 router.post('/admin/:id/toggle',c.toggleCategory);
 router.post('/admin/:id/delete',c.deleteCategory);
