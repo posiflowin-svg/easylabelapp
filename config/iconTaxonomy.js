@@ -1,6 +1,6 @@
 module.exports = [
   {
-    "name": "Fashion, Clothing & Accessories",
+    "name": "Clothing And Accessories",
     "subcategories": [
       "Men's Clothing Store",
       "Women's Clothing Store",
@@ -137,16 +137,24 @@ module.exports = [
     ]
   },
   {
-    "name": "Manufacturing, Wholesale & Logistics",
+    "name": "Manufacturer and Wholesaler",
     "subcategories": [
       "Garment Manufacturer",
       "Food Manufacturer",
       "General Manufacturer",
       "Packaging Material Supplier",
       "Wholesale Distributor",
-      "Warehouse",
-      "Courier / Logistics Company",
-      "E-commerce Seller"
+      "Warehouse"
+    ]
+  },
+  {
+    "name": "Courier/Logistics",
+    "subcategories": [
+      "Courier Service",
+      "Logistics Company",
+      "Transport Company",
+      "E-commerce Shipping",
+      "Packers & Movers"
     ]
   }
 ];

@@ -1,6 +1,32 @@
 const IconLibrary = require('../models/IconLibrary');
 const ICON_TAXONOMY = require('../config/iconTaxonomy');
 
+async function migrateLegacyCategoryNames() {
+  // Keep existing uploaded icons visible after taxonomy renames.
+  await IconLibrary.updateMany(
+    { mainCategory: 'Fashion, Clothing & Accessories' },
+    { $set: { mainCategory: 'Clothing And Accessories' } }
+  );
+
+  await IconLibrary.updateMany(
+    { mainCategory: 'Manufacturing, Wholesale & Logistics' },
+    { $set: { mainCategory: 'Manufacturer and Wholesaler' } }
+  );
+
+  // Old logistics-related sub-categories are no longer part of Manufacturer and Wholesaler.
+  // Preserve old records but move the main category to Courier/Logistics where possible.
+  await IconLibrary.updateMany(
+    { name: 'Courier / Logistics Company' },
+    { $set: { mainCategory: 'Courier/Logistics', name: 'Logistics Company', slug: slugify('Logistics Company') } }
+  );
+
+  await IconLibrary.updateMany(
+    { name: 'E-commerce Seller' },
+    { $set: { mainCategory: 'Courier/Logistics', name: 'E-commerce Shipping', slug: slugify('E-commerce Shipping') } }
+  );
+}
+
+
 function slugify(s){return String(s||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
 
 function toNodeBuffer(value) {
@@ -89,6 +115,7 @@ function detectImageMime(buffer, suppliedMime) {
 }
 
 exports.page=async(req,res)=>{
+  await migrateLegacyCategoryNames();
   const categories=await IconLibrary.find().sort({mainCategory:1,displayOrder:1,name:1}).lean();
   res.render('icon-library',{
     categories,
