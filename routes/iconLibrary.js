@@ -15,9 +15,21 @@ const upload=multer({
   }
 });
 
+
+const zipUpload=multer({
+  storage:multer.memoryStorage(),
+  limits:{fileSize:50*1024*1024},
+  fileFilter:(req,file,cb)=>{
+    const name=(file.originalname||'').toLowerCase();
+    const ok=name.endsWith('.zip') || ['application/zip','application/x-zip-compressed','application/octet-stream'].includes(file.mimetype);
+    cb(ok ? null : new Error('Upload a ZIP file'), ok);
+  }
+});
+
 router.get('/',c.list);
 router.post('/admin/category',c.createCategory);
 router.post('/admin/upload',upload.single('icon'),c.uploadByTaxonomy);
+router.post('/admin/upload-zip',zipUpload.single('iconZip'),c.uploadZipByTaxonomy);
 router.post('/admin/:id/upload',upload.single('icon'),c.upload);
 router.post('/admin/:id/toggle',c.toggleCategory);
 router.post('/admin/:id/delete',c.deleteCategory);

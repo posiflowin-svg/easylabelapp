@@ -69,7 +69,43 @@ button{cursor:pointer;font-weight:700}
       <button class="primary" type="submit" style="margin-top:19px">Upload Icon</button>
     </form>
 
-    <div class="info">Categories are fixed to the same 10 Main Categories and 100 business Sub Categories used by the Android app. This prevents spelling mismatches between backend and app.</div>
+    <div class="info">Categories are fixed to the same structure used by the Android app. This prevents spelling mismatches between backend and app.</div>
+  </div>
+
+  <div class="card">
+    <h2>Bulk Upload Icons (ZIP)</h2>
+    <p class="muted">Select a category, upload one ZIP, and each image filename will automatically become the Icon Name. Example: <b>Best Seller.png</b> → <b>Best Seller</b>.</p>
+    <form class="row" method="post" enctype="multipart/form-data" action="/api/icon-library/admin/upload-zip">
+      <div class="field">
+        <label>Main Category</label>
+        <select id="zipMainCategory" name="mainCategory" required>
+          <option value="">Select Main Category</option>
+          <% taxonomy.forEach(main=>{ %>
+            <option value="<%=main.name%>"><%=main.name%></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Sub Category</label>
+        <select id="zipSubCategory" name="subCategory" required disabled>
+          <option value="">Select Sub Category</option>
+        </select>
+      </div>
+
+      <div class="field" style="min-width:110px">
+        <label>Starting Order</label>
+        <input name="displayOrder" type="number" value="0" style="width:130px">
+      </div>
+
+      <div class="field">
+        <label>ZIP File</label>
+        <input name="iconZip" type="file" accept=".zip,application/zip,application/x-zip-compressed" required>
+      </div>
+
+      <button class="primary" type="submit" style="margin-top:19px">Upload ZIP Icons</button>
+    </form>
+    <div class="info">Supported files inside ZIP: PNG, JPG/JPEG, WebP and SVG. Hidden files, folders and __MACOSX files are ignored. Maximum: 500 icons per ZIP, 5 MB per icon.</div>
   </div>
 
   <% categories.forEach(c=>{ %>
@@ -109,23 +145,31 @@ const taxonomy = <%- JSON.stringify(taxonomy) %>;
 const mainSelect = document.getElementById('mainCategory');
 const subSelect = document.getElementById('subCategory');
 
-mainSelect.addEventListener('change', function(){
-  const selected = taxonomy.find(x => x.name === this.value);
-  subSelect.innerHTML = '<option value="">Select Sub Category</option>';
+function bindCategoryDropdown(mainSelect, subSelect) {
+  mainSelect.addEventListener('change', function(){
+    const selected = taxonomy.find(x => x.name === this.value);
+    subSelect.innerHTML = '<option value="">Select Sub Category</option>';
 
-  if (!selected) {
-    subSelect.disabled = true;
-    return;
-  }
+    if (!selected) {
+      subSelect.disabled = true;
+      return;
+    }
 
-  selected.subcategories.forEach(name => {
-    const option = document.createElement('option');
-    option.value = name;
-    option.textContent = name;
-    subSelect.appendChild(option);
+    selected.subcategories.forEach(name => {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = name;
+      subSelect.appendChild(option);
+    });
+    subSelect.disabled = false;
   });
-  subSelect.disabled = false;
-});
+}
+
+bindCategoryDropdown(mainSelect, subSelect);
+bindCategoryDropdown(
+  document.getElementById('zipMainCategory'),
+  document.getElementById('zipSubCategory')
+);
 </script>
 </body>
 </html>

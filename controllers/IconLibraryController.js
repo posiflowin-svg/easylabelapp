@@ -1,5 +1,7 @@
 const IconLibrary = require('../models/IconLibrary');
 const ICON_TAXONOMY = require('../config/iconTaxonomy');
+const AdmZip = require('adm-zip');
+const path = require('path');
 
 async function migrateLegacyCategoryNames() {
   // Keep existing uploaded icons visible after taxonomy renames.
@@ -243,6 +245,108 @@ exports.uploadByTaxonomy=async(req,res)=>{
       `Icon uploaded to ${mainCategory} > ${subCategory}`
     ));
   }catch(e){
+    res.redirect('/icon-library?message='+encodeURIComponent(e.message));
+  }
+};
+
+
+exports.uploadZipByTaxonomy=async(req,res)=>{
+  try{
+    const mainCategory=String(req.body.mainCategory||'').trim();
+    const subCategory=String(req.body.subCategory||'').trim();
+    resolveTaxonomy(mainCategory, subCategory);
+
+    if(!req.file || !req.file.buffer) throw new Error('Choose a ZIP file');
+    const zipBuffer=Buffer.from(req.file.buffer);
+    if(zipBuffer.length < 4 || zipBuffer[0] !== 0x50 || zipBuffer[1] !== 0x4b) {
+      throw new Error('Invalid ZIP file');
+    }
+
+    const zip=new AdmZip(zipBuffer);
+    const supportedExts=new Set(['.png','.jpg','.jpeg','.webp','.svg']);
+    const entries=zip.getEntries().filter(entry=>{
+      if(entry.isDirectory) return false;
+      const normalized=String(entry.entryName||'').replace(/\\/g,'/');
+      const base=path.posix.basename(normalized);
+      if(!base || base.startsWith('.') || normalized.includes('/__MACOSX/')) return false;
+      return supportedExts.has(path.extname(base).toLowerCase());
+    });
+
+    if(!entries.length) throw new Error('ZIP does not contain any PNG, JPG, WebP or SVG icons');
+    if(entries.length > 500) throw new Error('ZIP can contain maximum 500 icons at a time');
+
+    let c=await IconLibrary.findOne({name:subCategory});
+    if(!c) {
+      const mainIndex=ICON_TAXONOMY.findIndex(x=>x.name===mainCategory);
+      const subIndex=ICON_TAXONOMY[mainIndex].subcategories.indexOf(subCategory);
+      c=await IconLibrary.create({
+        name:subCategory,
+        slug:slugify(subCategory),
+        mainCategory,
+        displayOrder:(mainIndex*100)+subIndex,
+        active:true,
+        icons:[]
+      });
+    } else if(c.mainCategory !== mainCategory) {
+      c.mainCategory=mainCategory;
+    }
+
+    let uploaded=0;
+    let skipped=0;
+    const errors=[];
+    let totalExtracted=0;
+    const baseOrder=Number(req.body.displayOrder)||0;
+
+    for(const entry of entries){
+      try{
+        const normalized=String(entry.entryName||'').replace(/\\/g,'/');
+        const filename=path.posix.basename(normalized);
+        const ext=path.extname(filename).toLowerCase();
+        const iconName=path.basename(filename,ext).trim();
+        if(!iconName){skipped++;continue;}
+
+        const buffer=entry.getData();
+        totalExtracted += buffer.length;
+        if(buffer.length > 5*1024*1024) {
+          skipped++;
+          errors.push(`${filename}: larger than 5 MB`);
+          continue;
+        }
+        if(totalExtracted > 100*1024*1024) {
+          throw new Error('ZIP expanded data is too large (maximum 100 MB)');
+        }
+
+        const extMime={'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml'}[ext];
+        const mime=detectImageMime(buffer,extMime);
+        if(!['image/png','image/jpeg','image/webp','image/svg+xml'].includes(mime)) {
+          skipped++;
+          errors.push(`${filename}: unsupported image`);
+          continue;
+        }
+
+        c.icons.push({
+          name:iconName,
+          filename,
+          mimeType:mime,
+          data:buffer,
+          displayOrder:baseOrder+uploaded,
+          active:true
+        });
+        uploaded++;
+      }catch(entryError){
+        skipped++;
+        errors.push(`${entry.entryName}: ${entryError.message}`);
+      }
+    }
+
+    if(!uploaded) throw new Error(errors[0] || 'No valid icons were found in the ZIP');
+    await c.save();
+
+    let message=`${uploaded} icons uploaded to ${mainCategory} > ${subCategory}`;
+    if(skipped) message += `, ${skipped} skipped`;
+    res.redirect('/icon-library?message='+encodeURIComponent(message));
+  }catch(e){
+    console.error('ZIP icon upload error:',e);
     res.redirect('/icon-library?message='+encodeURIComponent(e.message));
   }
 };
