@@ -1007,8 +1007,8 @@
         <h2>Manual Template Manager</h2>
         <p class="template-note">
           Design the label inside the EasyLabel app, export it as a TXT/JSON
-          file, then upload that exact exported file here. Select the business
-          category, label category, size and plan manually.
+          file, then upload that exact exported file here. Select the same Main
+          Category and Sub Category used by the EasyLabel app.
         </p>
 
         <div class="template-panel">
@@ -1023,52 +1023,17 @@
               </div>
 
               <div class="template-field">
-                <label for="mainCategory">Business Category</label>
-                <input id="mainCategory" list="businessCategoryList" required
-                       placeholder="Example: Grocery Store">
-                <datalist id="businessCategoryList">
-                  <option value="Commercial Retail">
-                  <option value="Grocery Store">
-                  <option value="Bakery">
-                  <option value="Restaurant & Food">
-                  <option value="Clothing">
-                  <option value="Jewelry">
-                  <option value="Beauty & Personal Care">
-                  <option value="School & Education">
-                  <option value="Medical & Pharmacy">
-                  <option value="Home Storage">
-                  <option value="Office & Work">
-                  <option value="Shipping & Warehouse">
-                  <option value="Digital Devices">
-                  <option value="Gardening">
-                  <option value="Festive Theme">
-                  <option value="Other">
-                </datalist>
+                <label for="mainCategory">Main Category</label>
+                <select id="mainCategory" required>
+                  <option value="">Select Main Category</option>
+                </select>
               </div>
 
               <div class="template-field">
-                <label for="templateCategory">Label Category</label>
-                <input id="templateCategory" list="labelCategoryList" required
-                       placeholder="Example: Price Tag">
-                <datalist id="labelCategoryList">
-                  <option value="Price Tag">
-                  <option value="MRP Label">
-                  <option value="Barcode">
-                  <option value="QR Code">
-                  <option value="Name Tag">
-                  <option value="Expiry Date">
-                  <option value="Food Label">
-                  <option value="Bakery Label">
-                  <option value="Wash Care">
-                  <option value="Jewelry Tag">
-                  <option value="Shipping Label">
-                  <option value="Asset Tag">
-                  <option value="Storage Label">
-                  <option value="Thank You">
-                  <option value="Contact Information">
-                  <option value="Festival">
-                  <option value="Other">
-                </datalist>
+                <label for="templateCategory">Sub Category</label>
+                <select id="templateCategory" required disabled>
+                  <option value="">Select Sub Category</option>
+                </select>
               </div>
 
               <div class="template-field">
@@ -1180,6 +1145,216 @@
 
       <script>
         let allTemplates = [];
+
+        const TEMPLATE_TAXONOMY = [
+  {
+    "name": "Clothing And Accessories",
+    "subcategories": [
+      "Men's Clothing Store",
+      "Women's Clothing Store",
+      "Kids Clothing Store",
+      "Baby Clothing Store",
+      "Saree Store",
+      "Ethnic Wear Store",
+      "Boutique",
+      "Innerwear Store",
+      "Uniform Store",
+      "Textile / Fabric Store",
+      "Footwear Store",
+      "Bags & Luggage Store",
+      "Fashion Accessories Store",
+      "Jewellery Store",
+      "Watch Store"
+    ]
+  },
+  {
+    "name": "Grocery & Daily Essentials",
+    "subcategories": [
+      "Kirana / Grocery Store",
+      "Supermarket",
+      "Hypermarket",
+      "Departmental Store",
+      "Fruits & Vegetable Store",
+      "Dry Fruits Store",
+      "Organic Food Store",
+      "Dairy Store",
+      "General Store",
+      "Wholesale Grocery Store"
+    ]
+  },
+  {
+    "name": "Food & Beverage",
+    "subcategories": [
+      "Restaurant",
+      "Cafe",
+      "Fast Food Outlet",
+      "Cloud Kitchen",
+      "Bakery",
+      "Cake Shop",
+      "Sweet Shop",
+      "Namkeen / Snacks Shop",
+      "Ice Cream Shop",
+      "Chocolate / Confectionery Store",
+      "Tea Shop",
+      "Juice / Beverage Shop",
+      "Frozen Food Store",
+      "Meat Shop",
+      "Seafood Shop"
+    ]
+  },
+  {
+    "name": "Healthcare & Beauty",
+    "subcategories": [
+      "Pharmacy / Medical Store",
+      "Hospital",
+      "Clinic",
+      "Diagnostic Centre",
+      "Medical Equipment Store",
+      "Cosmetics Store",
+      "Beauty Products Store",
+      "Salon",
+      "Spa",
+      "Optical / Eyewear Store"
+    ]
+  },
+  {
+    "name": "Electronics & Technology",
+    "subcategories": [
+      "Mobile Phone Store",
+      "Mobile Accessories Store",
+      "Computer Store",
+      "Laptop Store",
+      "Electronics Store",
+      "Home Appliance Store",
+      "Electrical Store",
+      "CCTV / Security Store",
+      "Mobile Repair Shop",
+      "Computer / Electronics Repair Shop"
+    ]
+  },
+  {
+    "name": "Home, Hardware & Construction",
+    "subcategories": [
+      "Hardware Store",
+      "Tools Store",
+      "Furniture Store",
+      "Home Decor Store",
+      "Kitchenware Store",
+      "Crockery Store",
+      "Sanitaryware Store",
+      "Plumbing Store",
+      "Paint Store",
+      "Tiles & Ceramic Store",
+      "Construction Material Store",
+      "Steel / Metal Store"
+    ]
+  },
+  {
+    "name": "Gifts, Books & Lifestyle",
+    "subcategories": [
+      "Gift Shop",
+      "Toy Store",
+      "Stationery Store",
+      "Book Store",
+      "Sports Store",
+      "Fitness Equipment Store",
+      "Florist / Flower Shop",
+      "Pooja Items Store",
+      "Handicraft Store",
+      "Party Supplies Store"
+    ]
+  },
+  {
+    "name": "Automobile",
+    "subcategories": [
+      "Automobile Spare Parts Store",
+      "Car Accessories Store",
+      "Bike Accessories Store",
+      "Tyre Store",
+      "Battery Store",
+      "Automobile Workshop / Garage"
+    ]
+  },
+  {
+    "name": "Agriculture & Pet",
+    "subcategories": [
+      "Agriculture Products Store",
+      "Seeds & Fertilizer Store",
+      "Plant Nursery",
+      "Pet Shop"
+    ]
+  },
+  {
+    "name": "Manufacturer and Wholesaler",
+    "subcategories": [
+      "Garment Manufacturer",
+      "Food Manufacturer",
+      "General Manufacturer",
+      "Packaging Material Supplier",
+      "Wholesale Distributor",
+      "Warehouse"
+    ]
+  },
+  {
+    "name": "Courier/Logistics",
+    "subcategories": [
+      "Courier Service",
+      "Logistics Company",
+      "Transport Company",
+      "E-commerce Shipping",
+      "Packers & Movers"
+    ]
+  }
+];
+
+        function populateMainCategories() {
+          const mainSelect = document.getElementById('mainCategory');
+          mainSelect.innerHTML =
+            '<option value="">Select Main Category</option>';
+
+          TEMPLATE_TAXONOMY.forEach(group => {
+            const option = document.createElement('option');
+            option.value = group.name;
+            option.textContent = group.name;
+            mainSelect.appendChild(option);
+          });
+        }
+
+        function populateSubCategories(mainCategory, selectedSubCategory = '') {
+          const subSelect = document.getElementById('templateCategory');
+          subSelect.innerHTML =
+            '<option value="">Select Sub Category</option>';
+
+          const group = TEMPLATE_TAXONOMY.find(
+            item => item.name === mainCategory
+          );
+
+          if (!group) {
+            subSelect.disabled = true;
+            return;
+          }
+
+          group.subcategories.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            if (name === selectedSubCategory) option.selected = true;
+            subSelect.appendChild(option);
+          });
+
+          subSelect.disabled = false;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+          populateMainCategories();
+
+          document
+            .getElementById('mainCategory')
+            .addEventListener('change', event => {
+              populateSubCategories(event.target.value);
+            });
+        });
+
 
         function escapeHtml(value) {
           return String(value ?? '')
@@ -1369,8 +1544,8 @@
                 <thead>
                   <tr>
                     <th>Name</th>
-                    <th>Business Category</th>
-                    <th>Label Category</th>
+                    <th>Main Category</th>
+                    <th>Sub Category</th>
                     <th>Size</th>
                     <th>Access</th>
                     <th>Home</th>
@@ -1391,8 +1566,10 @@
           document.getElementById('templateName').value = template.name || '';
           document.getElementById('mainCategory').value =
             template.mainCategory || '';
-          document.getElementById('templateCategory').value =
-            template.templateCategory || '';
+          populateSubCategories(
+            template.mainCategory || '',
+            template.templateCategory || ''
+          );
           document.getElementById('labelSize').value =
             `${template.labelWidthMm}x${template.labelHeightMm}`;
           document.getElementById('accessType').value =
@@ -1414,6 +1591,7 @@
 
         function resetTemplateForm() {
           document.getElementById('templateForm').reset();
+          populateSubCategories('');
           document.getElementById('templateId').value = '';
           document.getElementById('templateActive').checked = true;
           document.getElementById('displayOrder').value = 0;

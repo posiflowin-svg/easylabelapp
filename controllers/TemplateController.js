@@ -1,22 +1,6 @@
 const Template = require('../models/Template');
-const BUSINESS_CATEGORIES = [
-    'Commercial Retail',
-    'Grocery Store',
-    'Bakery',
-    'Restaurant & Food',
-    'Clothing',
-    'Jewelry',
-    'Beauty & Personal Care',
-    'School & Education',
-    'Medical & Pharmacy',
-    'Home Storage',
-    'Office & Work',
-    'Shipping & Warehouse',
-    'Digital Devices',
-    'Gardening',
-    'Festive Theme',
-    'Other'
-];
+const ICON_TAXONOMY = require('../config/iconTaxonomy');
+const BUSINESS_CATEGORIES = ICON_TAXONOMY.map(item => item.name);
 
 
 const SUPPORTED_SIZES = new Set([
@@ -25,6 +9,20 @@ const SUPPORTED_SIZES = new Set([
     '75x25', '75x50',
     '100x50', '100x150', '100x15'
 ]);
+
+const validateCategoryPair = (mainCategory, templateCategory) => {
+    const main = ICON_TAXONOMY.find(item => item.name === mainCategory);
+    if (!main) {
+        const error = new Error('Please select a valid Main Category.');
+        error.statusCode = 400;
+        throw error;
+    }
+    if (!main.subcategories.includes(templateCategory)) {
+        const error = new Error('Please select a valid Sub Category for the selected Main Category.');
+        error.statusCode = 400;
+        throw error;
+    }
+};
 
 const normalizeAccessType = value => {
     const normalized = String(value || 'free').trim().toLowerCase();
@@ -140,10 +138,14 @@ const payload = body => {
 
     validateSize(labelWidthMm, labelHeightMm);
 
+    const mainCategory = String(body.mainCategory || '').trim();
+    const templateCategory = String(body.templateCategory || '').trim();
+    validateCategoryPair(mainCategory, templateCategory);
+
     return {
         name: String(body.name || '').trim(),
-        mainCategory: String(body.mainCategory || '').trim(),
-        templateCategory: String(body.templateCategory || '').trim(),
+        mainCategory,
+        templateCategory,
         jsonData: normalizeExportedJson(body.jsonData),
         labelWidthMm,
         labelHeightMm,
@@ -246,38 +248,12 @@ const getByTemplateCategory = async (req, res) => {
 };
 
 const category = async (req, res) => {
-    try {
-        const active = { isActive: { $ne: false } };
-        const [dbMainCategories, templateCategories] = await Promise.all([
-            Template.distinct('mainCategory', active),
-            Template.distinct('templateCategory', active)
-        ]);
-
-        // Always return the same Business Category choices shown in the
-        // Manual Template Manager. Any legacy/custom category already stored
-        // on templates is appended without removing the canonical choices.
-        const mainCategories = [...BUSINESS_CATEGORIES];
-        for (const value of dbMainCategories || []) {
-            const categoryName = String(value || '').trim();
-            if (categoryName && !mainCategories.includes(categoryName)) {
-                mainCategories.push(categoryName);
-            }
-        }
-
-        res.json({
-            success: true,
-            mainCategories,
-            templateCategories: templateCategories || []
-        });
-    } catch (error) {
-        // Even if Mongo is temporarily unavailable, onboarding can still use
-        // the canonical Business Category list.
-        res.json({
-            success: true,
-            mainCategories: BUSINESS_CATEGORIES,
-            templateCategories: []
-        });
-    }
+    res.json({
+        success: true,
+        mainCategories: BUSINESS_CATEGORIES,
+        taxonomy: ICON_TAXONOMY,
+        templateCategories: ICON_TAXONOMY.flatMap(item => item.subcategories)
+    });
 };
 
 const show = async (req, res) => {
