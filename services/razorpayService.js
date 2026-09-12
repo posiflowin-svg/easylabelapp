@@ -4,9 +4,23 @@ const crypto = require('crypto');
 function getAccount(accountKey) {
   const requested = String(accountKey || process.env.RAZORPAY_ACTIVE_ACCOUNT || '1').trim();
   const slot = requested === '2' ? '2' : '1';
-  const keyId = String(process.env[`RAZORPAY_ACCOUNT_${slot}_KEY_ID`] || '').trim();
-  const keySecret = String(process.env[`RAZORPAY_ACCOUNT_${slot}_KEY_SECRET`] || '').trim();
-  if (!keyId || !keySecret) throw new Error(`Razorpay account ${slot} is not configured`);
+  // Account 1 also accepts the legacy variable names so existing Render
+  // configuration continues to work after enabling multi-account support.
+  const fallbackKeyId = slot === '1' ? process.env.RAZORPAY_KEY_ID : '';
+  const fallbackKeySecret = slot === '1' ? process.env.RAZORPAY_KEY_SECRET : '';
+
+  const keyId = String(
+    process.env[`RAZORPAY_ACCOUNT_${slot}_KEY_ID`] || fallbackKeyId || ''
+  ).trim();
+  const keySecret = String(
+    process.env[`RAZORPAY_ACCOUNT_${slot}_KEY_SECRET`] || fallbackKeySecret || ''
+  ).trim();
+
+  if (!keyId || !keySecret) {
+    throw new Error(
+      `Razorpay account ${slot} is not configured. Add RAZORPAY_ACCOUNT_${slot}_KEY_ID and RAZORPAY_ACCOUNT_${slot}_KEY_SECRET in Render Environment.`
+    );
+  }
   return { accountKey: slot, keyId, keySecret };
 }
 
@@ -21,7 +35,11 @@ function requestRazorpay(method, path, account, body) {
       let raw=''; res.on('data',c=>raw+=c); res.on('end',()=>{
         let parsed={}; try{parsed=raw?JSON.parse(raw):{}}catch(e){parsed={raw}};
         if(res.statusCode>=200 && res.statusCode<300) resolve(parsed);
-        else reject(new Error(parsed.error?.description || parsed.error?.reason || `Razorpay HTTP ${res.statusCode}`));
+        else {
+          const description = parsed.error?.description || parsed.error?.reason || `Razorpay HTTP ${res.statusCode}`;
+          const details = parsed.error?.metadata ? ` | ${JSON.stringify(parsed.error.metadata)}` : '';
+          reject(new Error(`${description}${details}`));
+        }
       });
     });
     req.on('error', reject); if(payload) req.write(payload); req.end();

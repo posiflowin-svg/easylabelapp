@@ -616,7 +616,7 @@ const createRazorpayPaymentOrder = async (req, res) => {
         res.json({ success: true, keyId: account.keyId, accountKey: account.accountKey, orderId: order.id, amount: order.amount, currency: order.currency });
     } catch (error) {
         console.error('Razorpay create order error:', error.message);
-        res.status(400).json({ success: false, message: error.message });
+        res.status(400).json({ success: false, message: String(error.message || 'Unable to create Razorpay order').split(' | ')[0] });
     }
 };
 
