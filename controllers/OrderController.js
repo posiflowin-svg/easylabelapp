@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 // const { sendOrderStatusEmail } = require('../services/emailService');
 const ExcelJS = require('exceljs');
+const razorpayService = require('../services/razorpayService');
 
 // Generate Order ID with prefix and timestamp
 const generateOrderId = () => {
@@ -606,3 +607,31 @@ module.exports = {
     deleteOrder,
     updateOrder
 };
+
+// Secure Razorpay order creation. The mobile app never receives any Key Secret.
+const createRazorpayPaymentOrder = async (req, res) => {
+    try {
+        const { amount, currency, receipt, accountKey } = req.body || {};
+        const { account, order } = await razorpayService.createPaymentOrder({ amount, currency, receipt, accountKey });
+        res.json({ success: true, keyId: account.keyId, accountKey: account.accountKey, orderId: order.id, amount: order.amount, currency: order.currency });
+    } catch (error) {
+        console.error('Razorpay create order error:', error.message);
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+const verifyRazorpayPayment = async (req, res) => {
+    try {
+        const { paymentId, orderId, amount, accountKey } = req.body || {};
+        if (!paymentId || !orderId || !amount) return res.status(400).json({ success: false, message: 'Payment ID, order ID and amount are required' });
+        const result = await razorpayService.verifyPayment({ paymentId, orderId, amount, accountKey });
+        if (!result.verified) return res.status(400).json({ success: false, message: 'Payment verification failed' });
+        res.json({ success: true, paymentId, orderId, status: result.payment.status, accountKey: result.account.accountKey });
+    } catch (error) {
+        console.error('Razorpay verify error:', error.message);
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+module.exports.createRazorpayPaymentOrder = createRazorpayPaymentOrder;
+module.exports.verifyRazorpayPayment = verifyRazorpayPayment;
