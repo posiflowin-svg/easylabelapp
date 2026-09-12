@@ -47,6 +47,40 @@ function isActiveSubscription(subscription, now = new Date()) {
   return ['active', 'trial', 'grace_period'].includes(subscription.status) && new Date(subscription.expiryDate) > now;
 }
 
+function escapeRegex(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function resolvePremiumUser(identity) {
+  const raw = String(identity || '').trim();
+  if (!raw) return null;
+
+  if (mongoose.Types.ObjectId.isValid(raw)) {
+    const direct = await User.findById(raw).lean();
+    if (direct) return direct;
+  }
+
+  const exact = new RegExp('^' + escapeRegex(raw) + '$', 'i');
+  const digits = raw.replace(/\D/g, '');
+  const clauses = [{ email: exact }];
+  if (digits) {
+    clauses.push({ phone: digits });
+    clauses.push({ mobile: digits });
+  } else {
+    clauses.push({ phone: raw });
+    clauses.push({ mobile: raw });
+  }
+
+  return User.findOne({ $or: clauses }).lean();
+}
+
+function normalizeSubscriptionTier(planKey) {
+  const key = String(planKey || '').trim().toLowerCase();
+  if (key === 'business_monthly' || key.includes('business')) return 'business';
+  if (key === 'premium_monthly' || key.includes('premium')) return 'premium';
+  return 'free';
+}
+
 
 function parseOptionalDate(value, fallback = null) {
   if (!value) return fallback;
@@ -488,37 +522,91 @@ exports.catalog = async (req, res) => {
 
 exports.access = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    await ensureDefaults();
+
+    // The Android app may identify a customer by Mongo user id, email or mobile.
+    // Resolve all three so a manually activated Business plan is never missed.
+    const user = await resolvePremiumUser(req.params.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+        subscription: null,
+        tier: 'free',
+        isPremium: false,
+        isBusiness: false,
+        entitlements: {},
+        limits: { aiDesignMonthly: 0, teamMembers: 1, quickBillingProducts: 50 }
+      });
+    }
+
     const subscription = await UserSubscription.findOne({
-      userId,
+      userId: user._id,
       status: { $in: ['active', 'trial', 'grace_period'] },
       expiryDate: { $gt: new Date() }
-    }).sort({ expiryDate: -1 }).lean();
+    }).sort({ expiryDate: -1, createdAt: -1 }).lean();
 
     if (!subscription) {
-      return res.json({ success: true, subscription: null, entitlements: {}, limits: { aiDesignMonthly: 0, teamMembers: 1 } });
+      return res.json({
+        success: true,
+        userId: user._id,
+        subscription: null,
+        tier: 'free',
+        isPremium: false,
+        isBusiness: false,
+        entitlements: {},
+        limits: { aiDesignMonthly: 0, teamMembers: 1, quickBillingProducts: 50 }
+      });
     }
-    const plan = await PremiumPlan.findOne({ key: subscription.planKey, active: true }).lean();
+
+    const tier = normalizeSubscriptionTier(subscription.planKey);
+    const plan = await PremiumPlan.findOne({ key: subscription.planKey }).lean();
     const enabledFeatures = await PremiumFeature.find({ enabled: true }).select('key').lean();
     const enabledSet = new Set(enabledFeatures.map(f => f.key));
     const entitlements = {};
     (plan?.featureKeys || []).forEach(key => { entitlements[key] = enabledSet.has(key); });
 
+    // Core Business entitlement must remain explicit even if an old plan document
+    // is temporarily missing a feature key. This is important for manual activation.
+    if (tier === 'business') {
+      entitlements.cloud_backup = true;
+      entitlements.team_sharing = true;
+      entitlements.quick_billing_unlimited_products = true;
+    }
+    if (tier === 'premium' || tier === 'business') {
+      entitlements.premium_fonts = entitlements.premium_fonts !== false;
+      entitlements.premium_templates = entitlements.premium_templates !== false;
+      entitlements.ai_label_design = entitlements.ai_label_design !== false;
+    }
+
     res.json({
       success: true,
+      userId: user._id,
       subscription: {
+        id: subscription._id,
         plan: subscription.planKey,
+        planKey: subscription.planKey,
+        planName: plan?.name || (tier === 'business' ? 'EasyLabel Business' : 'EasyLabel Premium'),
+        tier,
         status: subscription.status,
         expiresAt: subscription.expiryDate,
-        autoRenew: subscription.autoRenew
+        expiryDate: subscription.expiryDate,
+        autoRenew: subscription.autoRenew,
+        source: subscription.source
       },
+      tier,
+      isPremium: tier === 'premium' || tier === 'business',
+      isBusiness: tier === 'business',
       entitlements,
       limits: {
-        aiDesignMonthly: plan?.aiMonthlyLimit || 0,
-        teamMembers: plan?.teamMemberLimit || 1
+        aiDesignMonthly: plan?.aiMonthlyLimit || (tier === 'business' ? 150 : tier === 'premium' ? 30 : 0),
+        teamMembers: plan?.teamMemberLimit || (tier === 'business' ? 5 : 1),
+        // -1 means unlimited. Free users remain capped at 50 products.
+        quickBillingProducts: tier === 'business' ? -1 : 50
       }
     });
   } catch (error) {
+    console.error('Premium access error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

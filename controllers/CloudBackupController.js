@@ -27,7 +27,7 @@ async function requireBusiness(identity) {
   const now = new Date();
   const sub = await UserSubscription.findOne({
     userId: user._id,
-    planKey: 'business_monthly',
+    planKey: { $regex: /business/i },
     status: { $in: ['active','trial','grace_period'] },
     expiryDate: { $gt: now }
   }).sort({ expiryDate: -1 }).lean();
