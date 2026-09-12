@@ -5,6 +5,8 @@ const Order = require('../models/Order');
 
 // Public routes
 router.post('/create', OrderController.createOrder);
+router.post('/payment/create', OrderController.createRazorpayPaymentOrder);
+router.post('/payment/verify', OrderController.verifyRazorpayPayment);
 router.get('/getById', OrderController.getOrderById);
 router.get('/getOrdersByPhone', OrderController.getOrdersByPhone);
 
