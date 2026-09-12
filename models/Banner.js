@@ -16,7 +16,7 @@ const bannerSchema = new Schema({
     isActive: { type: Boolean, default: true },
     clickType: {
         type: String,
-        enum: ['shop', 'url', 'none'],
+        enum: ['shop', 'quick_billing', 'url', 'none'],
         default: 'shop'
     },
     clickUrl: { type: String, trim: true, default: '' },

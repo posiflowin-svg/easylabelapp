@@ -58,7 +58,7 @@ function buildUpdate(req) {
         link: String(req.body.link || '').trim(),
         position: Math.min(3, Math.max(1, Number(req.body.position || 1))),
         isActive: boolValue(req.body.isActive, true),
-        clickType: ['shop', 'url', 'none'].includes(req.body.clickType) ? req.body.clickType : 'shop',
+        clickType: ['shop', 'quick_billing', 'url', 'none'].includes(req.body.clickType) ? req.body.clickType : 'shop',
         clickUrl: String(req.body.clickUrl || '').trim(),
         startDate: req.body.startDate ? new Date(req.body.startDate) : null,
         endDate: req.body.endDate ? new Date(req.body.endDate) : null
