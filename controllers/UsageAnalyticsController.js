@@ -20,6 +20,18 @@ async function posiflowGet(path) {
   } finally { clearTimeout(timer); }
 }
 
+async function posiflowPost(path, body) {
+  const base = clean(process.env.POSIFLOW_CRM_URL || 'https://handover-nhia.onrender.com').replace(/\/$/, '');
+  const key = clean(process.env.POSIFLOW_ANALYTICS_KEY);
+  if (!base || !key) return;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const r = await fetch(base + path, { method:'POST', headers:{'x-easylabel-key':key,'content-type':'application/json','accept':'application/json'}, body:JSON.stringify(body), signal:controller.signal });
+    if (!r.ok) throw new Error(`Posiflow HTTP ${r.status}`);
+  } finally { clearTimeout(timer); }
+}
+
 function normalizePrinterModel(value) {
   let model = clean(value);
   if (!model) return 'Unknown';
@@ -102,7 +114,15 @@ exports.ingest = async (req, res) => {
           inventoryItems: Array.isArray(raw.inventoryItems) ? raw.inventoryItems.slice(0, 500).map(x => ({ productId: clean(x.productId), name: clean(x.name), category: clean(x.category) })) : []
         };
         const r = await UsageEvent.updateOne({ eventId }, { $setOnInsert: doc }, { upsert: true });
-        if (r.upsertedCount) accepted++; else duplicate++;
+        if (r.upsertedCount) {
+          accepted++;
+          const mobile = normalizeMobile(doc.customerMobile);
+          if (mobile.length === 10) {
+            // Do not block usage ingestion if CRM is temporarily unavailable. CRM endpoint is idempotent.
+            posiflowPost('/api/easylabel/label-customers/sync', { mobile, name:doc.customerName, email:doc.customerEmail, customerId:doc.customerId, labelsPrinted:doc.eventType==='LABEL_PRINT'?doc.copies:0, printCommands:doc.eventType==='LABEL_PRINT'?1:0, lastActivity:doc.occurredAt })
+              .catch(err => console.error('Label Customer CRM sync failed', mobile, err.message));
+          }
+        } else duplicate++;
       } catch (e) { invalid++; }
     }
     res.json({ success: true, accepted, duplicate, invalid });
