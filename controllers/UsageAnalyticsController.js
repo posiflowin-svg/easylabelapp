@@ -1,6 +1,24 @@
 const UsageEvent = require('../models/UsageEvent');
 
 function clean(s) { return String(s || '').trim(); }
+function normalizeMobile(value) {
+  let d = String(value || '').replace(/\D/g, '');
+  if (d.length > 10 && d.startsWith('91')) d = d.slice(2);
+  if (d.length > 10 && d.startsWith('0')) d = d.slice(1);
+  return d.length >= 10 ? d.slice(-10) : d;
+}
+async function posiflowGet(path) {
+  const base = clean(process.env.POSIFLOW_CRM_URL || 'https://handover-nhia.onrender.com').replace(/\/$/, '');
+  const key = clean(process.env.POSIFLOW_ANALYTICS_KEY);
+  if (!base || !key) return { configured:false, data:null };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const r = await fetch(base + path, { headers:{ 'x-easylabel-key':key, 'accept':'application/json' }, signal:controller.signal });
+    if (!r.ok) throw new Error(`Posiflow HTTP ${r.status}`);
+    return { configured:true, data:await r.json() };
+  } finally { clearTimeout(timer); }
+}
 
 function normalizePrinterModel(value) {
   let model = clean(value);
@@ -192,9 +210,31 @@ exports.customers = async (req, res) => {
     const row = result[0] || { data: [], meta: [] };
     const total = row.meta[0] ? row.meta[0].total : 0;
 
+    // Enrich only the current page (max 100 customers) from Posiflow CRM.
+    // Matching is exact after both systems normalize the mobile to the last 10 Indian digits.
+    let purchaseMap = {};
+    let purchaseSync = 'not_configured';
+    const mobiles = [...new Set(row.data.map(x => normalizeMobile(x && x._id && x._id.mobile)).filter(x => x.length === 10))];
+    if (mobiles.length) {
+      try {
+        const crm = await posiflowGet('/api/easylabel/purchases?mobiles=' + encodeURIComponent(mobiles.join(',')));
+        purchaseSync = crm.configured ? 'ok' : 'not_configured';
+        if (crm.data && crm.data.success) purchaseMap = crm.data.data || {};
+      } catch (err) {
+        purchaseSync = 'unavailable';
+        console.error('Posiflow purchase enrichment failed', err.message);
+      }
+    }
+    row.data = row.data.map(x => {
+      const mobile = normalizeMobile(x && x._id && x._id.mobile);
+      const purchase = purchaseMap[mobile] || null;
+      return { ...x, normalizedMobile:mobile, lastPurchaseDate:purchase && purchase.lastPurchaseDate || null, crmOrderCount:purchase && purchase.orderCount || 0, crmTotalPurchase:purchase && purchase.totalPurchase || 0, purchaseSync };
+    });
+
     res.json({
       success: true,
       data: row.data,
+      purchaseSync,
       pagination: {
         page,
         limit,
@@ -354,6 +394,20 @@ exports.customerDetail = async (req,res) => {
     ]);
     res.json({success:true,labels,bills,inventory:inventory?{count:inventory.inventoryCount||0,items:inventory.inventoryItems||[],occurredAt:inventory.occurredAt}:{count:0,items:[]}});
   } catch(e) { console.error('Usage customer detail failed',e); res.status(500).json({success:false,message:'Unable to load customer details'}); }
+};
+
+
+exports.purchaseHistory = async (req,res) => {
+  const mobile = normalizeMobile(req.query.mobile);
+  if (mobile.length !== 10) return res.status(400).json({success:false,message:'Valid customer mobile required'});
+  try {
+    const crm = await posiflowGet('/api/easylabel/purchases/' + encodeURIComponent(mobile));
+    if (!crm.configured) return res.status(503).json({success:false,message:'Posiflow CRM connection is not configured'});
+    return res.status(crm.data && crm.data.success ? 200 : 502).json(crm.data || {success:false,message:'No response from Posiflow CRM'});
+  } catch(e) {
+    console.error('Posiflow purchase history failed',e.message);
+    return res.status(502).json({success:false,message:'Posiflow CRM is temporarily unavailable'});
+  }
 };
 
 exports.page = (req,res) => res.render('usage-analytics');
