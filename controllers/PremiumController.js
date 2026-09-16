@@ -16,35 +16,36 @@ const DEFAULT_FEATURES = [
   { key: 'premium_templates', name: 'Premium Label Templates', description: 'Professionally designed thermal label templates.', category: 'content', icon: 'fa-tags', displayOrder: 2 },
   { key: 'ai_label_design', name: 'AI Label Designer', description: 'AI-assisted editable thermal label layouts.', category: 'ai', icon: 'fa-wand-magic-sparkles', displayOrder: 3 },
   { key: 'cloud_backup', name: 'Cloud Backup', description: 'Secure Quick Billing cloud sync for products, inventory, images, customers, suppliers and sales across devices.', category: 'cloud', icon: 'fa-cloud-arrow-up', displayOrder: 4 },
-  { key: 'team_sharing', name: 'Team Sharing', description: 'Share and sync templates across authorised team phones.', category: 'team', icon: 'fa-users', displayOrder: 5 }
+  { key: 'team_sharing', name: 'Team Sharing', description: 'Share and sync templates across authorised team phones.', category: 'team', icon: 'fa-users', displayOrder: 5 },
+  { key: 'quick_billing', name: 'Quick Billing', description: 'Create bills and manage Quick Billing from EasyLabel.', category: 'business', icon: 'fa-receipt', displayOrder: 6 }
 ];
 
 const DEFAULT_PLANS = [
   {
     key: 'premium_monthly', name: 'EasyLabel Premium', description: 'Premium design tools for individual users.',
     price: 99, billingPeriod: 'monthly', autoRenew: true, displayOrder: 1,
-    featureKeys: ['premium_fonts', 'premium_templates', 'ai_label_design'], aiMonthlyLimit: 30, teamMemberLimit: 1
+    featureKeys: ['premium_fonts', 'premium_templates', 'ai_label_design'], googleProductId: 'easylabel_premium', googleBasePlanId: 'premium-monthly', aiMonthlyLimit: 30, teamMemberLimit: 1
   },
   {
     key: 'business_monthly', name: 'EasyLabel Business', description: 'Premium design plus cloud and team collaboration.',
     price: 299, billingPeriod: 'monthly', autoRenew: true, displayOrder: 2, recommended: true,
-    featureKeys: ['premium_fonts', 'premium_templates', 'ai_label_design', 'cloud_backup', 'team_sharing'],
-    aiMonthlyLimit: 150, teamMemberLimit: 5
+    featureKeys: ['premium_fonts', 'premium_templates', 'ai_label_design', 'cloud_backup', 'team_sharing', 'quick_billing'],
+    googleProductId: 'easylabel_business', googleBasePlanId: 'business-monthly', aiMonthlyLimit: 150, teamMemberLimit: 5
   }
 ];
 
 async function ensureDefaults() {
   for (const item of DEFAULT_FEATURES) {
-    await PremiumFeature.updateOne({ key: item.key }, { $setOnInsert: item }, { upsert: true });
+    await PremiumFeature.updateOne({ key: item.key }, { $set: item }, { upsert: true });
   }
   for (const item of DEFAULT_PLANS) {
-    await PremiumPlan.updateOne({ key: item.key }, { $setOnInsert: item }, { upsert: true });
+    await PremiumPlan.updateOne({ key: item.key }, { $set: item }, { upsert: true });
   }
   await PremiumSetting.updateOne({ key: 'global' }, { $setOnInsert: { key: 'global' } }, { upsert: true });
 }
 
 function isActiveSubscription(subscription, now = new Date()) {
-  return ['active', 'trial', 'grace_period'].includes(subscription.status) && new Date(subscription.expiryDate) > now;
+  return ['active', 'trial', 'grace_period', 'cancelled'].includes(subscription.status) && new Date(subscription.expiryDate) > now;
 }
 
 function escapeRegex(value) {
@@ -536,13 +537,13 @@ exports.access = async (req, res) => {
         isPremium: false,
         isBusiness: false,
         entitlements: {},
-        limits: { aiDesignMonthly: 0, teamMembers: 1, quickBillingProducts: 50 }
+        limits: { aiDesignMonthly: 0, teamMembers: 1, quickBillingProducts: 51 }
       });
     }
 
     const subscription = await UserSubscription.findOne({
       userId: user._id,
-      status: { $in: ['active', 'trial', 'grace_period'] },
+      status: { $in: ['active', 'trial', 'grace_period', 'cancelled'] },
       expiryDate: { $gt: new Date() }
     }).sort({ expiryDate: -1, createdAt: -1 }).lean();
 
@@ -555,7 +556,7 @@ exports.access = async (req, res) => {
         isPremium: false,
         isBusiness: false,
         entitlements: {},
-        limits: { aiDesignMonthly: 0, teamMembers: 1, quickBillingProducts: 50 }
+        limits: { aiDesignMonthly: 0, teamMembers: 1, quickBillingProducts: 51 }
       });
     }
 
@@ -571,6 +572,7 @@ exports.access = async (req, res) => {
     if (tier === 'business') {
       entitlements.cloud_backup = true;
       entitlements.team_sharing = true;
+      entitlements.quick_billing = true;
       entitlements.quick_billing_unlimited_products = true;
     }
     if (tier === 'premium' || tier === 'business') {
@@ -601,8 +603,8 @@ exports.access = async (req, res) => {
       limits: {
         aiDesignMonthly: plan?.aiMonthlyLimit || (tier === 'business' ? 150 : tier === 'premium' ? 30 : 0),
         teamMembers: plan?.teamMemberLimit || (tier === 'business' ? 5 : 1),
-        // -1 means unlimited. Free users remain capped at 50 products.
-        quickBillingProducts: tier === 'business' ? -1 : 50
+        // -1 means unlimited. Free users remain capped at 51 products.
+        quickBillingProducts: tier === 'business' ? -1 : 51
       }
     });
   } catch (error) {
