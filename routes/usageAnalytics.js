@@ -7,4 +7,5 @@ router.get('/customers', c.customers);
 router.get('/recent', c.recent);
 router.get('/models', c.models);
 router.get('/customer-activity', c.customerActivity);
+router.get('/purchase-history', c.purchaseHistory);
 module.exports = router;
