@@ -7,6 +7,18 @@ router.get('/customers', c.customers);
 router.get('/recent', c.recent);
 router.get('/models', c.models);
 router.get('/customer-activity', c.customerActivity);
+
+// Server-to-server endpoint used by Posiflow CRM Label Customer page.
+// Protected by the same shared analytics key used between both applications.
+router.get('/crm/customer-activity', async (req, res) => {
+  const configured = String(process.env.POSIFLOW_ANALYTICS_KEY || process.env.EASYLABEL_ANALYTICS_KEY || '').trim();
+  const supplied = String(req.get('x-easylabel-key') || '').trim();
+  if (!configured || !supplied || configured !== supplied) {
+    return res.status(401).json({ success:false, message:'Unauthorized' });
+  }
+  return c.customerActivity(req, res);
+});
+
 router.get('/purchase-history', async (req, res, next) => {
   try {
     if (typeof c.purchaseHistory !== 'function') {
