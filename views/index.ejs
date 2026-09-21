@@ -1507,7 +1507,6 @@
           }
 
           const rows = templates.map(template => {
-            const encoded = encodeURIComponent(JSON.stringify(template));
             const access = template.accessType || 'free';
 
             return `
@@ -1529,7 +1528,7 @@
                 <td>${escapeHtml(template.displayOrder || 0)}</td>
                 <td>
                   <button class="edit-btn"
-                    onclick="editTemplate('${encoded}')">Edit</button>
+                    onclick="editTemplate('${template._id}')">Edit</button>
                   <button class="delete-btn"
                     onclick="deleteTemplate('${template._id}')">
                     Delete
@@ -1559,8 +1558,21 @@
             </div>`;
         }
 
-        function editTemplate(encoded) {
-          const template = JSON.parse(decodeURIComponent(encoded));
+        function editTemplate(templateId) {
+          // Do not pass the whole template JSON through an inline onclick.
+          // Category names such as Men's Clothing Store contain an apostrophe,
+          // which can break the inline JavaScript string and make Edit do nothing.
+          const template = allTemplates.find(
+            item => String(item._id) === String(templateId)
+          );
+
+          if (!template) {
+            setTemplateStatus(
+              'Unable to load this template for editing. Please refresh and try again.',
+              'error'
+            );
+            return;
+          }
 
           document.getElementById('templateId').value = template._id || '';
           document.getElementById('templateName').value = template.name || '';
