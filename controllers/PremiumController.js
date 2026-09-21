@@ -10,6 +10,8 @@ const PremiumSetting = require('../models/PremiumSetting');
 const AIUsage = require('../models/AIUsage');
 const PaymentTransaction = require('../models/PaymentTransaction');
 const Banner = require('../models/Banner');
+const DeviceToken = require('../models/DeviceToken');
+const firebaseService = require('../services/firebaseService');
 
 const DEFAULT_FEATURES = [
   { key: 'premium_fonts', name: 'Premium Fonts', description: 'Exclusive professional fonts for label design.', category: 'design', icon: 'fa-font', displayOrder: 1 },
@@ -923,12 +925,36 @@ exports.sendNotification = async (req, res) => {
   try {
     const item = await PushNotification.findById(req.params.id);
     if (!item) return res.status(404).json({ success: false, message: 'Notification not found' });
-    // Phase 1.8: queue-ready admin action. Firebase delivery is connected in Phase 2.
+    let userIds = null;
+    if (item.targetAudience !== 'all') {
+      const now = new Date();
+      const active = await UserSubscription.find({ status: { $in: ['active', 'trial', 'grace_period', 'cancelled'] }, expiryDate: { $gt: now } }).select('userId planKey').lean();
+      if (item.targetAudience === 'free') {
+        const paid = new Set(active.map(s => String(s.userId)));
+        const registered = await DeviceToken.find({ enabled: true }).select('userId').lean();
+        userIds = [...new Set(registered.map(t => String(t.userId)).filter(id => !paid.has(id)))];
+      } else if (item.targetAudience === 'expired') {
+        const current = new Set(active.map(s => String(s.userId)));
+        const everPaid = await UserSubscription.distinct('userId');
+        userIds = everPaid.map(String).filter(id => !current.has(id));
+      } else {
+        const planKey = item.targetAudience === 'business' ? 'business_monthly' : 'premium_monthly';
+        userIds = active.filter(s => s.planKey === planKey).map(s => s.userId);
+      }
+    }
+    const tokenQuery = { enabled: true };
+    if (userIds) tokenQuery.userId = { $in: userIds };
+    const tokenDocs = await DeviceToken.find(tokenQuery).select('token').lean();
+    const result = await firebaseService.sendToTokens(tokenDocs.map(t => t.token),
+      { title: item.title, body: item.message, imageUrl: item.imageUrl },
+      { notificationId: String(item._id), actionType: item.actionType, actionValue: item.actionValue, buttonText: item.buttonText });
+    if (result.skipped) return res.status(400).json({ success: false, message: result.reason || 'No registered devices found. Open the latest Android app on a logged-in device first.' });
     item.status = 'sent';
     item.sentAt = new Date();
-    item.sentCount = Number(req.body.sentCount || 0);
+    item.sentCount = result.successCount || 0;
+    item.failedCount = result.failureCount || 0;
     await item.save();
-    res.json({ success: true, data: item, message: 'Marked as sent. Connect Firebase in Phase 2 for live delivery.' });
+    res.json({ success: true, data: item, result, message: `Notification sent to ${item.sentCount} device(s).` });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };
 

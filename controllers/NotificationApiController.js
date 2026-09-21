@@ -2,13 +2,23 @@ const mongoose = require('mongoose');
 const DeviceToken = require('../models/DeviceToken');
 const UserSubscription = require('../models/UserSubscription');
 const PushNotification = require('../models/PushNotification');
+const User = require('../models/User');
 const firebaseService = require('../services/firebaseService');
 
 exports.registerDevice = async (req, res) => {
   try {
     const { userId, token, deviceId, appVersion } = req.body;
-    if (!mongoose.Types.ObjectId.isValid(userId) || !token) return res.status(400).json({ success: false, message: 'Valid userId and token are required.' });
-    const item = await DeviceToken.findOneAndUpdate({ token }, { userId, token, deviceId: deviceId || '', appVersion: appVersion || '', enabled: true, lastSeenAt: new Date() }, { new: true, upsert: true, runValidators: true });
+    if (!userId || !token) return res.status(400).json({ success: false, message: 'userId and token are required.' });
+    let user = null;
+    const raw = String(userId).trim();
+    if (mongoose.Types.ObjectId.isValid(raw)) user = await User.findById(raw).lean();
+    if (!user) {
+      const exact = new RegExp('^' + raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i');
+      const digits = raw.replace(/\D/g, '');
+      user = await User.findOne({ $or: [{ email: exact }, { phone: digits || raw }] }).lean();
+    }
+    if (!user) return res.status(404).json({ success: false, message: 'EasyLabel user not found for notification registration.' });
+    const item = await DeviceToken.findOneAndUpdate({ token }, { userId: user._id, token, deviceId: deviceId || '', appVersion: appVersion || '', enabled: true, lastSeenAt: new Date() }, { new: true, upsert: true, runValidators: true });
     res.json({ success: true, data: item });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };

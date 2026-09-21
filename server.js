@@ -35,6 +35,7 @@ const AccountDeletionRoute = require('./routes/accountDeletion');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 const walletUserController = require('./controllers/walletUserController');
+const notificationScheduler = require('./services/notificationScheduler');
 
 mongoose.connect(process.env.MONGO_URI);
 const db = mongoose.connection;
@@ -146,4 +147,5 @@ app.post('/api/import-users', upload.single('file'), walletUserController.import
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('Server is running on port ' + PORT);
+    notificationScheduler.start();
 });
