@@ -1,6 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const premiumController = require('../controllers/PremiumController');
+const multer = require('multer');
+
+const notificationImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.mimetype)) return cb(new Error('Only JPG, PNG and WebP images are supported.'));
+    cb(null, true);
+  }
+});
 
 router.get('/catalog', premiumController.catalog);
 router.get('/access/:userId', premiumController.access);
@@ -26,7 +37,8 @@ router.post('/campaigns', premiumController.createCampaign);
 router.put('/campaigns/:id', premiumController.updateCampaign);
 router.put('/campaigns/:id/toggle', premiumController.toggleCampaign);
 router.delete('/campaigns/:id', premiumController.deleteCampaign);
-router.post('/notifications', premiumController.createNotification);
+router.get('/notifications/:id/image', premiumController.getNotificationImage);
+router.post('/notifications', notificationImageUpload.single('image'), premiumController.createNotification);
 router.put('/notifications/:id', premiumController.updateNotification);
 router.put('/notifications/:id/status', premiumController.updateNotificationStatus);
 router.post('/notifications/:id/send', premiumController.sendNotification);

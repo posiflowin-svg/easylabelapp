@@ -659,7 +659,10 @@ exports.createNotification = async (req, res) => {
     const item = await PushNotification.create({
       title: req.body.title,
       message: req.body.message,
-      imageUrl: req.body.imageUrl || '',
+      imageUrl: '',
+      imageData: req.file ? req.file.buffer : undefined,
+      imageContentType: req.file ? req.file.mimetype : '',
+      imageOriginalName: req.file ? req.file.originalname : '',
       targetAudience: req.body.targetAudience || 'all',
       actionType: req.body.actionType || 'none',
       actionValue: req.body.actionValue || '',
@@ -667,8 +670,28 @@ exports.createNotification = async (req, res) => {
       scheduleAt: req.body.scheduleAt || null,
       status
     });
+    if (req.file) {
+      const configured = String(process.env.PUBLIC_BASE_URL || '').trim().replace(/\/$/, '');
+      let base = configured || `${req.get('x-forwarded-proto') || req.protocol}://${req.get('host')}`;
+      if (base.startsWith('http://') && base.includes('.onrender.com')) base = 'https://' + base.substring(7);
+      item.imageUrl = `${base}/api/premium/notifications/${item._id}/image?v=${Date.now()}`;
+      await item.save();
+    }
     res.json({ success: true, data: item });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
+};
+
+
+exports.getNotificationImage = async (req, res) => {
+  try {
+    const item = await PushNotification.findById(req.params.id).select('+imageData imageContentType');
+    if (!item || !item.imageData) return res.status(404).send('Notification image not found');
+    res.set('Content-Type', item.imageContentType || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(item.imageData);
+  } catch (error) {
+    res.status(404).send('Notification image not found');
+  }
 };
 
 exports.updateNotificationStatus = async (req, res) => {
