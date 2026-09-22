@@ -16,7 +16,7 @@
     .campaign-kpi small{color:#64748b}.campaign-kpi strong{display:block;font-size:22px;margin-top:5px}
     .campaign-type{display:inline-flex;padding:4px 8px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700}
     .campaign-preview{border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;background:#fff;min-height:150px}
-    .campaign-preview-image{height:130px;background:#f8fafc;display:flex;align-items:center;justify-content:center;color:#94a3b8;overflow:hidden}
+    .campaign-preview-image{aspect-ratio:16/9;min-height:180px;background:#f8fafc;display:flex;align-items:center;justify-content:center;color:#94a3b8;overflow:hidden}
     .campaign-preview-image img{width:100%;height:100%;object-fit:cover}
     .campaign-preview-body{padding:16px}.campaign-preview-body h4{font-size:20px;margin-bottom:6px}.campaign-preview-body p{color:#64748b;line-height:1.45}
     .campaign-preview-button{display:inline-block;margin-top:12px;background:#2563eb;color:#fff;border-radius:9px;padding:9px 14px;font-weight:700;font-size:13px}
@@ -140,7 +140,7 @@
       </div>
 
       <div class="campaign-form-layout">
-        <form id="campaignForm" onsubmit="saveCampaign(event)">
+        <form id="campaignForm" enctype="multipart/form-data" onsubmit="saveCampaign(event)">
           <input type="hidden" name="id" id="campaignId">
           <div class="form-grid">
             <div><label>Title</label><input id="campaignTitle" name="title" maxlength="100" placeholder="Unlock EasyLabel Premium" oninput="previewCampaign()" required></div>
@@ -153,7 +153,7 @@
           <textarea id="campaignSubtitle" name="subtitle" rows="2" maxlength="260" placeholder="Short message shown to the user" oninput="previewCampaign()"></textarea>
 
           <div class="form-grid">
-            <div><label>Image URL</label><input id="campaignImageUrl" name="imageUrl" placeholder="https://..." oninput="previewCampaign()"></div>
+            <div><label>Popup Image</label><input id="campaignImage" name="image" type="file" accept="image/jpeg,image/png,image/webp" onchange="previewCampaignImage(this)"><input id="campaignImageUrl" name="imageUrl" type="hidden"><div class="mini" style="margin-top:6px">Recommended 1200 × 675 px (16:9) · JPG, PNG or WebP · Max 5 MB</div></div>
             <div><label>Button Text</label><input id="campaignButtonText" name="buttonText" value="View Plans" maxlength="40" oninput="previewCampaign()"></div>
             <div><label>Button Action</label><select name="buttonAction" id="campaignButtonAction" onchange="toggleCampaignActionValue()"><option value="open_subscription">Open Subscription</option><option value="open_feature">Open Feature/Page</option><option value="open_url">Open URL</option><option value="dismiss">Dismiss Only</option></select></div>
             <div><label>Action Value</label><input name="actionValue" id="campaignActionValue" placeholder="Feature key or https:// URL"></div>
@@ -387,49 +387,19 @@ async function deleteSubscription(id){if(!confirm('Permanently delete this subsc
 function localDateTimeValue(value){if(!value)return '';const d=new Date(value);if(Number.isNaN(d.getTime()))return '';const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);return local.toISOString().slice(0,16)}
 function toggleCampaignActionValue(){const action=document.getElementById('campaignButtonAction');const field=document.getElementById('campaignActionValue');if(!action||!field)return;const required=action.value==='open_url'||action.value==='open_feature';field.disabled=action.value==='open_subscription'||action.value==='dismiss';field.required=required;if(field.disabled)field.value=''}
 function previewCampaign(){
-  const title=document.getElementById('campaignTitle');
-  if(!title)return;
-
-  document.getElementById('campaignPreviewTitle').textContent=
-    title.value||'Campaign title';
-
-  document.getElementById('campaignPreviewSubtitle').textContent=
-    document.getElementById('campaignSubtitle').value||
-    'Your campaign message will appear here.';
-
-  document.getElementById('campaignPreviewButton').textContent=
-    document.getElementById('campaignButtonText').value||'View Plans';
-
-  document.getElementById('campaignPreviewType').textContent=
-    (document.getElementById('campaignType').value||'popup')
-      .replaceAll('_',' ')
-      .toUpperCase();
-
-  const url=document.getElementById('campaignImageUrl').value.trim();
-  const box=document.getElementById('campaignPreviewImage');
-  box.innerHTML='';
-
-  if(!url){
-    const empty=document.createElement('span');
-    empty.textContent='No image';
-    box.appendChild(empty);
-    return;
-  }
-
-  const img=document.createElement('img');
-  img.src=url;
-  img.alt='Campaign image';
-  img.onerror=()=>{
-    box.innerHTML='';
-    const unavailable=document.createElement('span');
-    unavailable.textContent='Image unavailable';
-    box.appendChild(unavailable);
-  };
-  box.appendChild(img);
+  const title=document.getElementById('campaignTitle');if(!title)return;
+  document.getElementById('campaignPreviewTitle').textContent=title.value||'Campaign title';
+  document.getElementById('campaignPreviewSubtitle').textContent=document.getElementById('campaignSubtitle').value||'Your campaign message will appear here.';
+  document.getElementById('campaignPreviewButton').textContent=document.getElementById('campaignButtonText').value||'View Plans';
+  document.getElementById('campaignPreviewType').textContent=(document.getElementById('campaignType').value||'popup').replaceAll('_',' ').toUpperCase();
+  const url=(document.getElementById('campaignImageUrl').value||'').trim();
+  renderCampaignPreviewImage(url);
 }
-function resetCampaignForm(){const form=document.getElementById('campaignForm');if(!form)return;form.reset();document.getElementById('campaignId').value='';document.getElementById('campaignActive').checked=true;document.getElementById('campaignSaveButton').textContent='Create Campaign';document.getElementById('campaignButtonText').value='View Plans';document.querySelector('#campaignForm [name=priority]').value='0';document.querySelector('#campaignForm [name=maxDisplays]').value='1';toggleCampaignActionValue();previewCampaign()}
-function editCampaign(c){openTab('campaigns',document.querySelector('.sidebar a[data-tab="campaigns"]'));const form=document.getElementById('campaignForm');document.getElementById('campaignId').value=c._id||'';form.elements.title.value=c.title||'';form.elements.campaignType.value=c.campaignType||'popup';form.elements.targetAudience.value=c.targetAudience||'free';form.elements.frequency.value=c.frequency||'once';form.elements.subtitle.value=c.subtitle||'';form.elements.imageUrl.value=c.imageUrl||'';form.elements.buttonText.value=c.buttonText||'View Plans';form.elements.buttonAction.value=c.buttonAction||'open_subscription';form.elements.actionValue.value=c.actionValue||'';form.elements.priority.value=Number(c.priority||0);form.elements.maxDisplays.value=Number(c.maxDisplays||0);form.elements.startDate.value=localDateTimeValue(c.startDate);form.elements.endDate.value=localDateTimeValue(c.endDate);document.getElementById('campaignActive').checked=!!c.active;document.getElementById('campaignSaveButton').textContent='Save Changes';toggleCampaignActionValue();previewCampaign();form.scrollIntoView({behavior:'smooth',block:'start'})}
-async function saveCampaign(e){e.preventDefault();const form=e.target;const f=new FormData(form);const data=Object.fromEntries(f.entries());data.active=f.has('active');const id=document.getElementById('campaignId').value;const url=id?'/api/premium/campaigns/'+id:'/api/premium/campaigns';const method=id?'PUT':'POST';try{await api(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});showMessage(id?'Campaign updated successfully.':'Campaign created successfully.');setTimeout(()=>location.reload(),500)}catch(err){showMessage(err.message,false)}}
+function renderCampaignPreviewImage(url){const box=document.getElementById('campaignPreviewImage');box.innerHTML='';if(!url){const empty=document.createElement('span');empty.textContent='Upload a 16:9 campaign image';box.appendChild(empty);return;}const img=document.createElement('img');img.src=url;img.alt='Campaign image';img.onerror=()=>{box.innerHTML='<span>Image unavailable</span>';};box.appendChild(img);}
+function previewCampaignImage(input){const file=input.files&&input.files[0];if(!file){previewCampaign();return;}if(file.size>5*1024*1024){input.value='';showMessage('Campaign image must be 5 MB or smaller.',false);previewCampaign();return;}if(!['image/jpeg','image/png','image/webp'].includes(file.type)){input.value='';showMessage('Use JPG, PNG or WebP image.',false);previewCampaign();return;}renderCampaignPreviewImage(URL.createObjectURL(file));}
+function resetCampaignForm(){const form=document.getElementById('campaignForm');if(!form)return;form.reset();document.getElementById('campaignId').value='';document.getElementById('campaignImageUrl').value='';document.getElementById('campaignActive').checked=true;document.getElementById('campaignSaveButton').textContent='Create Campaign';document.getElementById('campaignButtonText').value='View Plans';document.querySelector('#campaignForm [name=priority]').value='0';document.querySelector('#campaignForm [name=maxDisplays]').value='1';toggleCampaignActionValue();previewCampaign()}
+function editCampaign(c){openTab('campaigns',document.querySelector('.sidebar a[data-tab="campaigns"]'));const form=document.getElementById('campaignForm');document.getElementById('campaignId').value=c._id||'';form.elements.title.value=c.title||'';form.elements.campaignType.value=c.campaignType||'popup';form.elements.targetAudience.value=c.targetAudience||'free';form.elements.frequency.value=c.frequency||'once';form.elements.subtitle.value=c.subtitle||'';document.getElementById('campaignImageUrl').value=c.imageUrl||'';document.getElementById('campaignImage').value='';form.elements.buttonText.value=c.buttonText||'View Plans';form.elements.buttonAction.value=c.buttonAction||'open_subscription';form.elements.actionValue.value=c.actionValue||'';form.elements.priority.value=Number(c.priority||0);form.elements.maxDisplays.value=Number(c.maxDisplays||0);form.elements.startDate.value=localDateTimeValue(c.startDate);form.elements.endDate.value=localDateTimeValue(c.endDate);document.getElementById('campaignActive').checked=!!c.active;document.getElementById('campaignSaveButton').textContent='Save Changes';toggleCampaignActionValue();previewCampaign();form.scrollIntoView({behavior:'smooth',block:'start'})}
+async function saveCampaign(e){e.preventDefault();const form=e.target;const data=new FormData(form);data.set('active',document.getElementById('campaignActive').checked?'true':'false');const id=document.getElementById('campaignId').value;const url=id?'/api/premium/campaigns/'+id:'/api/premium/campaigns';const method=id?'PUT':'POST';try{await api(url,{method,body:data});showMessage(id?'Campaign updated successfully.':'Campaign created successfully.');setTimeout(()=>location.reload(),500)}catch(err){showMessage(err.message,false)}}
 async function toggleCampaign(id,active){try{await api('/api/premium/campaigns/'+id+'/toggle',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({active})});showMessage('Campaign status updated.');setTimeout(()=>location.reload(),400)}catch(err){showMessage(err.message,false)}}
 async function showCampaignStats(id){try{const d=await api('/api/premium/campaigns/'+id+'/stats');const s=d.data||{};alert('Campaign Performance\\n\\nImpressions: '+(s.impressions||0)+'\\nClicks: '+(s.clicks||0)+'\\nDismissals: '+(s.dismissals||0)+'\\nUnique users/devices: '+(s.uniqueUsers||0)+'\\nCTR: '+(s.ctr||0)+'%')}catch(err){showMessage(err.message,false)}}
 async function deleteCampaign(id){if(!confirm('Delete this campaign and its analytics history?'))return;try{await api('/api/premium/campaigns/'+id,{method:'DELETE'});showMessage('Campaign deleted.');setTimeout(()=>location.reload(),400)}catch(err){showMessage(err.message,false)}}

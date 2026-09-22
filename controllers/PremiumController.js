@@ -626,13 +626,42 @@ exports.changeSubscriptionPlan = async (req, res) => {
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };
 
+function campaignPublicBase(req) {
+  const configured = String(process.env.PUBLIC_BASE_URL || '').trim().replace(/\/$/, '');
+  let base = configured || `${req.get('x-forwarded-proto') || req.protocol}://${req.get('host')}`;
+  if (base.startsWith('http://') && base.includes('.onrender.com')) base = 'https://' + base.substring(7);
+  return base;
+}
+
 exports.createCampaign = async (req, res) => {
   try {
     const payload = sanitizeCampaignPayload(req.body);
+    if (req.file) {
+      payload.imageUrl = '';
+      payload.imageData = req.file.buffer;
+      payload.imageContentType = req.file.mimetype;
+      payload.imageOriginalName = req.file.originalname;
+    }
     const campaign = await PromoCampaign.create(payload);
+    if (req.file) {
+      campaign.imageUrl = `${campaignPublicBase(req)}/api/premium/campaigns/${campaign._id}/image?v=${Date.now()}`;
+      await campaign.save();
+    }
     res.json({ success: true, data: campaign });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+exports.getCampaignImage = async (req, res) => {
+  try {
+    const item = await PromoCampaign.findById(req.params.id).select('+imageData imageContentType');
+    if (!item || !item.imageData) return res.status(404).send('Campaign image not found');
+    res.set('Content-Type', item.imageContentType || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(item.imageData);
+  } catch (error) {
+    res.status(404).send('Campaign image not found');
   }
 };
 
@@ -916,13 +945,18 @@ exports.campaignStats = async (req, res) => {
 
 exports.updateCampaign = async (req, res) => {
   try {
+    const existing = await PromoCampaign.findById(req.params.id);
+    if (!existing) return res.status(404).json({ success: false, message: 'Campaign not found' });
     const payload = sanitizeCampaignPayload(req.body);
-    const item = await PromoCampaign.findByIdAndUpdate(
-      req.params.id,
-      payload,
-      { new: true, runValidators: true }
-    );
-    if (!item) return res.status(404).json({ success: false, message: 'Campaign not found' });
+    // Preserve the current hosted image when editing without selecting a new file.
+    if (!req.file && !String(req.body.imageUrl || '').trim()) payload.imageUrl = existing.imageUrl || '';
+    if (req.file) {
+      payload.imageData = req.file.buffer;
+      payload.imageContentType = req.file.mimetype;
+      payload.imageOriginalName = req.file.originalname;
+      payload.imageUrl = `${campaignPublicBase(req)}/api/premium/campaigns/${existing._id}/image?v=${Date.now()}`;
+    }
+    const item = await PromoCampaign.findByIdAndUpdate(req.params.id, payload, { new: true, runValidators: true });
     res.json({ success: true, data: item });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
