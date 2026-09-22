@@ -57,3 +57,17 @@ exports.send = async (req, res) => {
     res.json({ success: true, result, data: notification });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };
+
+
+exports.trackEvent = async (req, res) => {
+  try {
+    const type = String(req.body?.type || '').toLowerCase();
+    if (!['open', 'click'].includes(type)) {
+      return res.status(400).json({ success: false, message: 'type must be open or click.' });
+    }
+    const update = type === 'click' ? { $inc: { clickCount: 1 } } : { $inc: { openedCount: 1 } };
+    const item = await PushNotification.findByIdAndUpdate(req.params.id, update, { new: true }).select('sentCount openedCount clickCount');
+    if (!item) return res.status(404).json({ success: false, message: 'Notification not found.' });
+    res.json({ success: true });
+  } catch (error) { res.status(400).json({ success: false, message: error.message }); }
+};

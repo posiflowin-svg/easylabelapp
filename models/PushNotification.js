@@ -15,6 +15,8 @@ const pushNotificationSchema = new mongoose.Schema({
   sentAt: { type: Date, default: null },
   sentCount: { type: Number, default: 0 },
   failedCount: { type: Number, default: 0 },
+  openedCount: { type: Number, default: 0 },
+  clickCount: { type: Number, default: 0 },
   buttonText: { type: String, default: '' }
 }, { timestamps: true });
 

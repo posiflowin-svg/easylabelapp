@@ -219,7 +219,7 @@ exports.page = async (req, res) => {
       User.find().select('name email phone mobile').sort({ createdAt: -1 }).limit(3000).lean(),
       User.countDocuments(),
       PromoCampaign.find().sort({ priority: -1, createdAt: -1 }).limit(200).lean(),
-      PushNotification.find().sort({ createdAt: -1 }).limit(200).lean(),
+      PushNotification.find().sort({ createdAt: -1 }).limit(25).lean(),
       PremiumSetting.findOne({ key: 'global' }).lean(),
       PaymentTransaction.find({ status: 'paid', paidAt: { $gte: monthStart } }).sort({ paidAt: -1 }).limit(500).lean(),
       AIUsage.find({ createdAt: { $gte: monthStart } }).sort({ createdAt: -1 }).limit(1000).lean(),
@@ -677,6 +677,9 @@ exports.createNotification = async (req, res) => {
       item.imageUrl = `${base}/api/premium/notifications/${item._id}/image?v=${Date.now()}`;
       await item.save();
     }
+    // Keep notification history compact: retain only the newest 25 records.
+    const stale = await PushNotification.find().sort({ createdAt: -1 }).skip(25).select('_id').lean();
+    if (stale.length) await PushNotification.deleteMany({ _id: { $in: stale.map(n => n._id) } });
     res.json({ success: true, data: item });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 };
