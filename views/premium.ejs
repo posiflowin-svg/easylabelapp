@@ -143,20 +143,20 @@
         <form id="campaignForm" enctype="multipart/form-data" onsubmit="saveCampaign(event)">
           <input type="hidden" name="id" id="campaignId">
           <div class="form-grid">
-            <div><label>Title</label><input id="campaignTitle" name="title" maxlength="100" placeholder="Unlock EasyLabel Premium" oninput="previewCampaign()" required></div>
+            <div id="campaignTitleField"><label>Title</label><input id="campaignTitle" name="title" maxlength="100" placeholder="Unlock EasyLabel Premium" oninput="previewCampaign()" required></div>
             <div><label>Campaign Type</label><select id="campaignType" name="campaignType" onchange="previewCampaign()"><option value="popup">Popup</option><option value="home_banner">Home Banner</option><option value="full_screen">Full Screen</option><option value="new_feature">New Feature</option><option value="upgrade_banner">Upgrade Banner</option></select></div>
             <div><label>Target Audience</label><select name="targetAudience"><option value="free">Free Users</option><option value="all">All Users</option><option value="premium">Premium Users</option><option value="business">Business Users</option><option value="expired">Expired Users</option></select></div>
             <div><label>Frequency</label><select name="frequency"><option value="once">Once per user/device</option><option value="daily">Once Daily</option><option value="weekly">Once Weekly</option><option value="every_open">Every App Open</option></select></div>
           </div>
 
-          <label>Subtitle</label>
-          <textarea id="campaignSubtitle" name="subtitle" rows="2" maxlength="260" placeholder="Short message shown to the user" oninput="previewCampaign()"></textarea>
+          <div id="campaignSubtitleField"><label>Subtitle</label>
+          <textarea id="campaignSubtitle" name="subtitle" rows="2" maxlength="260" placeholder="Short message shown to the user" oninput="previewCampaign()"></textarea></div>
 
           <div class="form-grid">
-            <div><label>Popup Image</label><input id="campaignImage" name="image" type="file" accept="image/jpeg,image/png,image/webp" onchange="previewCampaignImage(this)"><input id="campaignImageUrl" name="imageUrl" type="hidden"><div class="mini" style="margin-top:6px">Recommended 1200 × 675 px (16:9) · JPG, PNG or WebP · Max 5 MB</div></div>
-            <div><label>Button Text</label><input id="campaignButtonText" name="buttonText" value="View Plans" maxlength="40" oninput="previewCampaign()"></div>
-            <div><label>Button Action</label><select name="buttonAction" id="campaignButtonAction" onchange="toggleCampaignActionValue()"><option value="open_subscription">Open Subscription</option><option value="open_feature">Open Feature/Page</option><option value="open_url">Open URL</option><option value="dismiss">Dismiss Only</option></select></div>
-            <div><label>Action Value</label><input name="actionValue" id="campaignActionValue" placeholder="Feature key or https:// URL"></div>
+            <div><label id="campaignImageLabel">Popup Image</label><input id="campaignImage" name="image" type="file" accept="image/jpeg,image/png,image/webp" onchange="previewCampaignImage(this)"><input id="campaignImageUrl" name="imageUrl" type="hidden"><div id="campaignImageHelp" class="mini" style="margin-top:6px">Recommended 1200 × 675 px (16:9) · JPG, PNG or WebP · Max 5 MB</div></div>
+            <div id="campaignButtonTextField"><label>Button Text</label><input id="campaignButtonText" name="buttonText" value="View Plans" maxlength="40" oninput="previewCampaign()"></div>
+            <div id="campaignButtonActionField"><label>Button Action</label><select name="buttonAction" id="campaignButtonAction" onchange="toggleCampaignActionValue()"><option value="open_subscription">Open Subscription</option><option value="open_feature">Open Feature/Page</option><option value="open_url">Open URL</option><option value="dismiss">Dismiss Only</option></select></div>
+            <div id="campaignActionValueField"><label id="campaignActionValueLabel">Action Value</label><input name="actionValue" id="campaignActionValue" placeholder="Feature key or https:// URL"></div>
             <div><label>Priority</label><input name="priority" type="number" value="0"><div class="mini">Higher priority displays first.</div></div>
             <div><label>Maximum Displays</label><input name="maxDisplays" type="number" min="0" value="1"><div class="mini">Per user/device. 0 = unlimited.</div></div>
             <div><label>Start Date</label><input name="startDate" type="datetime-local"></div>
@@ -386,8 +386,21 @@ async function recordPayment(id){const amount=prompt('Enter received amount (₹
 async function deleteSubscription(id){if(!confirm('Permanently delete this subscription record?'))return;try{await api('/api/premium/subscriptions/'+id,{method:'DELETE'});showMessage('Subscription deleted.');setTimeout(()=>location.reload(),500)}catch(e){showMessage(e.message,false)}}
 function localDateTimeValue(value){if(!value)return '';const d=new Date(value);if(Number.isNaN(d.getTime()))return '';const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);return local.toISOString().slice(0,16)}
 function toggleCampaignActionValue(){const action=document.getElementById('campaignButtonAction');const field=document.getElementById('campaignActionValue');if(!action||!field)return;const required=action.value==='open_url'||action.value==='open_feature';field.disabled=action.value==='open_subscription'||action.value==='dismiss';field.required=required;if(field.disabled)field.value=''}
+function updateCampaignTypeFields(){
+  const isFull=document.getElementById('campaignType')?.value==='full_screen';
+  ['campaignTitleField','campaignSubtitleField','campaignButtonTextField','campaignButtonActionField'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isFull?'none':'';});
+  const title=document.getElementById('campaignTitle');if(title)title.required=!isFull;
+  const action=document.getElementById('campaignButtonAction');if(isFull&&action)action.value='open_url';
+  const value=document.getElementById('campaignActionValue');if(value){value.disabled=false;value.required=isFull||(action&&action.value==='open_url')||(action&&action.value==='open_feature');value.placeholder=isFull?'https://your-external-link.com':'Feature key or https:// URL';}
+  const label=document.getElementById('campaignActionValueLabel');if(label)label.textContent=isFull?'External Link':'Action Value';
+  const imageLabel=document.getElementById('campaignImageLabel');if(imageLabel)imageLabel.textContent=isFull?'Full Screen Image':'Popup Image';
+  const help=document.getElementById('campaignImageHelp');if(help)help.textContent=isFull?'Recommended 1080 × 1920 px (9:16) · Covers ~90% of phone screen · JPG, PNG or WebP · Max 5 MB':'Recommended 1200 × 675 px (16:9) · JPG, PNG or WebP · Max 5 MB';
+  const previewTitle=document.getElementById('campaignPreviewTitle');const previewSubtitle=document.getElementById('campaignPreviewSubtitle');const previewButton=document.getElementById('campaignPreviewButton');
+  if(previewTitle)previewTitle.style.display=isFull?'none':'';if(previewSubtitle)previewSubtitle.style.display=isFull?'none':'';if(previewButton)previewButton.style.display=isFull?'none':'';
+}
 function previewCampaign(){
   const title=document.getElementById('campaignTitle');if(!title)return;
+  updateCampaignTypeFields();
   document.getElementById('campaignPreviewTitle').textContent=title.value||'Campaign title';
   document.getElementById('campaignPreviewSubtitle').textContent=document.getElementById('campaignSubtitle').value||'Your campaign message will appear here.';
   document.getElementById('campaignPreviewButton').textContent=document.getElementById('campaignButtonText').value||'View Plans';
@@ -395,7 +408,7 @@ function previewCampaign(){
   const url=(document.getElementById('campaignImageUrl').value||'').trim();
   renderCampaignPreviewImage(url);
 }
-function renderCampaignPreviewImage(url){const box=document.getElementById('campaignPreviewImage');box.innerHTML='';if(!url){const empty=document.createElement('span');empty.textContent='Upload a 16:9 campaign image';box.appendChild(empty);return;}const img=document.createElement('img');img.src=url;img.alt='Campaign image';img.onerror=()=>{box.innerHTML='<span>Image unavailable</span>';};box.appendChild(img);}
+function renderCampaignPreviewImage(url){const box=document.getElementById('campaignPreviewImage');box.innerHTML='';if(!url){const empty=document.createElement('span');empty.textContent=document.getElementById('campaignType')?.value==='full_screen'?'Upload a 9:16 full-screen image':'Upload a 16:9 campaign image';box.appendChild(empty);return;}const img=document.createElement('img');img.src=url;img.alt='Campaign image';img.onerror=()=>{box.innerHTML='<span>Image unavailable</span>';};box.appendChild(img);}
 function previewCampaignImage(input){const file=input.files&&input.files[0];if(!file){previewCampaign();return;}if(file.size>5*1024*1024){input.value='';showMessage('Campaign image must be 5 MB or smaller.',false);previewCampaign();return;}if(!['image/jpeg','image/png','image/webp'].includes(file.type)){input.value='';showMessage('Use JPG, PNG or WebP image.',false);previewCampaign();return;}renderCampaignPreviewImage(URL.createObjectURL(file));}
 function resetCampaignForm(){const form=document.getElementById('campaignForm');if(!form)return;form.reset();document.getElementById('campaignId').value='';document.getElementById('campaignImageUrl').value='';document.getElementById('campaignActive').checked=true;document.getElementById('campaignSaveButton').textContent='Create Campaign';document.getElementById('campaignButtonText').value='View Plans';document.querySelector('#campaignForm [name=priority]').value='0';document.querySelector('#campaignForm [name=maxDisplays]').value='1';toggleCampaignActionValue();previewCampaign()}
 function editCampaign(c){openTab('campaigns',document.querySelector('.sidebar a[data-tab="campaigns"]'));const form=document.getElementById('campaignForm');document.getElementById('campaignId').value=c._id||'';form.elements.title.value=c.title||'';form.elements.campaignType.value=c.campaignType||'popup';form.elements.targetAudience.value=c.targetAudience||'free';form.elements.frequency.value=c.frequency||'once';form.elements.subtitle.value=c.subtitle||'';document.getElementById('campaignImageUrl').value=c.imageUrl||'';document.getElementById('campaignImage').value='';form.elements.buttonText.value=c.buttonText||'View Plans';form.elements.buttonAction.value=c.buttonAction||'open_subscription';form.elements.actionValue.value=c.actionValue||'';form.elements.priority.value=Number(c.priority||0);form.elements.maxDisplays.value=Number(c.maxDisplays||0);form.elements.startDate.value=localDateTimeValue(c.startDate);form.elements.endDate.value=localDateTimeValue(c.endDate);document.getElementById('campaignActive').checked=!!c.active;document.getElementById('campaignSaveButton').textContent='Save Changes';toggleCampaignActionValue();previewCampaign();form.scrollIntoView({behavior:'smooth',block:'start'})}

@@ -162,7 +162,9 @@ function campaignFrequencyAllows(campaign, interaction, now = new Date()) {
 }
 
 function sanitizeCampaignPayload(body) {
-  const title = String(body.title || '').trim();
+  const campaignType = body.campaignType || 'popup';
+  const isFullScreen = campaignType === 'full_screen';
+  const title = String(body.title || '').trim() || (isFullScreen ? 'Full Screen Campaign' : '');
   if (!title) throw new Error('Campaign title is required.');
 
   const startDate = parseOptionalDate(body.startDate, new Date());
@@ -172,8 +174,9 @@ function sanitizeCampaignPayload(body) {
     throw new Error('End date must be after start date.');
   }
 
-  const buttonAction = body.buttonAction || 'open_subscription';
+  const buttonAction = isFullScreen ? 'open_url' : (body.buttonAction || 'open_subscription');
   const actionValue = String(body.actionValue || '').trim();
+  if (isFullScreen && !actionValue) throw new Error('Full Screen campaign requires an external URL.');
 
   if (buttonAction === 'open_url' && actionValue) {
     try {
@@ -190,10 +193,10 @@ function sanitizeCampaignPayload(body) {
 
   return {
     title,
-    campaignType: body.campaignType || 'popup',
-    subtitle: String(body.subtitle || '').trim(),
+    campaignType,
+    subtitle: isFullScreen ? '' : String(body.subtitle || '').trim(),
     imageUrl: String(body.imageUrl || '').trim(),
-    buttonText: String(body.buttonText || 'View Plans').trim(),
+    buttonText: isFullScreen ? '' : String(body.buttonText || 'View Plans').trim(),
     buttonAction,
     actionValue,
     targetAudience: body.targetAudience || 'free',
