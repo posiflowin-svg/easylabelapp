@@ -127,6 +127,7 @@ app.use('/api/shopping', BannerRoutes);
 app.use('/api/order', OrderRoutes);
 app.use('/api/coupon', couponRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/pos-enquiries', require('./routes/posEnquiries'));
 app.use('/api/colors', colorRoutes);
 app.use('/api/walletuser', walletUserRoutes);
 app.use('/api/wallettransaction', walletTransactionRoutes);
