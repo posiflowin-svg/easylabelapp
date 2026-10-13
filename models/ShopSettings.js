@@ -7,6 +7,9 @@ const shopSettingsSchema = new mongoose.Schema({
   heroSubtitle: { type: String, default: 'Printers, labels, scanners and POS hardware — delivered to your door.' },
   heroBadge: { type: String, default: 'EasyLabel Shop' },
   heroImageUrl: { type: String, default: '' },
+  allCategoryImageUrl: { type: String, default: '' },
+  allCategoryImageData: { type: Buffer, select: false },
+  allCategoryImageContentType: { type: String, default: '', select: false },
   shippingText: { type: String, default: 'Fast dispatch • Secure payments • Easy support' },
   supportText: { type: String, default: 'Need help choosing? Contact our sales team.' },
   sliderIntervalMs: { type: Number, default: 4500, min: 2000, max: 15000 }

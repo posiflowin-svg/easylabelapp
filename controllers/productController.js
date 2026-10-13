@@ -268,10 +268,19 @@ exports.getAllProducts = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+function allCategoryImageUrl(settings, req) {
+  if (!settings) return '';
+  if (settings.allCategoryImageContentType) {
+    const version = settings.updatedAt ? new Date(settings.updatedAt).getTime() : 0;
+    return `${publicBaseUrl(req)}/api/products/settings/all-category-image?v=${version}`;
+  }
+  return String(settings.allCategoryImageUrl || '');
+}
+
 exports.getStorefront = async (req, res, next) => {
   try {
     const [settingsDoc, products, categoryDocs, banners] = await Promise.all([
-      ShopSettings.findOne({ key: 'default' }).lean(),
+      ShopSettings.findOne({ key: 'default' }).select('+allCategoryImageContentType').lean(),
       Product.find({
         $or: [
           { active: true },
@@ -312,12 +321,14 @@ exports.getStorefront = async (req, res, next) => {
       categories = Array.from(map.values());
     }
 
+    settings.allCategoryImageUrl = allCategoryImageUrl(settingsDoc, req);
     const decoratedProducts = await decorateProductsWithUploadedMedia(products, req);
     res.json({
       success: true,
       settings,
       banners: banners.map(item => publicBanner(item, req)),
       categories,
+      allCategoryImageUrl: settings.allCategoryImageUrl,
       count: decoratedProducts.length,
       data: decoratedProducts
     });
@@ -331,7 +342,9 @@ exports.getShopSettings = async (req, res, next) => {
       { $setOnInsert: { key: 'default' } },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
-    res.json({ success: true, data: settings });
+    const data = settings.toObject();
+    data.allCategoryImageUrl = allCategoryImageUrl(settings, req);
+    res.json({ success: true, data });
   } catch (err) { next(err); }
 };
 
@@ -353,6 +366,46 @@ exports.updateShopSettings = async (req, res, next) => {
     );
     res.json({ success: true, data: settings });
   } catch (err) { next(err); }
+};
+
+exports.updateAllCategoryImage = async (req, res, next) => {
+  try {
+    const clear = boolValue(req.body.remove, false);
+    const urlProvided = Object.prototype.hasOwnProperty.call(req.body, 'imageUrl');
+    const url = String(req.body.imageUrl || '').trim();
+    if (!req.file && !clear && !urlProvided) {
+      return res.status(400).json({ success: false, message: 'Choose an image or enter an image URL.' });
+    }
+    if (url && !/^https?:\/\//i.test(url)) {
+      return res.status(400).json({ success: false, message: 'Image URL must start with http:// or https://.' });
+    }
+    const update = {};
+    if (req.file) {
+      update.allCategoryImageData = req.file.buffer;
+      update.allCategoryImageContentType = req.file.mimetype;
+      update.allCategoryImageUrl = '';
+    } else if (clear || urlProvided) {
+      update.allCategoryImageData = null;
+      update.allCategoryImageContentType = '';
+      update.allCategoryImageUrl = clear ? '' : url;
+    }
+    const settings = await ShopSettings.findOneAndUpdate(
+      { key: 'default' }, { $set: update, $setOnInsert: { key: 'default' } },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    ).select('+allCategoryImageContentType');
+    res.json({ success: true, imageUrl: allCategoryImageUrl(settings, req) });
+  } catch (err) { next(err); }
+};
+
+exports.getAllCategoryImage = async (req, res) => {
+  try {
+    const settings = await ShopSettings.findOne({ key: 'default' })
+      .select('+allCategoryImageData +allCategoryImageContentType');
+    if (!settings || !settings.allCategoryImageData) return res.status(404).send('All category image not found');
+    res.set('Content-Type', settings.allCategoryImageContentType || 'image/png');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(settings.allCategoryImageData);
+  } catch (_) { res.status(404).send('All category image not found'); }
 };
 
 exports.getProduct = async (req, res, next) => {
@@ -613,7 +666,7 @@ exports.page = async (req, res) => {
   try {
     const [products, settings, categories, banners] = await Promise.all([
       Product.find().sort({ featured: -1, sortOrder: 1, createdAt: -1 }).lean(),
-      ShopSettings.findOne({ key: 'default' }).lean(),
+      ShopSettings.findOne({ key: 'default' }).select('+allCategoryImageContentType').lean(),
       ShopCategory.find().sort({ sortOrder: 1, name: 1 }).select('+imageContentType').lean(),
       ShopBanner.find().sort({ sortOrder: 1, createdAt: -1 }).select('+imageContentType').lean()
     ]);
@@ -621,7 +674,7 @@ exports.page = async (req, res) => {
 
     res.render('shop-management', {
       products: decoratedProducts,
-      settings: settings || {},
+      settings: { ...(settings || {}), allCategoryImageUrl: allCategoryImageUrl(settings, req) },
       categories: categories.map(item => publicCategory(item, req)),
       banners: banners.map(item => publicBanner(item, req))
     });

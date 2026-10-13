@@ -82,6 +82,22 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 
 <div class="card">
 <div class="section-title"><div><h2 style="margin:0">Product Categories</h2><div class="muted">Upload category image and set the exact sequence shown in the Android Shop.</div></div></div>
+<div style="border:1px solid #e4e8ef;border-radius:12px;padding:16px;margin:14px 0 18px;background:#f8fafc">
+  <h3 style="margin:0 0 5px">All Products — Category Icon</h3>
+  <div class="muted" style="margin-bottom:12px">This is the default All category shown first in the Android Shop. It does not create another product category.</div>
+  <form id="allCategoryIconForm" enctype="multipart/form-data" onsubmit="saveAllCategoryIcon(event)">
+    <div class="grid2">
+      <div><label>Upload All Category Icon</label><input name="image" type="file" accept="image/png,image/jpeg,image/webp" onchange="previewAllCategoryIcon(this)"></div>
+      <div><label>Or Image URL</label><input name="imageUrl" id="allCategoryImageUrl" placeholder="https://..." value="<%=settings.allCategoryImageUrl||''%>"></div>
+    </div>
+    <div class="toolbar" style="margin-top:12px;align-items:center;gap:12px">
+      <img id="allCategoryIconPreview" class="thumb" src="<%=settings.allCategoryImageUrl||''%>" alt="All Products icon preview" style="width:70px;height:70px;object-fit:contain;background:white" onerror="this.style.visibility='hidden'" onload="this.style.visibility='visible'">
+      <button class="primary" type="submit">Save All Icon</button>
+      <button class="secondary" type="button" onclick="removeAllCategoryIcon()">Remove Icon</button>
+      <span class="muted" id="allCategoryIconStatus" role="status"></span>
+    </div>
+  </form>
+</div>
 <form id="categoryForm" enctype="multipart/form-data" onsubmit="saveCategory(event)">
 <input type="hidden" name="id">
 <div class="grid">
@@ -660,6 +676,42 @@ async function saveProduct(e){
 async function removeProduct(id){if(!confirm('Delete this product?'))return;try{await call('/api/products/'+id,{method:'DELETE'});location.reload()}catch(err){alert(err.message)}}
 function filterRows(){const q=document.getElementById('search').value.toLowerCase();document.querySelectorAll('#rows tr').forEach(r=>r.style.display=(r.dataset.search||'').includes(q)?'':'none')}
 async function saveSettings(){const data={enabled:document.getElementById('shopEnabled').checked,heroBadge:document.getElementById('heroBadge').value,heroTitle:document.getElementById('heroTitle').value,heroSubtitle:document.getElementById('heroSubtitle').value,shippingText:document.getElementById('shippingText').value,supportText:document.getElementById('supportText').value,sliderIntervalMs:document.getElementById('sliderIntervalMs').value};try{await call('/api/products/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});alert('Storefront saved')}catch(err){alert(err.message)}}
+function previewAllCategoryIcon(input){
+  if(input.files && input.files[0]){
+    const preview=document.getElementById('allCategoryIconPreview');
+    preview.src=URL.createObjectURL(input.files[0]);
+    preview.style.visibility='visible';
+  }
+}
+async function saveAllCategoryIcon(e){
+  e.preventDefault();
+  const form=document.getElementById('allCategoryIconForm');
+  const fd=new FormData(form);
+  const file=fd.get('image');
+  if(file && file.size){ fd.delete('imageUrl'); }
+  else if(!String(fd.get('imageUrl')||'').trim()){
+    alert('Please select an icon image or enter an image URL.');return;
+  }
+  const status=document.getElementById('allCategoryIconStatus');
+  status.textContent='Saving...';
+  try{
+    const result=await call('/api/products/settings/all-category-image',{method:'POST',body:fd});
+    status.textContent='All Products icon saved.';
+    document.getElementById('allCategoryIconPreview').src=result.imageUrl||'';
+    document.getElementById('allCategoryImageUrl').value=result.imageUrl||'';
+    form.querySelector('input[type=file]').value='';
+  }catch(err){status.textContent='';alert(err.message||'Unable to save icon');}
+}
+async function removeAllCategoryIcon(){
+  if(!confirm('Remove the All Products category icon?'))return;
+  const fd=new FormData();fd.set('remove','true');
+  try{
+    await call('/api/products/settings/all-category-image',{method:'POST',body:fd});
+    document.getElementById('allCategoryIconPreview').removeAttribute('src');
+    document.getElementById('allCategoryImageUrl').value='';
+    document.getElementById('allCategoryIconStatus').textContent='Icon removed.';
+  }catch(err){alert(err.message||'Unable to remove icon');}
+}
 function editCategory(c){categoryForm.id.value=c._id||'';categoryForm.name.value=c.name||'';categoryForm.sortOrder.value=c.sortOrder||0;categoryForm.imageUrl.value=c.imageUrl||'';categoryForm.active.checked=c.active!==false;window.scrollTo({top:categoryForm.getBoundingClientRect().top+window.scrollY-30,behavior:'smooth'})}
 function resetCategory(){categoryForm.reset();categoryForm.id.value='';categoryForm.sortOrder.value=0;categoryForm.active.checked=true}
 async function saveCategory(e){e.preventDefault();const fd=new FormData(categoryForm),id=fd.get('id');fd.set('active',categoryForm.active.checked?'true':'false');fd.delete('id');try{await call('/api/products/categories/manage'+(id?'/'+id:''),{method:id?'PUT':'POST',body:fd});location.reload()}catch(err){alert(err.message)}}

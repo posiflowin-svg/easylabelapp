@@ -136,6 +136,8 @@ const handleProductUpload = (req, res, next) => {
 
 router.get('/storefront', controller.getStorefront);
 router.get('/settings', controller.getShopSettings);
+router.post('/settings/all-category-image', lightweightUpload.single('image'), controller.updateAllCategoryImage);
+router.get('/settings/all-category-image', controller.getAllCategoryImage);
 router.put('/settings', controller.updateShopSettings);
 
 // Managed categories.
