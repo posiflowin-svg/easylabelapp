@@ -21,7 +21,9 @@ router.post('/', async (req,res) => {
       if (!user) return res.status(401).json({success:false,message:'Account not found.'});
     }
     const body = req.body || {};
-    const enquiryType = body.enquiryType === 'THERMAL_LABEL' ? 'THERMAL_LABEL' : 'POS';
+    const supportedTypes = ['POS','THERMAL_LABEL','THERMAL_RECEIPT','MOBILE_PRINTER','RECEIPT_PRINTER','LABEL_PRINTER','BARCODE_SCANNER'];
+    const enquiryType = body.enquiryType || 'POS';
+    if (!supportedTypes.includes(enquiryType)) return res.status(400).json({success:false,message:'Invalid enquiry category.'});
     const {businessType,outlets,purchaseTimeline,discountInterest} = body;
     let enquiryFields;
     if (enquiryType === 'THERMAL_LABEL') {
@@ -39,6 +41,20 @@ router.post('/', async (req,res) => {
         productId:String(body.productId || '').slice(0,120),
         productName:String(body.productName || '').slice(0,200),
         sku:String(body.sku || '').slice(0,120) };
+    } else if (enquiryType !== 'POS') {
+      const definitions = {
+        THERMAL_RECEIPT: {monthlyRollUsage:['Below 100','100–500','500–1,000','1,000–5,000','Above 5,000'],paperWidth:['58mm','80mm','Other / Not Sure'],rollDiameter:['30mm','40mm','50mm','80mm','Not Sure'],hasLabelPrinter:[true,false]},
+        MOBILE_PRINTER: {businessType:['Retail / Grocery Store','Restaurant / Cafe','Delivery / Logistics','Pharmacy / Medical Store','Billing / Field Sales','Other'],dailyVolume:['Below 100','100–500','500–1,000','Above 1,000'],purchaseQuantity:['1','2–5','6–10','Above 10'],paperWidth:['58mm','80mm','Not Sure']},
+        RECEIPT_PRINTER: {businessType:['Retail / Grocery Store','Restaurant / Cafe','Delivery / Logistics','Pharmacy / Medical Store','Billing / Field Sales','Other'],dailyVolume:['Below 100','100–500','500–1,000','Above 1,000'],purchaseQuantity:['1','2–5','6–10','Above 10'],paperWidth:['58mm','80mm','Not Sure']},
+        LABEL_PRINTER: {labelWidth:['2 inch','3 inch','4 inch','Not Sure'],dailyVolume:['Below 500','500–2,000','Above 2,000'],connectivity:['USB','Bluetooth','Wi-Fi','LAN','Not Sure'],printingPurpose:['Product Labels','Shipping Labels','Barcode Labels','Other'],purchaseQuantity:['1','2–5','6–10','Above 10']},
+        BARCODE_SCANNER: {businessType:['Retail / Grocery Store','Supermarket / Hypermarket','Pharmacy / Medical Store','Warehouse / Logistics','Clothing / Fashion Store','Other'],dailyVolume:['Below 100','100–500','500–1,000','Above 1,000'],purchaseQuantity:['1','2–5','6–10','Above 10'],scannerType:['Wired USB','Wireless','Desktop / Hands-Free','Not Sure']}
+      };
+      const fields = definitions[enquiryType];
+      if (!fields || Object.entries(fields).some(([key,values])=>!valid(body[key],values)))
+        return res.status(400).json({success:false,message:'Please complete all required enquiry questions.'});
+      enquiryFields = {enquiryType,category:enquiryType,...Object.fromEntries(Object.keys(fields).map(key=>[key,body[key]])),
+        specialRequirements:String(body.specialRequirements||'').trim().slice(0,1000),
+        productId:String(body.productId||'').slice(0,120),productName:String(body.productName||'').slice(0,200),sku:String(body.sku||'').slice(0,120)};
     } else {
       if (!valid(businessType,['Retail Shop','Supermarket','Restaurant / Cafe','Other Business','Other']) ||
           !valid(outlets,['1 Outlet','2-5 Outlets','6+ Outlets']) ||
@@ -122,7 +138,7 @@ router.post('/admin/logout', adminOnly, (req,res) => {
 });
 router.get('/admin',adminOnly,async(req,res)=>{
  try { const status=req.query.status;const category=req.query.category;const filter=['New','Contacted','Converted','Closed'].includes(status)?{status}:{};
- if(category==='THERMAL_LABEL')filter.enquiryType='THERMAL_LABEL';
+ if(['THERMAL_LABEL','THERMAL_RECEIPT','MOBILE_PRINTER','RECEIPT_PRINTER','LABEL_PRINTER','BARCODE_SCANNER'].includes(category))filter.enquiryType=category;
  if(category==='POS')filter.enquiryType={$in:['POS',null]};
  const items=await PosEnquiry.find(filter).sort({createdAt:-1}).limit(1000).lean();res.render('pos-enquiries',{items,status:status||'',category:category||'ALL'});
  }catch(e){console.error(e);res.status(500).send('Unable to load enquiries');}
