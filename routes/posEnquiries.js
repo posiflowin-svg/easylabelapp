@@ -20,11 +20,32 @@ router.post('/', async (req,res) => {
       }
       if (!user) return res.status(401).json({success:false,message:'Account not found.'});
     }
-    const {businessType,outlets,purchaseTimeline,discountInterest} = req.body || {};
-    if (!valid(businessType,['Retail Shop','Supermarket','Restaurant / Cafe','Other Business','Other']) ||
-        !valid(outlets,['1 Outlet','2-5 Outlets','6+ Outlets']) ||
-        !valid(purchaseTimeline,['Within 7 Days','Within 30 Days','Exploring Options','Just Exploring']) ||
-        typeof discountInterest !== 'boolean') return res.status(400).json({success:false,message:'Please answer all enquiry questions.'});
+    const body = req.body || {};
+    const enquiryType = body.enquiryType === 'THERMAL_LABEL' ? 'THERMAL_LABEL' : 'POS';
+    const {businessType,outlets,purchaseTimeline,discountInterest} = body;
+    let enquiryFields;
+    if (enquiryType === 'THERMAL_LABEL') {
+      const usage = ['Below 1,000','1,000–5,000','5,000–10,000','10,000–50,000','Above 50,000'];
+      const sizes = ['50 x 25 mm','50 x 30 mm','50 x 50 mm','38 x 25 mm','100 x 150 mm','Other / Not Sure'];
+      const types = ['Tearable','Non-Tearable','Not Sure'];
+      if (!valid(body.monthlyLabelUsage,usage) || !valid(body.labelSize,sizes) ||
+          !valid(body.labelType,types) || typeof body.hasLabelPrinter !== 'boolean') {
+        return res.status(400).json({success:false,message:'Please complete the Thermal Label enquiry questions.'});
+      }
+      enquiryFields = { enquiryType, category:'Thermal Label',
+        monthlyLabelUsage:body.monthlyLabelUsage, labelSize:body.labelSize,
+        labelType:body.labelType, hasLabelPrinter:body.hasLabelPrinter,
+        specialRequirements:String(body.specialRequirements || '').trim().slice(0,1000),
+        productId:String(body.productId || '').slice(0,120),
+        productName:String(body.productName || '').slice(0,200),
+        sku:String(body.sku || '').slice(0,120) };
+    } else {
+      if (!valid(businessType,['Retail Shop','Supermarket','Restaurant / Cafe','Other Business','Other']) ||
+          !valid(outlets,['1 Outlet','2-5 Outlets','6+ Outlets']) ||
+          !valid(purchaseTimeline,['Within 7 Days','Within 30 Days','Exploring Options','Just Exploring']) ||
+          typeof discountInterest !== 'boolean') return res.status(400).json({success:false,message:'Please answer all POS enquiry questions.'});
+      enquiryFields = {enquiryType,businessType,outlets,purchaseTimeline,discountInterest};
+    }
     let contact;
     if (user) {
       contact = { user:user._id, customerName:user.name, customerEmail:user.email,
@@ -43,7 +64,7 @@ router.post('/', async (req,res) => {
       contact = {customerName:name, customerEmail:email, customerPhone:phone,
         identityVerification:'Unverified'};
     }
-    const enquiry = await PosEnquiry.create({...contact,businessType,outlets,purchaseTimeline,discountInterest});
+    const enquiry = await PosEnquiry.create({...contact,...enquiryFields});
     res.status(201).json({success:true,message:'Enquiry submitted successfully.',id:enquiry._id});
   } catch (e) {
     if (e.name === 'JsonWebTokenError' || e.name === 'TokenExpiredError') return res.status(401).json({success:false,message:'Session expired. Please sign in again.'});
@@ -100,13 +121,15 @@ router.post('/admin/logout', adminOnly, (req,res) => {
   req.session.destroy(() => { res.clearCookie('connect.sid'); res.redirect('/api/pos-enquiries/admin/login'); });
 });
 router.get('/admin',adminOnly,async(req,res)=>{
- try { const status=req.query.status;const filter=['New','Contacted','Converted','Closed'].includes(status)?{status}:{};
- const items=await PosEnquiry.find(filter).sort({createdAt:-1}).limit(1000).lean();res.render('pos-enquiries',{items,status:status||''});
+ try { const status=req.query.status;const category=req.query.category;const filter=['New','Contacted','Converted','Closed'].includes(status)?{status}:{};
+ if(category==='THERMAL_LABEL')filter.enquiryType='THERMAL_LABEL';
+ if(category==='POS')filter.enquiryType={$in:['POS',null]};
+ const items=await PosEnquiry.find(filter).sort({createdAt:-1}).limit(1000).lean();res.render('pos-enquiries',{items,status:status||'',category:category||'ALL'});
  }catch(e){console.error(e);res.status(500).send('Unable to load enquiries');}
 });
 router.post('/admin/:id/status',adminOnly,async(req,res)=>{
  try{if(!valid(req.body.status,['New','Contacted','Converted','Closed']))return res.status(400).send('Invalid status');
- await PosEnquiry.findByIdAndUpdate(req.params.id,{status:req.body.status});res.redirect('/api/pos-enquiries/admin');
+ await PosEnquiry.findByIdAndUpdate(req.params.id,{status:req.body.status});res.redirect('/api/pos-enquiries/admin?'+new URLSearchParams({...(req.body.category?{category:req.body.category}:{}),...(req.body.filterStatus?{status:req.body.filterStatus}:{})}).toString());
  }catch(e){res.status(400).send('Unable to update status');}
 });
 module.exports=router;
