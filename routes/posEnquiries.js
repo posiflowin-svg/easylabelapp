@@ -12,9 +12,9 @@ router.post('/', async (req,res) => {
     const user = await User.findById(decoded.userId).select('name email phone');
     if (!user) return res.status(401).json({success:false,message:'Account not found. Please sign in again.'});
     const {businessType,outlets,purchaseTimeline,discountInterest} = req.body || {};
-    if (!valid(businessType,['Retail Shop','Restaurant / Cafe','Other Business']) ||
+    if (!valid(businessType,['Retail Shop','Supermarket','Restaurant / Cafe','Other Business','Other']) ||
         !valid(outlets,['1 Outlet','2-5 Outlets','6+ Outlets']) ||
-        !valid(purchaseTimeline,['Within 7 Days','Within 30 Days','Exploring Options']) ||
+        !valid(purchaseTimeline,['Within 7 Days','Within 30 Days','Exploring Options','Just Exploring']) ||
         typeof discountInterest !== 'boolean') return res.status(400).json({success:false,message:'Please answer all enquiry questions.'});
     const enquiry = await PosEnquiry.create({user:user._id,customerName:user.name,customerEmail:user.email,customerPhone:user.phone,businessType,outlets,purchaseTimeline,discountInterest});
     res.status(201).json({success:true,message:'Enquiry submitted successfully.',id:enquiry._id});

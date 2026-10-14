@@ -2,6 +2,12 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const createSessionToken = (user) => jwt.sign(
+    { userId: user._id.toString(), name: user.name, email: user.email },
+    process.env.JWT_SECRET || 'verySecretValue',
+    { expiresIn: '7d' }
+);
+
 const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
 const normalizePhone = (value) => String(value || '').replace(/\D/g, '').trim();
 
@@ -76,6 +82,7 @@ const register = async (req, res) => {
         return res.status(201).json({
             success: true,
             message: 'User Added Successfully!',
+            token: createSessionToken(user),
             referralCode: user.referralCode,
             user: publicUser(user)
         });
@@ -125,8 +132,7 @@ const login = async (req, res) => {
         const matched = await bcrypt.compare(password, user.password || '');
         if (!matched) return res.status(401).json({ success: false, message: 'Password does not match!' });
 
-        const secret = process.env.JWT_SECRET || 'verySecretValue';
-        const token = jwt.sign({ userId: user._id.toString(), name: user.name, email: user.email }, secret, { expiresIn: '7d' });
+        const token = createSessionToken(user);
         return res.json({ success: true, message: 'Login Successful!', token, user: publicUser(user) });
     } catch (error) {
         console.error('Login error:', error);
@@ -152,9 +158,20 @@ const quickLogin = async (req, res) => {
             return res.status(404).json({ success: false, message: 'No user found with this email or mobile number!' });
         }
 
+        // Legacy quick login remains available for non-sensitive app features.
+        // Issue an authenticated session ONLY after verifying the account password.
+        // A phone number or email address alone does not prove account ownership.
+        const password = String(req.body.password || '');
+        let token;
+        if (password) {
+            const verified = await bcrypt.compare(password, user.password || '');
+            if (!verified) return res.status(401).json({ success: false, message: 'Incorrect password' });
+            token = createSessionToken(user);
+        }
         return res.json({
             success: true,
             message: 'Quick Login Successful!',
+            ...(token ? { token } : {}),
             user: publicUser(user)
         });
     } catch (error) {
