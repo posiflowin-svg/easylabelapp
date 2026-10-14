@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Sign In · POS Enquiries</title><style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f3f6fa;font:15px system-ui,Arial;color:#17263b;padding:20px}
+.panel{width:min(430px,100%);padding:32px;border-radius:18px;background:#fff;border:1px solid #e2e8f0;box-shadow:0 18px 48px #1e293b14}
+h1{margin:0 0 8px;font-size:24px}p{color:#64748b;line-height:1.5}label{display:block;margin:24px 0 8px;font-weight:650}
+input{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:10px;font:inherit}button{width:100%;margin-top:16px;background:#ed3342;color:white;border:0;border-radius:10px;padding:14px;font:inherit;font-weight:700;cursor:pointer}button:disabled{opacity:.6}
+.error{color:#be123c;min-height:20px;font-size:13px;margin-top:12px}a{color:#475569;text-decoration:none}
+</style></head><body><main class="panel"><p style="font-weight:800;color:#ed3342;margin-top:0">EasyLabel Admin</p>
+<h1>POS Purchase Enquiries</h1><p>Enter your existing EasyLabel admin password to view customer enquiries.</p>
+<form id="login"><label for="password">Admin password</label><input id="password" type="password" autocomplete="current-password" required autofocus>
+<button id="submit" type="submit">Sign In & View Enquiries</button><div class="error" id="error" role="alert" aria-live="polite"></div></form>
+<p><a href="/shop-management">← Back to Shop Manager</a></p></main>
+<script>
+document.getElementById('login').addEventListener('submit',async function(event){
+ event.preventDefault();const button=document.getElementById('submit'),error=document.getElementById('error');
+ button.disabled=true;error.textContent='';
+ try {const response=await fetch('/api/verify-admin-password',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({password:document.getElementById('password').value})});
+ if(!response.ok) throw new Error(response.status===401?'Incorrect admin password.':'Could not start an admin session.');
+ window.location.replace('/api/pos-enquiries/admin');
+ }catch(e){error.textContent=e.message||'Connection error. Please retry.';button.disabled=false;}
+});
+</script></body></html>

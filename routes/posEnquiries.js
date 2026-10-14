@@ -49,7 +49,14 @@ router.post('/', async (req,res) => {
     console.error('POS enquiry submission:',e);res.status(500).json({success:false,message:'Could not save enquiry.'});
   }
 });
-function adminOnly(req,res,next){if(req.session && req.session.adminAuthenticated) return next();res.status(403).send('Admin authentication required');}
+function adminOnly(req,res,next) {
+  if (req.session && req.session.adminAuthenticated) return next();
+  // Render a password prompt instead of a bare 403 for browser navigation.
+  if (req.method === 'GET' && req.accepts('html')) {
+    return res.status(401).render('pos-enquiries-login', { nextPath: '/api/pos-enquiries/admin' });
+  }
+  return res.status(403).json({ success: false, message: 'Admin authentication required' });
+}
 router.get('/admin',adminOnly,async(req,res)=>{
  try { const status=req.query.status;const filter=['New','Contacted','Converted','Closed'].includes(status)?{status}:{};
  const items=await PosEnquiry.find(filter).sort({createdAt:-1}).limit(1000).lean();res.render('pos-enquiries',{items,status:status||''});

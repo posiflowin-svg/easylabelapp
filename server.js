@@ -48,13 +48,16 @@ db.once('open', () => {
 });
 
 const app = express();
+// Render terminates HTTPS at its reverse proxy. Trust its forwarded protocol
+// so secure session cookies can be issued and returned correctly.
+app.set('trust proxy', 1);
 
 // Add session middleware
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === 'production' }
+    saveUninitialized: false,
+    cookie: { httpOnly: true, sameSite: 'lax', secure: 'auto', maxAge: 8 * 60 * 60 * 1000 }
 }));
 
 app.use(morgan('dev'));
@@ -110,9 +113,12 @@ app.get('/usage-analytics', require('./controllers/UsageAnalyticsController').pa
 app.post('/api/verify-admin-password', (req, res) => {
     const { password } = req.body;
     
-    if (password === process.env.ADMIN_PASSWORD) {
+    if (process.env.ADMIN_PASSWORD && typeof password === 'string' && password === process.env.ADMIN_PASSWORD) {
         req.session.adminAuthenticated = true;
-        return res.json({ success: true });
+        return req.session.save((error) => {
+            if (error) return res.status(500).json({ success: false, message: 'Unable to start admin session.' });
+            return res.json({ success: true });
+        });
     }
     
     res.status(401).json({ success: false });
