@@ -7,16 +7,17 @@ h1{margin:0 0 8px;font-size:24px}p{color:#64748b;line-height:1.5}label{display:b
 input{width:100%;padding:13px;border:1px solid #cbd5e1;border-radius:10px;font:inherit}button{width:100%;margin-top:16px;background:#ed3342;color:white;border:0;border-radius:10px;padding:14px;font:inherit;font-weight:700;cursor:pointer}button:disabled{opacity:.6}
 .error{color:#be123c;min-height:20px;font-size:13px;margin-top:12px}a{color:#475569;text-decoration:none}
 </style></head><body><main class="panel"><p style="font-weight:800;color:#ed3342;margin-top:0">EasyLabel Admin</p>
-<h1>POS Purchase Enquiries</h1><p>Enter your existing EasyLabel admin password to view customer enquiries.</p>
-<form id="login"><label for="password">Admin password</label><input id="password" type="password" autocomplete="current-password" required autofocus>
+<h1>POS Purchase Enquiries</h1><p>Enter your separate POS Enquiry admin password. Other EasyLabel pages remain password-free.</p>
+<% if (!configured) { %><p class="error">Set POS_ENQUIRY_ADMIN_PASSWORD in Render Environment before signing in.</p><% } %>
+<form id="login"><label for="password">POS Enquiry password</label><input id="password" type="password" autocomplete="current-password" required autofocus>
 <button id="submit" type="submit">Sign In & View Enquiries</button><div class="error" id="error" role="alert" aria-live="polite"></div></form>
 <p><a href="/shop-management">← Back to Shop Manager</a></p></main>
 <script>
 document.getElementById('login').addEventListener('submit',async function(event){
  event.preventDefault();const button=document.getElementById('submit'),error=document.getElementById('error');
  button.disabled=true;error.textContent='';
- try {const response=await fetch('/api/verify-admin-password',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({password:document.getElementById('password').value})});
- if(!response.ok) throw new Error(response.status===401?'Incorrect admin password.':'Could not start an admin session.');
+ try {const response=await fetch('/api/pos-enquiries/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({password:document.getElementById('password').value})});
+ if(!response.ok) throw new Error((await response.json().catch(()=>({}))).message || 'Could not start an admin session.');
  window.location.replace('/api/pos-enquiries/admin');
  }catch(e){error.textContent=e.message||'Connection error. Please retry.';button.disabled=false;}
 });
