@@ -10,6 +10,8 @@ const PremiumSetting = require('../models/PremiumSetting');
 const AIUsage = require('../models/AIUsage');
 const PaymentTransaction = require('../models/PaymentTransaction');
 const Banner = require('../models/Banner');
+const ShopCategory = require('../models/ShopCategory');
+const Product = require('../models/Product');
 const DeviceToken = require('../models/DeviceToken');
 const firebaseService = require('../services/firebaseService');
 
@@ -215,7 +217,7 @@ exports.page = async (req, res) => {
     const monthStart = new Date();
     monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-    const [features, plans, subscriptions, users, totalUsers, campaigns, notifications, settings, payments, aiUsageMonth, aiUsageToday, homeBanners] = await Promise.all([
+    const [features, plans, subscriptions, users, totalUsers, campaigns, notifications, settings, payments, aiUsageMonth, aiUsageToday, homeBanners, categories, shopProducts] = await Promise.all([
       PremiumFeature.find().sort({ displayOrder: 1, createdAt: 1 }).lean(),
       PremiumPlan.find().sort({ displayOrder: 1, price: 1 }).lean(),
       UserSubscription.find().sort({ createdAt: -1 }).limit(1000).populate('userId', 'name email phone mobile').lean(),
@@ -227,7 +229,9 @@ exports.page = async (req, res) => {
       PaymentTransaction.find({ status: 'paid', paidAt: { $gte: monthStart } }).sort({ paidAt: -1 }).limit(500).lean(),
       AIUsage.find({ createdAt: { $gte: monthStart } }).sort({ createdAt: -1 }).limit(1000).lean(),
       AIUsage.find({ createdAt: { $gte: todayStart } }).lean(),
-      Banner.find().sort({ position: 1, createdAt: -1 }).lean()
+      Banner.find().sort({ position: 1, createdAt: -1 }).lean(),
+      ShopCategory.find({ active: true }).sort({ sortOrder: 1, name: 1 }).lean(),
+      Product.find({ active: true }).select('name sku category').sort({ name: 1 }).lean()
     ]);
 
     const now = new Date();
@@ -256,7 +260,7 @@ exports.page = async (req, res) => {
     const churnRate = subscriptions.length ? (cancelledCount / subscriptions.length) * 100 : 0;
 
     res.render('premium', {
-      features, plans, subscriptions, users, campaigns, notifications, settings, payments, aiUsageMonth, homeBanners,
+      features, plans, subscriptions, users, campaigns, notifications, settings, payments, aiUsageMonth, homeBanners, categories, shopProducts,
       aiStats: { today: aiUsageToday.length, month: aiUsageMonth.length, cost: aiMonthCost, avgGenerationMs },
       stats: {
         totalUsers,

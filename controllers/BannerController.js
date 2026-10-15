@@ -46,6 +46,8 @@ function publicBanner(banner, req) {
         position: Number(banner.position || 1),
         clickType: banner.clickType || 'shop',
         clickUrl: banner.clickUrl || '',
+        clickCategory: banner.clickCategory || '',
+        clickProductId: banner.clickProductId || '',
         startDate: banner.startDate,
         endDate: banner.endDate
     };
@@ -58,8 +60,10 @@ function buildUpdate(req) {
         link: String(req.body.link || '').trim(),
         position: Math.min(3, Math.max(1, Number(req.body.position || 1))),
         isActive: boolValue(req.body.isActive, true),
-        clickType: ['shop', 'quick_billing', 'url', 'none'].includes(req.body.clickType) ? req.body.clickType : 'shop',
+        clickType: ['shop', 'category', 'product', 'quick_billing', 'url', 'none'].includes(req.body.clickType) ? req.body.clickType : 'shop',
         clickUrl: String(req.body.clickUrl || '').trim(),
+        clickCategory: String(req.body.clickCategory || '').trim(),
+        clickProductId: String(req.body.clickProductId || '').trim(),
         startDate: req.body.startDate ? new Date(req.body.startDate) : null,
         endDate: req.body.endDate ? new Date(req.body.endDate) : null
     };
