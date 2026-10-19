@@ -1571,6 +1571,56 @@
         }
 
         let templatePreviewData = '';
+
+        function renderSavedEplPreview(template, paper) {
+          let wrapper, raw;
+          try {
+            wrapper = JSON.parse(template.jsonData);
+            if(wrapper.dataFormat !== 'EPL') return false;
+            const encoded=atob(wrapper.dataBase64);
+            raw=Array.from(encoded,ch=>String.fromCharCode(
+              wrapper.dataEncryption===1 ? 255-ch.charCodeAt(0) : ch.charCodeAt(0))).join('');
+          } catch(e) { return false; }
+          const w=Number((raw.match(/^q(\d+)/m)||[])[1])||Math.round(template.labelWidthMm*8);
+          const h=Number((raw.match(/^Q(\d+)/m)||[])[1])||Math.round(template.labelHeightMm*8);
+          if(w<1||h<1||w>5000||h>5000)return false;
+          const canvas=document.createElement('canvas');
+          canvas.width=Math.min(1600,w*2);canvas.height=Math.min(1600,h*2);
+          canvas.style.cssText='width:100%;height:100%;display:block';
+          const ctx=canvas.getContext('2d'),sx=canvas.width/w,sy=canvas.height/h;
+          ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.fillStyle='black';ctx.strokeStyle='black';
+          const lines=raw.split(/\r?\n/);
+          let count=0;
+          for(let i=0;i<lines.length;i++){
+            const line=lines[i].trim();
+            if(line.startsWith('LS')){
+              const v=line.slice(2).split(',').map(Number);
+              if(v.length>=4&&v.slice(0,4).every(Number.isFinite)){
+                ctx.lineWidth=Math.max(1,(v[4]||1)*sy);
+                ctx.beginPath();ctx.moveTo(v[0]*sx,v[1]*sy);
+                ctx.lineTo(v[2]*sx,v[3]*sy);ctx.stroke();count++;
+              }
+            } else if(/^A\d+,/.test(line)){
+              const v=line.slice(1).split(',');
+              let txt='';
+              for(let j=i+1;j<Math.min(i+4,lines.length);j++){
+                const match=lines[j].match(/^GV[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,([A-Za-z0-9+/=]+)$/);
+                if(match){try{txt=atob(match[1]);}catch(e){}break;}
+              }
+              if(txt&&Number.isFinite(Number(v[0]))&&Number.isFinite(Number(v[1]))){
+                ctx.font='bold '+Math.max(10,Math.min(80,(Number(v[3])||20)*sy*.75))+'px Arial';
+                ctx.textBaseline='top';ctx.fillText(txt,Number(v[0])*sx,Number(v[1])*sy);
+                count++;
+              }
+            }
+          }
+          if(!count)return false;
+          paper.replaceChildren(canvas);
+          const note=document.getElementById('easyTemplatePreviewNote');
+          if(note)note.textContent='Automatic preview from saved EPL. Text and lines are approximated; custom fonts, bitmaps, logos and barcodes may not appear or match printing.';
+          return true;
+        }
         function previewTemplate(templateId) {
           const template = allTemplates.find(t => String(t._id) === String(templateId));
           if (!template) return;
@@ -1589,8 +1639,18 @@
           const source = template.previewImageUrl || '';
           img.style.display = source ? 'block' : 'none';
           message.style.display = source ? 'none' : 'flex';
-          if (source) img.src = source;
-          else img.removeAttribute('src');
+          paper.replaceChildren(img, message);
+          if (source) {
+            img.src = source;
+            document.getElementById('easyTemplatePreviewNote').textContent =
+              'Saved preview image; print output depends on printer settings.';
+          } else if (!renderSavedEplPreview(template, paper)) {
+            img.removeAttribute('src');
+            message.textContent = 'Automatic preview is unavailable for this template. Edit it to upload an exact preview image.';
+            message.style.display = 'flex';
+            document.getElementById('easyTemplatePreviewNote').textContent =
+              'No supported EPL text or line elements were found.';
+          }
           modal.style.display = 'flex';
         }
         function closeTemplatePreview() {
@@ -2030,7 +2090,7 @@
         </div>
       </div>
     </div>
-    <p style="color:#667085;font-size:12px;margin-top:12px">Preview image is shown in the template's label aspect ratio. Exact printed output depends on printer settings.</p>
+    <p id="easyTemplatePreviewNote" style="color:#667085;font-size:12px;margin-top:12px">Preview image is shown in the template's label aspect ratio. Exact printed output depends on printer settings.</p>
   </div>
 </div>
 </body>
