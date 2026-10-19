@@ -215,13 +215,16 @@ async function openProductById(id){
     const result=await call('/api/products/'+encodeURIComponent(id));
     if(!result || !result.data) throw new Error('Product data not found');
     openProduct(result.data);
+    if (!Array.isArray(result.data.variants)) {
+      console.warn('Product API did not return a variants array for this product.');
+    }
   }catch(err){
     console.error('Unable to open product editor:',err);
     alert(err.message||'Unable to open product for editing');
   }
 }
 
-function openProduct(p){loadShopVariants(p?.variants);form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';renderUploadedImages(null);renderUploadedAPlusImages(null);if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.externalImages||p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.externalAPlusImages||p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured;renderUploadedImages(p);renderUploadedAPlusImages(p)}modal.classList.add('show');bindBulkImageDeleteControls();}
+function openProduct(p){form.reset();loadShopVariants(p?.variants);form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';renderUploadedImages(null);renderUploadedAPlusImages(null);if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.externalImages||p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.externalAPlusImages||p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured;renderUploadedImages(p);renderUploadedAPlusImages(p)}modal.classList.add('show');bindBulkImageDeleteControls();}
 function closeProduct(){modal.classList.remove('show')}
 
 
@@ -653,7 +656,7 @@ function collectShopVariants() {
   const seen=new Set();
   return rows.map((row,i)=>{
     const get=k=>row.querySelector('[data-variant="'+k+'"]').value.trim();
-    const sku=get('sku'), name=get('name'), price=Number(get('price')), mrp=Number(get('mrp')||0), stock=Number(get('stock')||-1);
+    const sku=get('sku'), name=get('name'), price=Number(get('price')), mrp=Number(get('mrp')||0), stock=Number(get('stock') === '' ? -1 : get('stock'));
     if(!name||!sku||get('price')===''||!Number.isFinite(price)||price<0||!Number.isFinite(mrp)||mrp<0||!Number.isInteger(stock)||stock< -1)throw new Error('Complete valid name, SKU, price, MRP and stock for variation '+(i+1));
     if(seen.has(sku.toLowerCase()))throw new Error('Duplicate variation SKU: '+sku);
     seen.add(sku.toLowerCase());
@@ -706,6 +709,13 @@ async function saveProduct(e){
       body: fd
     });
 
+    if (variants.length) {
+      const saved = result && result.data;
+      if (!saved || !Array.isArray(saved.variants) || saved.variants.length !== variants.length) {
+        alert('Product saved, but the server did not return all variations. Please check backend deployment before editing again.');
+        return;
+      }
+    }
     alert(id ? 'Product updated successfully' : 'Product added successfully');
     location.reload();
   } catch (err) {
