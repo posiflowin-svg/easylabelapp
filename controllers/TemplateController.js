@@ -131,6 +131,21 @@ const listTemplates = filter =>
         })
         .lean();
 
+const validatePreview = value => {
+    const v = String(value || '').trim();
+    if (!v) return '';
+    if (v.length > 750000) {
+        const e = new Error('Preview image must be smaller than 500 KB.');
+        e.statusCode = 400; throw e;
+    }
+    if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/i.test(v) &&
+        !/^\/template-assets-v2\/[a-zA-Z0-9_.-]+\.(png|webp|jpg|jpeg|svg)$/i.test(v)) {
+        const e = new Error('Preview must be a PNG/JPG/WebP image or a local template asset.');
+        e.statusCode = 400; throw e;
+    }
+    return v;
+};
+
 const payload = body => {
     const accessType = normalizeAccessType(body.accessType);
     const labelWidthMm = numberValue(body.labelWidthMm);
@@ -144,6 +159,7 @@ const payload = body => {
 
     return {
         name: String(body.name || '').trim(),
+        previewImageUrl: validatePreview(body.previewImageUrl),
         mainCategory,
         templateCategory,
         jsonData: normalizeExportedJson(body.jsonData),

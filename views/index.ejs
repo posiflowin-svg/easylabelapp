@@ -1083,6 +1083,16 @@
                   placeholder='{"dataFormat":"EPL","dataEncryption":1,"dataBase64":"..."}'></textarea>
               </div>
 
+              <div class="template-field full">
+                <label for="templatePreviewFile">Template preview image (optional)</label>
+                <input type="file" id="templatePreviewFile" accept="image/png,image/jpeg,image/webp">
+                <small style="display:block;color:#667085;margin-top:5px">
+                  Upload a screenshot of the actual label design (PNG/JPG/WebP, max 500 KB).
+                  EasyLabel EPL exports contain encrypted print data, so the admin browser
+                  cannot directly reconstruct their exact appearance.
+                </small>
+                <div id="templatePreviewUploadState" style="font-size:12px;color:#475467;margin-top:5px"></div>
+              </div>
               <div class="template-field">
                 <label>
                   <input type="checkbox" id="featuredOnHome">
@@ -1527,6 +1537,8 @@
                 <td>${template.isActive === false ? 'Inactive' : 'Active'}</td>
                 <td>${escapeHtml(template.displayOrder || 0)}</td>
                 <td>
+                  <button class="edit-btn" style="background:#2563eb"
+                    onclick="previewTemplate('${template._id}')">Preview</button>
                   <button class="edit-btn"
                     onclick="editTemplate('${template._id}')">Edit</button>
                   <button class="delete-btn"
@@ -1557,6 +1569,52 @@
               </table>
             </div>`;
         }
+
+        let templatePreviewData = '';
+        function previewTemplate(templateId) {
+          const template = allTemplates.find(t => String(t._id) === String(templateId));
+          if (!template) return;
+          const modal = document.getElementById('easyTemplatePreviewModal');
+          const w = Number(template.labelWidthMm) || 50;
+          const h = Number(template.labelHeightMm) || 25;
+          document.getElementById('easyTemplatePreviewName').textContent = template.name || 'Template';
+          document.getElementById('easyTemplatePreviewMeta').textContent =
+            `${w} × ${h} mm • ${template.mainCategory || ''} / ${template.templateCategory || ''} • ${(template.accessType || 'free').toUpperCase()}`;
+          const paper = document.getElementById('easyTemplatePreviewPaper');
+          const img = document.getElementById('easyTemplatePreviewImage');
+          const message = document.getElementById('easyTemplatePreviewMissing');
+          const scale = Math.min(440 / w, 280 / h);
+          paper.style.width = Math.round(w * scale) + 'px';
+          paper.style.height = Math.round(h * scale) + 'px';
+          const source = template.previewImageUrl || '';
+          img.style.display = source ? 'block' : 'none';
+          message.style.display = source ? 'none' : 'flex';
+          if (source) img.src = source;
+          else img.removeAttribute('src');
+          modal.style.display = 'flex';
+        }
+        function closeTemplatePreview() {
+          document.getElementById('easyTemplatePreviewModal').style.display = 'none';
+          document.getElementById('easyTemplatePreviewImage').removeAttribute('src');
+        }
+        document.addEventListener('keydown', e => {
+          if (e.key === 'Escape') closeTemplatePreview();
+        });
+        document.getElementById('templatePreviewFile').addEventListener('change', event => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
+          if (!['image/png','image/jpeg','image/webp'].includes(file.type) || file.size > 500 * 1024) {
+            event.target.value = '';
+            alert('Choose PNG, JPG or WebP smaller than 500 KB.');
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => {
+            templatePreviewData = String(reader.result || '');
+            document.getElementById('templatePreviewUploadState').textContent = 'Preview image ready to save.';
+          };
+          reader.readAsDataURL(file);
+        });
 
         function editTemplate(templateId) {
           // Do not pass the whole template JSON through an inline onclick.
@@ -1594,6 +1652,10 @@
             template.displayOrder || 0;
           document.getElementById('jsonData').value =
             template.jsonData || '';
+          templatePreviewData = template.previewImageUrl || '';
+          document.getElementById('templatePreviewFile').value = '';
+          document.getElementById('templatePreviewUploadState').textContent =
+            templatePreviewData ? 'Saved preview available. Choose a file to replace it.' : 'No preview uploaded.';
 
           setTemplateStatus('Editing existing template.', 'ok');
           document
@@ -1603,6 +1665,8 @@
 
         function resetTemplateForm() {
           document.getElementById('templateForm').reset();
+          templatePreviewData = '';
+          document.getElementById('templatePreviewUploadState').textContent = '';
           populateSubCategories('');
           document.getElementById('templateId').value = '';
           document.getElementById('templateActive').checked = true;
@@ -1691,7 +1755,8 @@
               displayOrder:Number(
                 document.getElementById('displayOrder').value || 0
               ),
-              jsonData:document.getElementById('jsonData').value.trim()
+              jsonData:document.getElementById('jsonData').value.trim(),
+              previewImageUrl:templatePreviewData
             };
 
             if (templateId) {
@@ -1948,5 +2013,25 @@
             }
         };
     </script>
-  </body>
+  <div id="easyTemplatePreviewModal" role="dialog" aria-modal="true" aria-label="Template preview"
+  onclick="if(event.target===this)closeTemplatePreview()"
+  style="display:none;position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.72);align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:16px;padding:24px;width:min(600px,100%);max-height:90vh;overflow:auto;box-shadow:0 20px 65px #0003">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:15px">
+      <h2 id="easyTemplatePreviewName" style="font-size:21px">Template Preview</h2>
+      <button type="button" onclick="closeTemplatePreview()" style="padding:8px 12px;border:1px solid #d0d5dd;border-radius:8px;background:white;cursor:pointer">✕ Close</button>
+    </div>
+    <p id="easyTemplatePreviewMeta" style="color:#667085;font-size:13px;margin:12px 0"></p>
+    <div style="min-height:320px;background:#f1f5f9;border-radius:12px;display:flex;justify-content:center;align-items:center;padding:18px;overflow:auto">
+      <div id="easyTemplatePreviewPaper" style="background:#fff;border:1px solid #cbd5e1;box-shadow:0 4px 18px #0002;position:relative;flex-shrink:0;overflow:hidden">
+        <img id="easyTemplatePreviewImage" alt="Saved template design preview" style="display:none;width:100%;height:100%;object-fit:fill">
+        <div id="easyTemplatePreviewMissing" style="display:flex;height:100%;padding:12px;align-items:center;justify-content:center;text-align:center;color:#667085;font-size:12px">
+          No image preview saved. Edit this template and upload a screenshot of its actual label design.
+        </div>
+      </div>
+    </div>
+    <p style="color:#667085;font-size:12px;margin-top:12px">Preview image is shown in the template's label aspect ratio. Exact printed output depends on printer settings.</p>
+  </div>
+</div>
+</body>
 </html>

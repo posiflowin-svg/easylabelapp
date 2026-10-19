@@ -26,6 +26,8 @@ const templateSchema = new Schema({
         index: true
     },
 
+    previewImageUrl: { type: String, default: "" },
+
     // Exact JSON exported from EasyLabel Android editor.
     jsonData: {
         type: String,
