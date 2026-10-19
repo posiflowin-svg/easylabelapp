@@ -6,6 +6,12 @@ const Template=require('../models/Template');
 const PendingTemplate=require('../models/PendingTemplate');
 const bulkUploadAccess=require('../middleware/bulkUploadAccess');
 const masterOnly=require('../middleware/masterTemplateAdmin');
+const MasterDevice=require('../models/MasterDevice');
+const MasterActivation=require('../models/MasterActivation');
+const hash=v=>crypto.createHash('sha256').update(v).digest('hex');
+const adminGate=bulkUploadAccess;
+const activationAttempts=new Map();
+
 const TAXONOMY=require('../config/iconTaxonomy');
 const router=express.Router();
 const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:12*1024*1024}});
@@ -45,6 +51,41 @@ router.post('/upload',bulkUploadAccess,upload.single('file'),async(req,res)=>{
   res.status(201).json({success:true,batchId,uploaded:rows.length,pending:rows.length});
  }catch(e){res.status(400).json({success:false,message:e.message});}
 });
+// Administrative device provisioning uses the existing private backend admin token.
+router.post('/devices/codes',adminGate,express.json(),async(req,res)=>{
+ try{
+  const name=String(req.body?.name||'Master phone').trim().slice(0,80);
+  const code=crypto.randomBytes(24).toString('hex');
+  await MasterActivation.create({name,codeHash:hash(code),expiresAt:new Date(Date.now()+10*60*1000)});
+  res.set('Cache-Control','no-store').json({success:true,code,expiresInMinutes:10,name});
+ }catch(e){res.status(500).json({success:false,message:'Unable to create activation code.'});}
+});
+router.get('/devices',adminGate,async(req,res)=>{
+ try{const devices=await MasterDevice.find().select('name revokedAt lastUsedAt createdAt').sort({createdAt:-1}).lean();res.json({success:true,devices});}
+ catch(e){res.status(500).json({success:false,message:'Unable to list devices.'});}
+});
+router.post('/devices/:id/revoke',adminGate,async(req,res)=>{
+ try{const device=await MasterDevice.findByIdAndUpdate(req.params.id,{$set:{revokedAt:new Date()}},{new:true});
+ if(!device)return res.status(404).json({success:false,message:'Device not found.'});
+ res.json({success:true});}catch(e){res.status(400).json({success:false,message:'Invalid device ID.'});}
+});
+// Activation does not require a customer login. Codes are single-use and expire after 10 minutes.
+router.post('/activate',express.json(),async(req,res)=>{
+ try{
+  const ip=req.ip||'unknown';const now=Date.now();const old=activationAttempts.get(ip)||{n:0,until:now+600000};
+  const attempt=old.until<now?{n:0,until:now+600000}:old;
+  if(attempt.n>=10)return res.status(429).json({success:false,message:'Too many attempts. Try again later.'});
+  attempt.n++;activationAttempts.set(ip,attempt);
+  if(activationAttempts.size>5000){for(const [key,v] of activationAttempts){if(v.until<now)activationAttempts.delete(key);}}
+  const code=String(req.body?.code||'').trim().toLowerCase();
+  if(!/^[a-f0-9]{48}$/.test(code))return res.status(400).json({success:false,message:'Invalid activation code.'});
+  const claim=await MasterActivation.findOneAndUpdate({codeHash:hash(code),usedAt:null,expiresAt:{$gt:new Date()}},{$set:{usedAt:new Date()}},{new:true});
+  if(!claim)return res.status(403).json({success:false,message:'Code expired or already used.'});
+  const credential=crypto.randomBytes(32).toString('hex');
+  const device=await MasterDevice.create({name:claim.name,credentialHash:hash(credential)});
+  res.set('Cache-Control','no-store').json({success:true,credential,deviceId:device._id,name:device.name});
+ }catch(e){res.status(500).json({success:false,message:'Activation failed.'});}
+});
 router.get('/pending',masterOnly,async(req,res)=>{
  try{
   const page=Math.max(1,Math.min(10000,parseInt(req.query.page)||1));
@@ -74,7 +115,7 @@ router.patch('/:id/publish',masterOnly,async(req,res)=>{
    accessType,requiredPlan:accessType,featuredOnHome:req.body.featuredOnHome===true,
    isActive:true,displayOrder:0});
   pending.status='published';pending.publishedTemplateId=template._id;
-  pending.configuredBy=req.masterTemplateUser._id;pending.publishedAt=new Date();await pending.save();
+  pending.configuredByDevice=req.masterTemplateDevice._id;pending.publishedAt=new Date();await pending.save();
   res.json({success:true,templateId:template._id,pendingId:pending._id});
  }catch(e){res.status(400).json({success:false,message:e.message});}
 });
