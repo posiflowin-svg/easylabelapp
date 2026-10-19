@@ -28,6 +28,32 @@ function normalizeStringArray(value) {
     .filter(Boolean);
 }
 
+function normalizeVariants(value) {
+  if (value === undefined || value === null || value === '') return [];
+  let rows = value;
+  if (typeof rows === 'string') {
+    try { rows = JSON.parse(rows); } catch (_) { throw new Error('Invalid variations JSON'); }
+  }
+  if (!Array.isArray(rows) || rows.length > 100) throw new Error('Variations must be an array of up to 100 entries');
+  const skus = new Set();
+  return rows.map((row, index) => {
+    if (!row || typeof row !== 'object') throw new Error(`Variation ${index + 1} is invalid`);
+    const name = String(row.name || '').trim();
+    const sku = String(row.sku || '').trim();
+    const price = Number(row.price);
+    const mrp = Number(row.mrp || 0);
+    const stock = row.stock === '' || row.stock == null ? -1 : Number(row.stock);
+    if (!name || !sku) throw new Error(`Variation ${index + 1} needs a name and SKU`);
+    if (!Number.isFinite(price) || price < 0 || !Number.isFinite(mrp) || mrp < 0 ||
+        !Number.isInteger(stock) || stock < -1) throw new Error(`Variation ${index + 1} has invalid price, MRP or stock`);
+    if (skus.has(sku.toLowerCase())) throw new Error(`Duplicate variation SKU: ${sku}`);
+    skus.add(sku.toLowerCase());
+    const attributes = row.attributes && typeof row.attributes === 'object' && !Array.isArray(row.attributes)
+      ? Object.fromEntries(Object.entries(row.attributes).slice(0, 10).map(([k,v]) => [String(k).slice(0,50), String(v).slice(0,100)])) : {};
+    return { name, sku, price, mrp, stock, imageUrl: String(row.imageUrl || '').trim(), attributes, active: row.active !== false && row.active !== 'false' };
+  });
+}
+
 function normalizeProductPayload(body = {}) {
   const images = Array.isArray(body.images)
     ? body.images.map(v => String(v || '').trim()).filter(Boolean)
@@ -43,6 +69,7 @@ function normalizeProductPayload(body = {}) {
     price: Number(body.price || 0),
     mrp: Number(body.mrp || 0),
     images,
+    ...(body.variants !== undefined ? { variants: normalizeVariants(body.variants) } : {}),
     category: {
       name: String(category.name || '').trim(),
       imageUrl: String(category.imageUrl || '').trim()
@@ -420,7 +447,9 @@ exports.getProduct = async (req, res, next) => {
 exports.createProduct = async (req, res, next) => {
   let product = null;
   try {
-    const payload = normalizeProductPayload(req.body);
+    let payload;
+    try { payload = normalizeProductPayload(req.body); }
+    catch (e) { return res.status(400).json({ success: false, message: e.message }); }
     const uploadedImages = [
       ...(req.files?.productImageFiles || []),
       ...(req.files?.productImages || [])
@@ -459,7 +488,10 @@ exports.createProduct = async (req, res, next) => {
 
 exports.updateProduct = async (req, res, next) => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, normalizeProductPayload(req.body), {
+    let payload;
+    try { payload = normalizeProductPayload(req.body); }
+    catch (e) { return res.status(400).json({ success: false, message: e.message }); }
+    const product = await Product.findByIdAndUpdate(req.params.id, payload, {
       new: true, runValidators: true
     });
     if (!product) {

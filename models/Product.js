@@ -1,11 +1,23 @@
 const mongoose = require('mongoose');
 
+const productVariantSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true, maxlength: 100 },
+  sku: { type: String, required: true, trim: true, maxlength: 100 },
+  price: { type: Number, required: true, min: 0 },
+  mrp: { type: Number, default: 0, min: 0 },
+  stock: { type: Number, default: -1, min: -1 },
+  imageUrl: { type: String, default: '', trim: true },
+  attributes: { type: Map, of: String, default: {} },
+  active: { type: Boolean, default: true }
+}, { _id: false });
+
 const productSchema = new mongoose.Schema({
   name: { type: String, required: [true, 'Product name is required'], trim: true, maxlength: 160 },
   sku: { type: String, default: '', trim: true, index: true },
   price: { type: Number, required: [true, 'Selling price is required'], min: 0 },
   mrp: { type: Number, default: 0, min: 0 },
   images: [{ type: String, trim: true }],
+  variants: { type: [productVariantSchema], default: [] },
   category: {
     name: { type: String, required: [true, 'Category name is required'], trim: true },
     imageUrl: { type: String, default: '', trim: true }

@@ -139,6 +139,11 @@ th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#64748b}.t
 <div><label>Selling Price ₹ *</label><input name="price" type="number" min="0" required></div><div><label>MRP ₹</label><input name="mrp" type="number" min="0"></div><div><label>Stock</label><input name="stock" type="number" value="-1"></div>
 <div><label>Badge</label><input name="badge" placeholder="BESTSELLER / NEW"></div><div><label>Product Sort Order</label><input name="sortOrder" type="number" value="0"></div>
 </div>
+<div class="card" style="margin-top:14px;background:#f8fafc;box-shadow:none">
+  <div class="head"><div><h3 style="margin:0">Product Variations</h3><div class="muted">Optional: each option has its own SKU, price, stock and image.</div></div><button type="button" class="secondary" onclick="addShopVariant()">+ Add Variation</button></div>
+  <div id="shopVariantRows" style="display:grid;gap:10px;margin-top:12px"></div>
+  <div class="muted" style="margin-top:8px;font-size:12px">Example: Printer Only, Printer + 1 Roll, Printer + 5 Rolls. Leave empty for a single-SKU product.</div>
+</div>
 <div class="grid2" style="margin-top:12px">
 <div><label>Upload Product Images</label><input name="productImageFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple><div class="muted" style="font-size:11px;margin-top:5px">Up to 8 product images. Max 15 MB each.</div></div>
 <div><label>Or Product Image URLs (one per line)</label><textarea name="images" rows="4" placeholder="https://.../main.jpg\nhttps://.../second.jpg"></textarea></div>
@@ -216,7 +221,7 @@ async function openProductById(id){
   }
 }
 
-function openProduct(p){form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';renderUploadedImages(null);renderUploadedAPlusImages(null);if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.externalImages||p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.externalAPlusImages||p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured;renderUploadedImages(p);renderUploadedAPlusImages(p)}modal.classList.add('show');bindBulkImageDeleteControls();}
+function openProduct(p){loadShopVariants(p?.variants);form.reset();form.active.checked=true;form.stock.value=-1;form.sortOrder.value=0;form.id.value='';document.getElementById('modalTitle').textContent='Add Product';renderUploadedImages(null);renderUploadedAPlusImages(null);if(p){document.getElementById('modalTitle').textContent='Edit Product';form.id.value=p._id||'';form.name.value=p.name||'';form.sku.value=p.sku||'';form.categoryName.value=p.category?.name||'';form.price.value=p.price||0;form.mrp.value=p.mrp||0;form.stock.value=p.stock??-1;form.badge.value=p.badge||'';form.sortOrder.value=p.sortOrder||0;form.images.value=(p.externalImages||p.images||[]).join('\n');form.bulletPoints.value=(p.bulletPoints||[]).join('\n');form.description.value=p.description||'';form.aPlusImages.value=(p.externalAPlusImages||p.aPlusImages||[]).join('\n');form.aPlusTexts.value=(p.aPlusTexts||[]).join('\n');form.productVideoUrl.value=p.productVideoUrl||'';form.active.checked=p.active!==false;form.featured.checked=!!p.featured;renderUploadedImages(p);renderUploadedAPlusImages(p)}modal.classList.add('show');bindBulkImageDeleteControls();}
 function closeProduct(){modal.classList.remove('show')}
 
 
@@ -621,11 +626,48 @@ if(document.readyState==='loading'){
   bindBulkImageDeleteControls();
 }
 
+function addShopVariant(v = {}) {
+  const holder=document.getElementById('shopVariantRows');
+  if(holder.children.length >= 100){alert('Maximum 100 variations per product');return;}
+  const row=document.createElement('div');
+  row.style.cssText='border:1px solid #dbe3ef;border-radius:12px;padding:12px;background:#fff';
+  row.innerHTML=`<div class="grid">
+    <div><label>Variation Name *</label><input data-variant="name" placeholder="Printer + 1 Roll" required></div>
+    <div><label>Variation SKU *</label><input data-variant="sku" placeholder="PSF20-1ROLL" required></div>
+    <div><label>Selling Price ₹ *</label><input data-variant="price" type="number" min="0" step="0.01" required></div>
+    <div><label>MRP ₹</label><input data-variant="mrp" type="number" min="0" step="0.01"></div>
+    <div><label>Stock (-1 = unlimited)</label><input data-variant="stock" type="number" min="-1" step="1" value="-1"></div>
+    <div><label>Variation Image URL</label><input data-variant="imageUrl" placeholder="https://..."></div>
+  </div><div class="toolbar" style="margin-top:8px"><label><input type="checkbox" data-variant="active" checked style="width:auto"> Available</label><button type="button" class="danger" onclick="this.closest('[data-variant-row]').remove()">Remove</button></div>`;
+  row.dataset.variantRow='1';
+  holder.appendChild(row);
+  ['name','sku','price','mrp','stock','imageUrl'].forEach(k=>row.querySelector('[data-variant="'+k+'"]').value=v[k]??(k==='stock'?-1:''));
+  row.querySelector('[data-variant="active"]').checked=v.active!==false;
+}
+function loadShopVariants(rows) {
+  document.getElementById('shopVariantRows').replaceChildren();
+  (Array.isArray(rows)?rows:[]).forEach(addShopVariant);
+}
+function collectShopVariants() {
+  const rows=[...document.querySelectorAll('#shopVariantRows [data-variant-row]')];
+  const seen=new Set();
+  return rows.map((row,i)=>{
+    const get=k=>row.querySelector('[data-variant="'+k+'"]').value.trim();
+    const sku=get('sku'), name=get('name'), price=Number(get('price')), mrp=Number(get('mrp')||0), stock=Number(get('stock')||-1);
+    if(!name||!sku||get('price')===''||!Number.isFinite(price)||price<0||!Number.isFinite(mrp)||mrp<0||!Number.isInteger(stock)||stock< -1)throw new Error('Complete valid name, SKU, price, MRP and stock for variation '+(i+1));
+    if(seen.has(sku.toLowerCase()))throw new Error('Duplicate variation SKU: '+sku);
+    seen.add(sku.toLowerCase());
+    return {name,sku,price,mrp,stock,imageUrl:get('imageUrl'),active:row.querySelector('[data-variant="active"]').checked};
+  });
+}
 async function saveProduct(e){
   e.preventDefault();
 
   const id = form.id.value;
+  let variants;
+  try { variants = collectShopVariants(); } catch(err) { alert(err.message); return; }
   const fd = new FormData(form);
+  fd.set('variants', JSON.stringify(variants));
 
   fd.set('active', form.active.checked ? 'true' : 'false');
   fd.set('featured', form.featured.checked ? 'true' : 'false');
