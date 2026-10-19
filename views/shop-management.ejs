@@ -641,10 +641,25 @@ function addShopVariant(v = {}) {
     <div><label>MRP ₹</label><input data-variant="mrp" type="number" min="0" step="0.01"></div>
     <div><label>Stock (-1 = unlimited)</label><input data-variant="stock" type="number" min="-1" step="1" value="-1"></div>
     <div><label>Variation Image URL</label><input data-variant="imageUrl" placeholder="https://..."></div>
+  </div><div style="margin-top:10px"><label>Bulk prices per roll (optional)</label>
+    <div class="muted" style="font-size:12px">Enter a price for each minimum quantity. Leave blank to disable that tier.</div>
+    <div data-bulk-tiers class="grid" style="margin-top:6px"></div>
   </div><div class="toolbar" style="margin-top:8px"><label><input type="checkbox" data-variant="active" checked style="width:auto"> Available</label><button type="button" class="danger" onclick="this.closest('[data-variant-row]').remove()">Remove</button></div>`;
   row.dataset.variantRow='1';
   holder.appendChild(row);
   ['name','sku','price','mrp','stock','imageUrl'].forEach(k=>row.querySelector('[data-variant="'+k+'"]').value=v[k]??(k==='stock'?-1:''));
+  const tierHost=row.querySelector('[data-bulk-tiers]');
+  [10,25,50,100,200,500,1000].forEach(q=>{
+    const wrap=document.createElement('label');
+    wrap.style.fontSize='12px';
+    wrap.textContent=q.toLocaleString('en-IN')+'+ rolls (₹/roll)';
+    const input=document.createElement('input');
+    input.type='number'; input.min='0'; input.step='0.01'; input.placeholder='Optional';
+    input.dataset.tierQty=String(q);
+    const saved=(v.bulkTiers||[]).find(t=>Number(t.minQty)===q);
+    if(saved)input.value=saved.pricePerRoll;
+    wrap.appendChild(input);tierHost.appendChild(wrap);
+  });
   row.querySelector('[data-variant="active"]').checked=v.active!==false;
 }
 function loadShopVariants(rows) {
@@ -660,7 +675,12 @@ function collectShopVariants() {
     if(!name||!sku||get('price')===''||!Number.isFinite(price)||price<0||!Number.isFinite(mrp)||mrp<0||!Number.isInteger(stock)||stock< -1)throw new Error('Complete valid name, SKU, price, MRP and stock for variation '+(i+1));
     if(seen.has(sku.toLowerCase()))throw new Error('Duplicate variation SKU: '+sku);
     seen.add(sku.toLowerCase());
-    return {name,sku,price,mrp,stock,imageUrl:get('imageUrl'),active:row.querySelector('[data-variant="active"]').checked};
+    const bulkTiers=[...row.querySelectorAll('[data-tier-qty]')].filter(el=>el.value.trim()!=='').map(el=>({
+      minQty:Number(el.dataset.tierQty),pricePerRoll:Number(el.value)
+    }));
+    if(bulkTiers.some(t=>!Number.isFinite(t.pricePerRoll)||t.pricePerRoll<0))
+      throw new Error('Invalid bulk price for variation '+(i+1));
+    return {name,sku,price,mrp,stock,imageUrl:get('imageUrl'),bulkTiers,active:row.querySelector('[data-variant="active"]').checked};
   });
 }
 async function saveProduct(e){

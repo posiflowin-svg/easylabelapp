@@ -50,7 +50,18 @@ function normalizeVariants(value) {
     skus.add(sku.toLowerCase());
     const attributes = row.attributes && typeof row.attributes === 'object' && !Array.isArray(row.attributes)
       ? Object.fromEntries(Object.entries(row.attributes).slice(0, 10).map(([k,v]) => [String(k).slice(0,50), String(v).slice(0,100)])) : {};
-    return { name, sku, price, mrp, stock, imageUrl: String(row.imageUrl || '').trim(), attributes, active: row.active !== false && row.active !== 'false' };
+    const rawTiers = row.bulkTiers || [];
+    if (!Array.isArray(rawTiers) || rawTiers.length > 15) throw new Error(`Variation ${index + 1}: invalid bulk tiers`);
+    const bulkTiers = rawTiers.map(t => ({
+      minQty: Number(t.minQty),
+      pricePerRoll: Number(t.pricePerRoll)
+    }));
+    if (bulkTiers.some(t => !Number.isInteger(t.minQty) || t.minQty < 1 ||
+          !Number.isFinite(t.pricePerRoll) || t.pricePerRoll < 0) ||
+        new Set(bulkTiers.map(t => t.minQty)).size !== bulkTiers.length)
+      throw new Error(`Variation ${index + 1}: invalid or duplicate bulk quantity`);
+    bulkTiers.sort((a,b) => a.minQty - b.minQty);
+    return { name, sku, price, mrp, stock, imageUrl: String(row.imageUrl || '').trim(), attributes, bulkTiers, active: row.active !== false && row.active !== 'false' };
   });
 }
 

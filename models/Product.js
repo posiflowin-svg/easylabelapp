@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 
+const bulkTierSchema = new mongoose.Schema({
+  minQty: { type: Number, required: true, min: 1 },
+  pricePerRoll: { type: Number, required: true, min: 0 }
+}, { _id: false });
+
 const productVariantSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 100 },
   sku: { type: String, required: true, trim: true, maxlength: 100 },
@@ -8,6 +13,7 @@ const productVariantSchema = new mongoose.Schema({
   stock: { type: Number, default: -1, min: -1 },
   imageUrl: { type: String, default: '', trim: true },
   attributes: { type: Map, of: String, default: {} },
+  bulkTiers: { type: [bulkTierSchema], default: [] },
   active: { type: Boolean, default: true }
 }, { _id: false });
 
