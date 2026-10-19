@@ -4,7 +4,7 @@ const AdmZip=require('adm-zip');
 const crypto=require('crypto');
 const Template=require('../models/Template');
 const PendingTemplate=require('../models/PendingTemplate');
-const adminOnly=require('../middleware/adminOnly');
+const bulkUploadAccess=require('../middleware/bulkUploadAccess');
 const masterOnly=require('../middleware/masterTemplateAdmin');
 const TAXONOMY=require('../config/iconTaxonomy');
 const router=express.Router();
@@ -21,8 +21,8 @@ function parseEntry(filename,data){
  const wrapped=(obj.jsonData!==undefined?obj.jsonData:obj);
  return {name:String(obj.name||filename.replace(/\.json$/i,'')).trim().slice(0,140),jsonData:validJson(wrapped)};
 }
-router.get('/admin',adminOnly,(req,res)=>res.render('template-bulk'));
-router.post('/upload',adminOnly,upload.single('file'),async(req,res)=>{
+router.get('/admin',bulkUploadAccess,(req,res)=>res.render('template-bulk'));
+router.post('/upload',bulkUploadAccess,upload.single('file'),async(req,res)=>{
  try{
   if(!req.file)return res.status(400).json({success:false,message:'Upload a ZIP of EasyLabel JSON files.'});
   const zip=new AdmZip(req.file.buffer);
