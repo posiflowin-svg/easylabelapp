@@ -125,6 +125,7 @@ app.post('/api/verify-admin-password', (req, res) => {
 });
 
 // Mount other routes
+app.use('/api/template-bulk', require('./routes/templateBulk'));
 app.use('/api/template', TemplateRoute);
 app.use('/api/appversion', AppVersionRoute);
 app.use('/api/showad', ShowADRoute);
