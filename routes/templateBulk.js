@@ -17,17 +17,19 @@ function validJson(value){
  return JSON.stringify(v);
 }
 function parseEntry(filename,data){
- const obj=JSON.parse(data.toString('utf8'));
+ let obj;
+ try { obj=JSON.parse(data.toString('utf8').replace(/^\uFEFF/, '').trim()); }
+ catch(e) { throw Error('File must contain EasyLabel exported EPL JSON data (TXT exports are supported).'); }
  const wrapped=(obj.jsonData!==undefined?obj.jsonData:obj);
- return {name:String(obj.name||filename.replace(/\.json$/i,'')).trim().slice(0,140),jsonData:validJson(wrapped)};
+ return {name:String(obj.name||filename.replace(/\.(?:json|txt)$/i,'')).trim().slice(0,140),jsonData:validJson(wrapped)};
 }
 router.get('/admin',bulkUploadAccess,(req,res)=>res.render('template-bulk'));
 router.post('/upload',bulkUploadAccess,upload.single('file'),async(req,res)=>{
  try{
-  if(!req.file)return res.status(400).json({success:false,message:'Upload a ZIP of EasyLabel JSON files.'});
+  if(!req.file)return res.status(400).json({success:false,message:'Upload a ZIP containing EasyLabel .txt or .json exported templates.'});
   const zip=new AdmZip(req.file.buffer);
-  const entries=zip.getEntries().filter(e=>!e.isDirectory&&e.entryName.toLowerCase().endsWith('.json')&&!e.entryName.startsWith('__MACOSX/'));
-  if(!entries.length||entries.length>MAX_ITEMS)return res.status(400).json({success:false,message:'ZIP must contain 1 to 200 JSON templates.'});
+  const entries=zip.getEntries().filter(e=>!e.isDirectory&&/\.(?:json|txt)$/i.test(e.entryName)&&!e.entryName.startsWith('__MACOSX/'));
+  if(!entries.length||entries.length>MAX_ITEMS)return res.status(400).json({success:false,message:'ZIP must contain 1 to 200 EasyLabel .txt or .json templates.'});
   let total=0;const rows=[],errors=[];
   for(const entry of entries){
    try{
