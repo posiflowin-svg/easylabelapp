@@ -97,6 +97,26 @@ router.get('/pending',masterOnly,async(req,res)=>{
  }catch(e){res.status(500).json({success:false,message:'Unable to load templates.'});}
 });
 router.get('/me',masterOnly,(req,res)=>res.json({success:true,master:true}));
+// Destructive operations are restricted to pending records and authorized Master Admin devices.
+router.delete('/pending/:id',masterOnly,async(req,res)=>{
+ try{
+  if(!/^[a-f0-9]{24}$/i.test(req.params.id))return res.status(400).json({success:false,message:'Invalid template ID.'});
+  const deleted=await PendingTemplate.findOneAndDelete({_id:req.params.id,status:'pending'});
+  if(!deleted)return res.status(404).json({success:false,message:'Pending template not found or already published.'});
+  res.json({success:true,deleted:1});
+ }catch(e){res.status(500).json({success:false,message:'Unable to delete template.'});}
+});
+router.post('/pending/bulk-delete',masterOnly,express.json({limit:'32kb'}),async(req,res)=>{
+ try{
+  const ids=req.body&&req.body.ids;
+  if(!Array.isArray(ids)||ids.length===0||ids.length>50||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{24}$/i.test(id)))
+   return res.status(400).json({success:false,message:'Provide 1 to 50 valid template IDs.'});
+  const unique=[...new Set(ids)];
+  const result=await PendingTemplate.deleteMany({_id:{$in:unique},status:'pending'});
+  res.json({success:true,deleted:result.deletedCount,requested:unique.length});
+ }catch(e){res.status(500).json({success:false,message:'Unable to delete selected templates.'});}
+});
+
 router.patch('/:id/publish',masterOnly,async(req,res)=>{
  try{
   const pending=await PendingTemplate.findById(req.params.id);
