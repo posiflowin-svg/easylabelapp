@@ -691,6 +691,10 @@ exports.deleteCampaign = async (req, res) => {
 
 exports.createNotification = async (req, res) => {
   try {
+    const validActions = ['none', 'shop', 'category', 'product', 'quick_billing', 'url', 'open_url', 'open_subscription', 'open_feature'];
+    if (!validActions.includes(req.body.actionType || 'none')) return res.status(400).json({success:false,message:'Invalid notification action.'});
+    if (['category','product','url','open_url','open_feature'].includes(req.body.actionType) && !String(req.body.actionValue || '').trim()) return res.status(400).json({success:false,message:'Please select an action destination.'});
+    if (['url','open_url'].includes(req.body.actionType) && !/^https?:\/\//i.test(String(req.body.actionValue || ''))) return res.status(400).json({success:false,message:'URL must begin with https:// or http://'});
     const status = req.body.scheduleAt ? 'scheduled' : 'draft';
     const item = await PushNotification.create({
       title: req.body.title,
