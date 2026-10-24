@@ -13,6 +13,8 @@ const Banner = require('../models/Banner');
 const ShopCategory = require('../models/ShopCategory');
 const Product = require('../models/Product');
 const DeviceToken = require('../models/DeviceToken');
+const TargetedCampaignDraft = require('../models/TargetedCampaignDraft');
+const MarketingConsent = require('../models/MarketingConsent');
 const firebaseService = require('../services/firebaseService');
 
 const DEFAULT_FEATURES = [
@@ -209,10 +211,11 @@ function sanitizeCampaignPayload(body) {
     buttonAction,
     actionValue,
     targetAudience: body.targetAudience || 'free',
+    savedAudienceId: body.targetAudience === 'saved' ? String(body.savedAudienceId || '') : '',
     frequency: body.frequency || 'once',
     startDate,
     endDate,
-    active: body.active === true || body.active === 'true',
+    active: body.targetAudience === 'saved' ? false : (body.active === true || body.active === 'true'),
     priority: Number(body.priority || 0),
     maxDisplays: Math.max(0, Number(body.maxDisplays || 0))
   };
@@ -224,7 +227,7 @@ exports.page = async (req, res) => {
     const monthStart = new Date();
     monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
     const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-    const [features, plans, subscriptions, users, totalUsers, campaigns, notifications, settings, payments, aiUsageMonth, aiUsageToday, homeBanners, categories, shopProducts] = await Promise.all([
+    const [features, plans, subscriptions, users, totalUsers, campaigns, notifications, settings, payments, aiUsageMonth, aiUsageToday, homeBanners, categories, shopProducts, savedAudiences] = await Promise.all([
       PremiumFeature.find().sort({ displayOrder: 1, createdAt: 1 }).lean(),
       PremiumPlan.find().sort({ displayOrder: 1, price: 1 }).lean(),
       UserSubscription.find().sort({ createdAt: -1 }).limit(1000).populate('userId', 'name email phone mobile').lean(),
@@ -238,7 +241,8 @@ exports.page = async (req, res) => {
       AIUsage.find({ createdAt: { $gte: todayStart } }).lean(),
       Banner.find().sort({ position: 1, createdAt: -1 }).lean(),
       ShopCategory.find({ active: true }).sort({ sortOrder: 1, name: 1 }).lean(),
-      Product.find({ active: true }).select('name sku category').sort({ name: 1 }).lean()
+      Product.find({ active: true }).select('name sku category').sort({ name: 1 }).lean(),
+      TargetedCampaignDraft.find().select('title channel status createdAt').sort({createdAt:-1}).limit(100).lean(),
     ]);
 
     const now = new Date();
@@ -267,7 +271,7 @@ exports.page = async (req, res) => {
     const churnRate = subscriptions.length ? (cancelledCount / subscriptions.length) * 100 : 0;
 
     res.render('premium', {
-      features, plans, subscriptions, users, campaigns, notifications, settings, payments, aiUsageMonth, homeBanners, categories, shopProducts,
+      features, plans, subscriptions, users, campaigns, notifications, settings, payments, aiUsageMonth, homeBanners, categories, shopProducts, savedAudiences,
       aiStats: { today: aiUsageToday.length, month: aiUsageMonth.length, cost: aiMonthCost, avgGenerationMs },
       stats: {
         totalUsers,
@@ -650,6 +654,7 @@ function campaignPublicBase(req) {
 exports.createCampaign = async (req, res) => {
   try {
     const payload = sanitizeCampaignPayload(req.body);
+    if (payload.targetAudience === 'saved' && !await TargetedCampaignDraft.exists({_id:payload.savedAudienceId})) return res.status(400).json({success:false,message:'Select a valid saved audience'});
     if (req.file) {
       payload.imageUrl = '';
       payload.imageData = req.file.buffer;
@@ -681,6 +686,8 @@ exports.getCampaignImage = async (req, res) => {
 
 exports.toggleCampaign = async (req, res) => {
   try {
+    const existingCampaign = await PromoCampaign.findById(req.params.id);
+    if (existingCampaign?.targetAudience === 'saved' && (req.body.active === true || req.body.active === 'true')) return res.status(400).json({success:false,message:'Saved campaigns require authenticated Android integration and internal test before activation'});
     const campaign = await PromoCampaign.findByIdAndUpdate(req.params.id, { active: req.body.active === true || req.body.active === 'true' }, { new: true });
     if (!campaign) return res.status(404).json({ success: false, message: 'Campaign not found' });
     res.json({ success: true, data: campaign });
@@ -702,6 +709,7 @@ exports.createNotification = async (req, res) => {
     if (!validActions.includes(req.body.actionType || 'none')) return res.status(400).json({success:false,message:'Invalid notification action.'});
     if (['category','product','url','open_url','open_feature'].includes(req.body.actionType) && !String(req.body.actionValue || '').trim()) return res.status(400).json({success:false,message:'Please select an action destination.'});
     if (['url','open_url'].includes(req.body.actionType) && !/^https?:\/\//i.test(String(req.body.actionValue || ''))) return res.status(400).json({success:false,message:'URL must begin with https:// or http://'});
+    if (req.body.targetAudience === 'saved' && !await TargetedCampaignDraft.exists({_id:req.body.savedAudienceId})) return res.status(400).json({success:false,message:'Select a valid saved audience'});
     const status = req.body.scheduleAt ? 'scheduled' : 'draft';
     const item = await PushNotification.create({
       title: req.body.title,
@@ -711,6 +719,7 @@ exports.createNotification = async (req, res) => {
       imageContentType: req.file ? req.file.mimetype : '',
       imageOriginalName: req.file ? req.file.originalname : '',
       targetAudience: req.body.targetAudience || 'all',
+      savedAudienceId: req.body.targetAudience === 'saved' ? String(req.body.savedAudienceId || '') : '',
       actionType: req.body.actionType || 'none',
       actionValue: req.body.actionValue || '',
       buttonText: req.body.buttonText || '',
@@ -803,6 +812,10 @@ exports.activeCampaigns = async (req, res) => {
 
     const eligible = [];
     for (const campaign of campaigns) {
+      if (campaign.targetAudience === 'saved') {
+        // This legacy public endpoint accepts userId as a query parameter; never trust it for private audiences.
+        continue;
+      }
       if (!campaignMatchesAudience(campaign, audienceInfo.audience)) continue;
 
       const identity = campaignIdentityQuery(
@@ -966,6 +979,7 @@ exports.updateCampaign = async (req, res) => {
     const existing = await PromoCampaign.findById(req.params.id);
     if (!existing) return res.status(404).json({ success: false, message: 'Campaign not found' });
     const payload = sanitizeCampaignPayload(req.body);
+    if (payload.targetAudience === 'saved' && !await TargetedCampaignDraft.exists({_id:payload.savedAudienceId})) return res.status(400).json({success:false,message:'Select a valid saved audience'});
     // Preserve the current hosted image when editing without selecting a new file.
     if (!req.file && !String(req.body.imageUrl || '').trim()) payload.imageUrl = existing.imageUrl || '';
     if (req.file) {
@@ -988,6 +1002,7 @@ exports.updateNotification = async (req, res) => {
       message: req.body.message,
       imageUrl: req.body.imageUrl || '',
       targetAudience: req.body.targetAudience || 'all',
+      savedAudienceId: req.body.targetAudience === 'saved' ? String(req.body.savedAudienceId || '') : '',
       actionType: req.body.actionType || 'none',
       actionValue: req.body.actionValue || '',
       buttonText: req.body.buttonText || '',
@@ -1003,8 +1018,17 @@ exports.sendNotification = async (req, res) => {
   try {
     const item = await PushNotification.findById(req.params.id);
     if (!item) return res.status(404).json({ success: false, message: 'Notification not found' });
+    if (item.status === 'sent') return res.status(409).json({success:false,message:'Already sent; duplicate sending blocked'});
     let userIds = null;
-    if (item.targetAudience !== 'all') {
+    if (item.targetAudience === 'saved') {
+      const audience = await TargetedCampaignDraft.findById(item.savedAudienceId).select('+identities').lean();
+      if (!audience) return res.status(400).json({success:false,message:'Saved audience missing'});
+      const ids = [...new Set((audience.identities || []).filter(x => /^id:[a-f0-9]{24}$/i.test(x)).map(x => x.slice(3)))];
+      const consented = await MarketingConsent.find({userId:{$in:ids},push:true}).select('userId').lean();
+      userIds = consented.map(x => x.userId);
+      if (!userIds.length) return res.status(400).json({success:false,message:'No verified opted-in accounts in saved audience; nothing sent'});
+      if (userIds.length > 5000) return res.status(400).json({success:false,message:'Audience exceeds 5000; split into batches'});
+    } else if (item.targetAudience !== 'all') {
       const now = new Date();
       const active = await UserSubscription.find({ status: { $in: ['active', 'trial', 'grace_period', 'cancelled'] }, expiryDate: { $gt: now } }).select('userId planKey').lean();
       if (item.targetAudience === 'free') {
@@ -1021,6 +1045,7 @@ exports.sendNotification = async (req, res) => {
       }
     }
     const tokenQuery = { enabled: true };
+    if (item.targetAudience === 'saved') tokenQuery.userId = { $in: userIds }; 
     if (userIds) tokenQuery.userId = { $in: userIds };
     const tokenDocs = await DeviceToken.find(tokenQuery).select('token').lean();
     const result = await firebaseService.sendToTokens(tokenDocs.map(t => t.token),

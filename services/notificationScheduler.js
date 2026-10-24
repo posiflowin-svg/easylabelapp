@@ -5,6 +5,9 @@ const firebaseService = require('./firebaseService');
 
 let running = false;
 async function sendItem(item) {
+  // Saved audiences require explicit reviewed sending with verified consent.
+  // Never fall through to the subscription branch (which could broadcast).
+  if (item.targetAudience === 'saved') return;
   let userIds = null;
   if (item.targetAudience !== 'all') {
     const active = await UserSubscription.find({ status: { $in: ['active','trial','grace_period','cancelled'] }, expiryDate: { $gt: new Date() } }).select('userId planKey').lean();
