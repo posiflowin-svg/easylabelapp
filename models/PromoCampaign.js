@@ -9,7 +9,7 @@ const promoCampaignSchema = new mongoose.Schema({
   imageContentType: { type: String, default: '' },
   imageOriginalName: { type: String, default: '' },
   buttonText: { type: String, default: 'View Plans' },
-  buttonAction: { type: String, enum: ['open_subscription', 'open_feature', 'open_url', 'dismiss'], default: 'open_subscription' },
+  buttonAction: { type: String, enum: ['shop', 'category', 'product', 'quick_billing', 'open_subscription', 'open_feature', 'open_url', 'dismiss'], default: 'open_subscription' },
   actionValue: { type: String, default: '' },
   targetAudience: { type: String, enum: ['all', 'free', 'premium', 'business', 'expired'], default: 'free' },
   frequency: { type: String, enum: ['once', 'daily', 'weekly', 'every_open'], default: 'once' },

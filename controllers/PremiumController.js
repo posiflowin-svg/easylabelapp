@@ -189,6 +189,13 @@ function sanitizeCampaignPayload(body) {
     }
   }
 
+  if (['category', 'product'].includes(buttonAction) && !actionValue) {
+    throw new Error('Select a destination for this campaign action.');
+  }
+  if (!['shop', 'category', 'product', 'quick_billing', 'open_url', 'dismiss', 'open_subscription', 'open_feature'].includes(buttonAction)) {
+    throw new Error('Unsupported campaign action.');
+  }
+
   if (buttonAction === 'open_feature' && !actionValue) {
     throw new Error('Open Feature action requires a feature key/page value.');
   }
