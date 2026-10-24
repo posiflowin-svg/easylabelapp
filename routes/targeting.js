@@ -112,4 +112,22 @@ router.get('/drafts', async(req,res)=>{
  catch(e){res.status(500).json({success:false,message:'Unable to load drafts'});}
 });
 
+
+// V42: review is read-only. Never equate a printed device ID or phone number
+// with an authenticated account for sending or granting a price discount.
+router.get('/drafts/:id/review', async (req,res) => {
+ try {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({success:false,message:'Invalid draft ID'});
+  const draft=await TargetedCampaignDraft.findById(req.params.id).select('+identities').lean();
+  if (!draft) return res.status(404).json({success:false,message:'Campaign draft not found'});
+  const DeviceToken=require('../models/DeviceToken');
+  const ids=(draft.identities||[]).filter(v=>typeof v==='string'&&v.startsWith('id:')).map(v=>v.slice(3));
+  const validIds=[...new Set(ids.filter(v=>mongoose.isValidObjectId(v)))];
+  // Only an exact account ObjectId match is considered a candidate. This is
+  // NOT sufficient evidence of customer consent or eligibility to send.
+  const registered=validIds.length ? await DeviceToken.distinct('userId',{enabled:true,userId:{$in:validIds.map(v=>new mongoose.Types.ObjectId(v))}}) : [];
+  const product=await Product.findById(draft.productId).select('name sku price active variants').lean();
+  res.json({success:true,review:{id:String(draft._id),title:draft.title,status:draft.status,channel:draft.channel,audienceCount:(draft.identities||[]).length,accountIdCandidates:validIds.length,registeredDeviceAccounts:registered.length,unverifiedIdentities:(draft.identities||[]).length-validIds.length,product:product?{name:product.name,sku:product.sku,active:product.active!==false}:null,variantSku:draft.variantSku,discountType:draft.discountType,discountValue:draft.discountValue,readyToSend:false,notes:['No notifications have been sent.','Account identity and marketing permission must be verified before sending.','Discount checkout validation and Android targeted-banner entitlement are not installed.']}});
+ } catch(e) {res.status(500).json({success:false,message:'Unable to review campaign'});}
+});
 module.exports=router;
