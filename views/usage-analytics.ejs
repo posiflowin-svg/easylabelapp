@@ -91,7 +91,15 @@
  <label>Batch number<br><input id="tcBatch" type="number" min="1" value="1" style="width:90px"></label>
  <label>Channel<br><select id="tcChannel"><option value="push">Push Notification</option><option value="banner">In-app Banner</option><option value="both">Push + Banner</option></select></label>
  <label>Campaign title<br><input id="tcTitle" maxlength="150" placeholder="Special offer for 50×25" style="width:230px"></label>
- <label>Product ID / SKU<br><input id="tcProduct" maxlength="120" placeholder="Enter exact shop product ID" style="width:220px"></label>
+ <div style="min-width:260px;flex:1;max-width:420px;position:relative">
+  <label for="tcProductSearch" style="display:block;margin-bottom:4px">Shop product</label>
+  <input id="tcProductSearch" type="search" autocomplete="off" placeholder="Search product name, SKU or category" style="width:100%;box-sizing:border-box" aria-controls="tcProductResults" aria-expanded="false">
+  <input type="hidden" id="tcProduct">
+  <div id="tcProductResults" role="listbox" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:15;background:white;border:1px solid #cbd5e1;border-radius:9px;box-shadow:0 12px 26px #14233d22;max-height:250px;overflow:auto"></div>
+  <div id="tcProductPicked" style="font-size:12px;color:#64748b;margin-top:4px">Choose an active Shop product.</div>
+  <label for="tcVariant" style="display:block;margin-top:8px">Variant (optional)</label>
+  <select id="tcVariant" disabled style="width:100%"><option value="">Default product</option></select>
+</div>
  <label>Discount<br><select id="tcDiscountType"><option value="percent">Percentage (%)</option><option value="fixed">Fixed (₹)</option></select></label>
  <label>Value<br><input id="tcDiscount" type="number" min="0" step="0.01" value="10" style="width:90px"></label>
  <button id="tcSave" type="button" style="background:#ef3340;color:white;border:0;border-radius:8px;padding:11px 18px;cursor:pointer">Save campaign draft</button>
@@ -378,12 +386,45 @@ function targetCountSelected(update=true){
  document.getElementById('targetSelected').textContent=tcSelected.size+' selected across pages ('+document.querySelectorAll('.targetCheck:checked').length+' on this page)';
 }
 function tcParams(){const [width,height]=document.getElementById('targetSize').value.split('x');return {width:Number(width),height:Number(height),period:document.getElementById('targetPeriod').value,minPrints:Number(document.getElementById('targetMinimum').value),from:document.getElementById('targetFrom').value,to:document.getElementById('targetTo').value};}
+// Product search uses the live Shop database. Never accept a free-typed product ID.
+let tcProductTimer,tcProductRequest=0;
+const tcSearch=document.getElementById('tcProductSearch'),tcResults=document.getElementById('tcProductResults');
+const tcHidden=document.getElementById('tcProduct'),tcVariant=document.getElementById('tcVariant');
+function tcClearProduct(){tcHidden.value='';tcVariant.innerHTML='<option value="">Default product</option>';tcVariant.disabled=true;document.getElementById('tcProductPicked').textContent='Choose an active Shop product.';}
+async function tcSearchProducts(){
+ const seq=++tcProductRequest;
+ tcResults.style.display='block';tcResults.textContent='Searching Shop products…';
+ try{
+  const r=await fetch('/api/targeting/products?q='+encodeURIComponent(tcSearch.value.trim()),{credentials:'same-origin'});
+  const j=await r.json();if(seq!==tcProductRequest)return;
+  if(!r.ok||!j.success)throw Error(j.message||'Product search failed');
+  tcResults.replaceChildren();
+  if(!j.products.length){tcResults.textContent='No active Shop products found.';return;}
+  j.products.forEach(p=>{
+   const option=document.createElement('button');option.type='button';option.setAttribute('role','option');
+   option.style.cssText='display:block;width:100%;text-align:left;background:white;border:0;border-bottom:1px solid #eef2f6;padding:10px;cursor:pointer;color:#14233d';
+   const title=document.createElement('strong');title.textContent=p.name;option.appendChild(title);
+   const detail=document.createElement('div');detail.style.cssText='font-size:12px;color:#64748b;margin-top:3px';detail.textContent=[p.sku,p.category,'₹'+Number(p.price||0).toLocaleString('en-IN')].filter(Boolean).join(' · ');option.appendChild(detail);
+   option.addEventListener('click',()=>{
+    tcHidden.value=p.id;tcSearch.value=p.name+(p.sku?' ('+p.sku+')':'');
+    document.getElementById('tcProductPicked').textContent='Selected: '+p.name+' · ₹'+Number(p.price||0).toLocaleString('en-IN');
+    tcVariant.replaceChildren();const def=document.createElement('option');def.value='';def.textContent='Default product';tcVariant.appendChild(def);
+    (p.variants||[]).forEach(v=>{const el=document.createElement('option');el.value=v.sku;el.textContent=v.name+' · '+v.sku+' · ₹'+Number(v.price||0).toLocaleString('en-IN');tcVariant.appendChild(el)});
+    tcVariant.disabled=!(p.variants||[]).length;tcResults.style.display='none';tcSearch.setAttribute('aria-expanded','false');
+   });tcResults.appendChild(option);
+  });tcSearch.setAttribute('aria-expanded','true');
+ }catch(e){if(seq===tcProductRequest)tcResults.textContent=e.message||'Unable to search products';}
+}
+tcSearch.addEventListener('input',()=>{tcClearProduct();clearTimeout(tcProductTimer);tcProductTimer=setTimeout(tcSearchProducts,300)});
+tcSearch.addEventListener('focus',()=>{if(!tcHidden.value)tcSearchProducts()});
+document.addEventListener('click',e=>{if(!tcSearch.contains(e.target)&&!tcResults.contains(e.target)){tcResults.style.display='none';tcSearch.setAttribute('aria-expanded','false')}});
 document.getElementById('tcSave').addEventListener('click',async()=>{
  const status=document.getElementById('tcStatus'),btn=document.getElementById('tcSave');
  const mode=document.getElementById('tcMode').value;
  if(!targetTotal){status.textContent='Find customers first.';return;}
+ if(!tcHidden.value){status.textContent='Select a Shop product from the search dropdown.';return;}
  if(mode==='manual'&&!tcSelected.size){status.textContent='Select customers using the table checkboxes first.';return;}
- const body={...tcParams(),mode,batch:Number(document.getElementById('tcBatch').value),channel:document.getElementById('tcChannel').value,title:document.getElementById('tcTitle').value,productId:document.getElementById('tcProduct').value,discountType:document.getElementById('tcDiscountType').value,discountValue:Number(document.getElementById('tcDiscount').value),identities:mode==='manual'?[...tcSelected]:[]};
+ const body={...tcParams(),mode,batch:Number(document.getElementById('tcBatch').value),channel:document.getElementById('tcChannel').value,title:document.getElementById('tcTitle').value,productId:document.getElementById('tcProduct').value,variantSku:document.getElementById('tcVariant').value,discountType:document.getElementById('tcDiscountType').value,discountValue:Number(document.getElementById('tcDiscount').value),identities:mode==='manual'?[...tcSelected]:[]};
  btn.disabled=true;status.textContent='Saving campaign draft…';
  try{const r=await fetch('/api/targeting/drafts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();if(!r.ok||!j.success)throw Error(j.message||'Save failed');status.textContent='Draft saved: '+j.count.toLocaleString('en-IN')+' customers. ID: '+j.id+'. No notifications sent and no discount activated.';tcLoadHistory();}
  catch(e){status.textContent='Unable to save: '+e.message;}

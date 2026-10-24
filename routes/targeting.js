@@ -1,5 +1,7 @@
 const express = require('express');
 const UsageEvent = require('../models/UsageEvent');
+const Product = require('../models/Product');
+const mongoose = require('mongoose');
 const router = express.Router();
 const TargetedCampaignDraft = require('../models/TargetedCampaignDraft');
 router.use((req,res,next) => {
@@ -38,6 +40,21 @@ router.get('/audience',async(req,res)=>{
   } catch(e){res.status(400).json({success:false,message:e.message||'Unable to load audience'});}
 });
 
+// Authenticated, bounded Shop catalog lookup for campaign draft configuration.
+router.get('/products', async (req,res) => {
+ try {
+  const q=String(req.query.q||'').trim().slice(0,80);
+  const filter={active:{$ne:false}};
+  if(q){
+   const escaped=q.replace(/[^a-zA-Z0-9 ]/g, c => '\\'+c);
+   const regex=new RegExp(escaped,'i');
+   filter.$or=[{name:regex},{sku:regex},{'category.name':regex},{'variants.sku':regex}];
+  }
+  const docs=await Product.find(filter).select('name sku price category images variants active').sort({name:1,_id:1}).limit(60).lean();
+  res.json({success:true,products:docs.map(p=>({id:String(p._id),name:p.name,sku:p.sku||'',price:p.price,category:p.category?.name||'',image:p.images?.[0]||'',variants:(p.variants||[]).filter(v=>v.active!==false).map(v=>({sku:v.sku,name:v.name,price:v.price}))}))});
+ }catch(e){res.status(500).json({success:false,message:'Unable to load Shop products'});}
+});
+
 // Draft only: do not dispatch messages or grant discounts from an unverified customer identifier.
 router.post('/drafts', async (req,res) => {
  try {
@@ -55,7 +72,11 @@ router.post('/drafts', async (req,res) => {
   const discountValue=Number(body.discountValue);
   if(!['percent','fixed'].includes(discountType)||!Number.isFinite(discountValue)||discountValue<0||discountValue>1000000||(discountType==='percent'&&discountValue>100)) throw Error('Invalid discount');
   const productId=String(body.productId||'').trim();
-  if(!productId||productId.length>120) throw Error('Select a product identifier');
+  if(!mongoose.isValidObjectId(productId)) throw Error('Select a product from the Shop dropdown');
+  const product=await Product.findOne({_id:productId,active:{$ne:false}}).select('name sku variants').lean();
+  if(!product) throw Error('Selected product is no longer available in the Shop');
+  const variantSku=String(body.variantSku||'').trim();
+  if(variantSku && !(product.variants||[]).some(v=>v.active!==false&&v.sku===variantSku)) throw Error('Selected product variant is unavailable');
   const title=String(body.title||'').trim();
   if(!title||title.length>150) throw Error('Enter a campaign title (max 150 characters)');
   const date=dateRange(period,body.from,body.to);
@@ -82,7 +103,7 @@ router.post('/drafts', async (req,res) => {
    chosen=rows.map(r=>r._id);
   }
   if(!chosen.length) throw Error('No matching customers');
-  const draft=await TargetedCampaignDraft.create({title,channel,productId,discountType,discountValue,audienceMode:mode,filter:{width,height,minPrints,period,from:body.from||'',to:body.to||''},identities:chosen,status:'draft'});
+  const draft=await TargetedCampaignDraft.create({title,channel,productId,variantSku,discountType,discountValue,audienceMode:mode,filter:{width,height,minPrints,period,from:body.from||'',to:body.to||''},identities:chosen,status:'draft'});
   res.status(201).json({success:true,id:draft._id,count:chosen.length,status:'draft',message:'Campaign draft saved. Sending and discounts are not active.'});
  }catch(e){res.status(400).json({success:false,message:e.message||'Unable to save draft'});}
 });
