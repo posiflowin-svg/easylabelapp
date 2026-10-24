@@ -58,7 +58,7 @@ async function verifyPayment({ paymentId, orderId, amount, accountKey }) {
   const account=getAccount(accountKey);
   const payment=await requestRazorpay('GET',`/v1/payments/${encodeURIComponent(paymentId)}`,account);
   const expectedPaise=Math.round(Number(amount)*100);
-  const statusOk=['authorized','captured'].includes(String(payment.status||'').toLowerCase());
+  const statusOk=String(payment.status||'').toLowerCase()==='captured';
   const orderOk=String(payment.order_id||'')===String(orderId||'');
   const amountOk=Number(payment.amount)===expectedPaise;
   return { verified: statusOk && orderOk && amountOk, payment, account };

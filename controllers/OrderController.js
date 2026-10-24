@@ -19,7 +19,8 @@ const getCurrentTime = () => {
 // 1. Create Order (Enhanced with validation)
 const createOrder = async (req, res) => {
     try {
-        const { customer, products, couponCode, expectedDeliveryDate, paymentMethod } = req.body;
+        const { customer, products, couponCode, expectedDeliveryDate, paymentMethod, paymentId, razorpayOrderId, accountKey } = req.body;
+        if (paymentMethod && paymentMethod !== 'Online') return res.status(400).json({success:false,message:'New orders support prepaid online payments only'});
 
         // Validate required fields
         if (!customer || !customer.name || !customer.phone || !products || products.length === 0) {
@@ -33,6 +34,15 @@ const createOrder = async (req, res) => {
         const subtotal = products.reduce((sum, product) => sum + (product.price * product.quantity), 0);
         const totalAmount = subtotal - (req.body.discount || 0);
 
+        // A client-provided payment status is never trusted. Verify directly with Razorpay.
+        let verifiedPayment = null;
+        if (paymentId || razorpayOrderId) {
+            if (!paymentId || !razorpayOrderId) return res.status(400).json({success:false,message:'Both paymentId and razorpayOrderId are required'});
+            const check = await razorpayService.verifyPayment({paymentId, orderId: razorpayOrderId, amount: totalAmount, accountKey});
+            if (!check.verified) return res.status(400).json({success:false,message:'Razorpay payment could not be verified as captured'});
+            verifiedPayment = check;
+            if (await Order.exists({razorpayPaymentId: paymentId})) return res.status(409).json({success:false,message:'Payment already linked to another order'});
+        }
         const order = new Order({
             orderId: generateOrderId(),
             date: new Date(),
@@ -44,7 +54,9 @@ const createOrder = async (req, res) => {
             discount: req.body.discount || 0,
             totalAmount,
             expectedDeliveryDate: new Date(expectedDeliveryDate),
-            paymentMethod: paymentMethod || 'COD'
+            paymentMethod: 'Online',
+            paymentStatus: verifiedPayment ? 'Paid' : 'Pending',
+            ...(verifiedPayment ? {razorpayPaymentId:paymentId,razorpayOrderId,paymentVerifiedAt:new Date(),paymentAccountKey:verifiedPayment.account.accountKey} : {})
         });
 
         await order.save();
@@ -636,11 +648,22 @@ const createRazorpayPaymentOrder = async (req, res) => {
 
 const verifyRazorpayPayment = async (req, res) => {
     try {
-        const { paymentId, orderId, amount, accountKey } = req.body || {};
+        const { paymentId, orderId, amount, accountKey, shopOrderId } = req.body || {};
         if (!paymentId || !orderId || !amount) return res.status(400).json({ success: false, message: 'Payment ID, order ID and amount are required' });
         const result = await razorpayService.verifyPayment({ paymentId, orderId, amount, accountKey });
         if (!result.verified) return res.status(400).json({ success: false, message: 'Payment verification failed' });
-        res.json({ success: true, paymentId, orderId, status: result.payment.status, accountKey: result.account.accountKey });
+        let linkedOrder = null;
+        if (shopOrderId) {
+            const existing = await Order.findOne({orderId:String(shopOrderId)});
+            if (!existing) return res.status(404).json({success:false,message:'Shop order not found; payment verified but not linked'});
+            if (Math.round(Number(existing.totalAmount)*100) !== Math.round(Number(amount)*100)) return res.status(409).json({success:false,message:'Shop order amount does not match payment'});
+            if (existing.razorpayPaymentId && existing.razorpayPaymentId !== paymentId) return res.status(409).json({success:false,message:'Order already linked to another payment'});
+            const used = await Order.exists({razorpayPaymentId:paymentId, _id:{$ne:existing._id}});
+            if (used) return res.status(409).json({success:false,message:'Payment already linked to another order'});
+            linkedOrder = await Order.findOneAndUpdate({_id:existing._id,$or:[{razorpayPaymentId:{$exists:false}},{razorpayPaymentId:paymentId}]},{$set:{paymentStatus:'Paid',paymentMethod:'Online',razorpayPaymentId:paymentId,razorpayOrderId:orderId,paymentVerifiedAt:new Date(),paymentAccountKey:result.account.accountKey}},{new:true});
+            if (!linkedOrder) return res.status(409).json({success:false,message:'Order payment changed concurrently'});
+        }
+        res.json({ success: true, paymentId, orderId, status: result.payment.status, accountKey: result.account.accountKey, linkedShopOrderId:linkedOrder?.orderId || null });
     } catch (error) {
         console.error('Razorpay verify error:', error.message);
         res.status(400).json({ success: false, message: error.message });

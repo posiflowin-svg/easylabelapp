@@ -53,7 +53,11 @@ const OrderSchema = new mongoose.Schema({
     },
     expectedDeliveryDate: { type: Date, required: true },
     paymentMethod: { type: String, enum: ['COD', 'Online'], default: 'Online' },
-    paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Paid' },
+    razorpayPaymentId: { type: String, trim: true, sparse: true, unique: true },
+    razorpayOrderId: { type: String, trim: true },
+    paymentVerifiedAt: { type: Date },
+    paymentAccountKey: { type: String, trim: true },
+    paymentStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending' },
     notes: { type: String, default: '' }
 }, { timestamps: true });
 
