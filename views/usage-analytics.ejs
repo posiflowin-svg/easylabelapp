@@ -83,6 +83,21 @@
     <div class="scroll"><table style="min-width:650px"><thead><tr><th><input type="checkbox" id="targetSelectPage" onchange="selectTargetPage(this.checked)" aria-label="Select current page"></th><th>Customer</th><th>Mobile</th><th>Labels printed</th><th>Print jobs</th><th>Last activity</th></tr></thead><tbody id="targetRows"><tr><td colspan="6">Apply filters to load customers</td></tr></tbody></table></div>
     <div class="pager"><span id="targetSelected">0 selected on this page</span><div class="pageBtns"><button class="pageBtn" onclick="loadTargetAudience(Math.max(1,targetPage-1))">Previous</button><button class="pageBtn" onclick="loadTargetAudience(targetPage+1)">Next</button></div></div>
   </section>
+<section id="targetCampaignPanel" style="margin:18px auto;padding:22px;max-width:1320px;background:#fff;border:1px solid #e0e5ef;border-radius:14px">
+ <h3 style="margin:0 0 7px">Targeted Campaign Builder <small style="font-size:12px;color:#667085">Draft workflow · no messages sent</small></h3>
+ <p style="color:#667085">Choose customers from the filtered table, an entire 5,000-user batch, or all matching customers. Save a campaign draft for review.</p>
+ <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:end">
+ <label>Audience<br><select id="tcMode"><option value="manual">Manually selected (across pages)</option><option value="batch">Batch of up to 5,000</option><option value="all">All matching customers</option></select></label>
+ <label>Batch number<br><input id="tcBatch" type="number" min="1" value="1" style="width:90px"></label>
+ <label>Channel<br><select id="tcChannel"><option value="push">Push Notification</option><option value="banner">In-app Banner</option><option value="both">Push + Banner</option></select></label>
+ <label>Campaign title<br><input id="tcTitle" maxlength="150" placeholder="Special offer for 50×25" style="width:230px"></label>
+ <label>Product ID / SKU<br><input id="tcProduct" maxlength="120" placeholder="Enter exact shop product ID" style="width:220px"></label>
+ <label>Discount<br><select id="tcDiscountType"><option value="percent">Percentage (%)</option><option value="fixed">Fixed (₹)</option></select></label>
+ <label>Value<br><input id="tcDiscount" type="number" min="0" step="0.01" value="10" style="width:90px"></label>
+ <button id="tcSave" type="button" style="background:#ef3340;color:white;border:0;border-radius:8px;padding:11px 18px;cursor:pointer">Save campaign draft</button>
+ </div><p id="tcStatus" style="color:#58677e" role="status">No draft created. Selected customers are retained across pages in this browser tab.</p>
+ <div id="tcHistory" style="font-size:13px;color:#58677e"></div>
+</section>
   <!-- Admin verification is required only for customer-level targeting data. -->
   <div id="targetAuthOverlay" role="presentation" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.58);z-index:9999;align-items:center;justify-content:center;padding:16px">
     <div role="dialog" aria-modal="true" aria-labelledby="targetAuthTitle" style="background:#fff;border-radius:16px;max-width:420px;width:100%;box-shadow:0 20px 70px rgba(0,0,0,.22);padding:26px">
@@ -297,6 +312,8 @@ async function openCustomer(mobile,id,name){
 </script>
 <script>
 let targetPage=1,targetTotal=0,targetCurrent=[];
+const tcSelected=new Set();
+let tcFilterKey="";
 let targetPendingPage=null;
 function safeTargetText(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function targetAuthDialog(page){
@@ -348,12 +365,31 @@ async function loadTargetAudience(page){
   if(r.status===401){status.textContent='Admin verification required to view customer results.';targetAuthDialog(page);return;}
   if(!r.ok||!j.success)throw Error(j.message||'Unable to fetch customers');
   targetPage=j.page;targetTotal=j.total;targetCurrent=j.rows||[];
+  const filterKey=[width,height,document.getElementById('targetPeriod').value,document.getElementById('targetMinimum').value,document.getElementById('targetFrom').value,document.getElementById('targetTo').value].join('|');
+  if(tcFilterKey&&tcFilterKey!==filterKey)tcSelected.clear();tcFilterKey=filterKey;
   status.textContent=j.total.toLocaleString('en-IN')+' matching customers · page '+j.page+' of '+Math.max(1,Math.ceil(j.total/100))+' · '+Math.ceil(j.total/5000)+' batches of up to 5,000';
-  document.getElementById('targetRows').innerHTML=targetCurrent.length?targetCurrent.map((x,i)=>'<tr><td><input type="checkbox" class="targetCheck" data-index="'+i+'" onchange="targetCountSelected()"></td><td>'+safeTargetText(x.name||x._id)+'</td><td>'+safeTargetText(x.mobile)+'</td><td>'+Number(x.copies||0).toLocaleString('en-IN')+'</td><td>'+Number(x.jobs||0).toLocaleString('en-IN')+'</td><td>'+safeTargetText(x.lastUsed?new Date(x.lastUsed).toLocaleDateString('en-IN'):'')+'</td></tr>').join(''):'<tr><td colspan="6">No matching customers</td></tr>';
-  document.getElementById('targetSelectPage').checked=false;targetCountSelected();
+  document.getElementById('targetRows').innerHTML=targetCurrent.length?targetCurrent.map((x,i)=>'<tr><td><input type="checkbox" class="targetCheck" data-index="'+i+'" '+(tcSelected.has(x._id)?'checked':'')+' onchange="targetCountSelected()"></td><td>'+safeTargetText(x.name||x._id)+'</td><td>'+safeTargetText(x.mobile)+'</td><td>'+Number(x.copies||0).toLocaleString('en-IN')+'</td><td>'+Number(x.jobs||0).toLocaleString('en-IN')+'</td><td>'+safeTargetText(x.lastUsed?new Date(x.lastUsed).toLocaleDateString('en-IN'):'')+'</td></tr>').join(''):'<tr><td colspan="6">No matching customers</td></tr>';
+  document.getElementById('targetSelectPage').checked=targetCurrent.length>0&&targetCurrent.every(x=>tcSelected.has(x._id));targetCountSelected(false);
  }catch(e){status.textContent=e.message;document.getElementById('targetRows').innerHTML='<tr><td colspan="6">Audience unavailable</td></tr>';}
 }
 function selectTargetPage(v){document.querySelectorAll('.targetCheck').forEach(c=>c.checked=v);targetCountSelected();}
-function targetCountSelected(){document.getElementById('targetSelected').textContent=document.querySelectorAll('.targetCheck:checked').length+' selected on this page';}
+function targetCountSelected(update=true){
+ if(update)document.querySelectorAll('.targetCheck').forEach(c=>{const id=targetCurrent[Number(c.dataset.index)]?._id;if(id){if(c.checked)tcSelected.add(id);else tcSelected.delete(id);}});
+ document.getElementById('targetSelected').textContent=tcSelected.size+' selected across pages ('+document.querySelectorAll('.targetCheck:checked').length+' on this page)';
+}
+function tcParams(){const [width,height]=document.getElementById('targetSize').value.split('x');return {width:Number(width),height:Number(height),period:document.getElementById('targetPeriod').value,minPrints:Number(document.getElementById('targetMinimum').value),from:document.getElementById('targetFrom').value,to:document.getElementById('targetTo').value};}
+document.getElementById('tcSave').addEventListener('click',async()=>{
+ const status=document.getElementById('tcStatus'),btn=document.getElementById('tcSave');
+ const mode=document.getElementById('tcMode').value;
+ if(!targetTotal){status.textContent='Find customers first.';return;}
+ if(mode==='manual'&&!tcSelected.size){status.textContent='Select customers using the table checkboxes first.';return;}
+ const body={...tcParams(),mode,batch:Number(document.getElementById('tcBatch').value),channel:document.getElementById('tcChannel').value,title:document.getElementById('tcTitle').value,productId:document.getElementById('tcProduct').value,discountType:document.getElementById('tcDiscountType').value,discountValue:Number(document.getElementById('tcDiscount').value),identities:mode==='manual'?[...tcSelected]:[]};
+ btn.disabled=true;status.textContent='Saving campaign draft…';
+ try{const r=await fetch('/api/targeting/drafts',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();if(!r.ok||!j.success)throw Error(j.message||'Save failed');status.textContent='Draft saved: '+j.count.toLocaleString('en-IN')+' customers. ID: '+j.id+'. No notifications sent and no discount activated.';tcLoadHistory();}
+ catch(e){status.textContent='Unable to save: '+e.message;}
+ finally{btn.disabled=false;}
+});
+async function tcLoadHistory(){try{const r=await fetch('/api/targeting/drafts',{credentials:'same-origin'});if(!r.ok)return;const j=await r.json();document.getElementById('tcHistory').textContent=(j.drafts||[]).slice(0,5).map(d=>d.title+' · '+d.channel+' · '+d.status+' · '+new Date(d.createdAt).toLocaleDateString()).join(' | ');}catch(e){}}
+tcLoadHistory();
 </script>
 </body></html>
