@@ -83,6 +83,22 @@
     <div class="scroll"><table style="min-width:650px"><thead><tr><th><input type="checkbox" id="targetSelectPage" onchange="selectTargetPage(this.checked)" aria-label="Select current page"></th><th>Customer</th><th>Mobile</th><th>Labels printed</th><th>Print jobs</th><th>Last activity</th></tr></thead><tbody id="targetRows"><tr><td colspan="6">Apply filters to load customers</td></tr></tbody></table></div>
     <div class="pager"><span id="targetSelected">0 selected on this page</span><div class="pageBtns"><button class="pageBtn" onclick="loadTargetAudience(Math.max(1,targetPage-1))">Previous</button><button class="pageBtn" onclick="loadTargetAudience(targetPage+1)">Next</button></div></div>
   </section>
+  <!-- Admin verification is required only for customer-level targeting data. -->
+  <div id="targetAuthOverlay" role="presentation" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.58);z-index:9999;align-items:center;justify-content:center;padding:16px">
+    <div role="dialog" aria-modal="true" aria-labelledby="targetAuthTitle" style="background:#fff;border-radius:16px;max-width:420px;width:100%;box-shadow:0 20px 70px rgba(0,0,0,.22);padding:26px">
+      <h2 id="targetAuthTitle" style="margin:0 0 8px;font-size:21px;color:#14233d">Verify administrator access</h2>
+      <p style="margin:0 0 18px;color:#64748b;line-height:1.5">Customer names and mobile numbers are protected. Enter your existing EasyLabel admin password to view the matching audience.</p>
+      <form id="targetAuthForm">
+        <label for="targetAdminPassword" style="display:block;font-size:13px;font-weight:700;margin-bottom:7px">Admin password</label>
+        <input id="targetAdminPassword" type="password" autocomplete="current-password" required style="box-sizing:border-box;width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:12px;font-size:15px">
+        <p id="targetAuthError" role="alert" style="display:none;color:#b91c1c;font-size:13px;margin:10px 0 0"></p>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+          <button type="button" id="targetAuthCancel" style="border:1px solid #cbd5e1;border-radius:9px;background:#fff;padding:10px 18px;cursor:pointer">Cancel</button>
+          <button type="submit" id="targetAuthSubmit" style="border:0;border-radius:9px;background:#ef3340;color:#fff;font-weight:700;padding:10px 18px;cursor:pointer">Verify &amp; continue</button>
+        </div>
+      </form>
+    </div>
+  </div>
   <section class="tabsWrap">
     <div class="tabs">
       <button class="tab active" data-tab="customerTab" onclick="switchTab('customerTab',this)">Customer Summary <span class="tabCount" id="customerCount"></span></button>
@@ -281,16 +297,51 @@ async function openCustomer(mobile,id,name){
 </script>
 <script>
 let targetPage=1,targetTotal=0,targetCurrent=[];
+let targetPendingPage=null;
 function safeTargetText(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function targetAuthDialog(page){
+ targetPendingPage=page;
+ document.getElementById('targetAuthError').style.display='none';
+ const overlay=document.getElementById('targetAuthOverlay');overlay.style.display='flex';
+ document.getElementById('targetAdminPassword').focus();
+}
+function closeTargetAuth(){
+ document.getElementById('targetAuthOverlay').style.display='none';
+ document.getElementById('targetAdminPassword').value='';
+ targetPendingPage=null;
+}
+document.getElementById('targetAuthCancel').addEventListener('click',()=>{
+ closeTargetAuth();document.getElementById('targetStatus').textContent='Admin verification is required to view customer targeting.';
+});
+document.getElementById('targetAuthForm').addEventListener('submit',async(e)=>{
+ e.preventDefault();
+ const btn=document.getElementById('targetAuthSubmit'),error=document.getElementById('targetAuthError');
+ const password=document.getElementById('targetAdminPassword').value;
+ if(!password)return;
+ btn.disabled=true;btn.textContent='Verifying…';error.style.display='none';
+ try{
+  const response=await fetch('/api/verify-admin-password',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})});
+  const result=await response.json();
+  if(!response.ok||!result.success)throw Error('Incorrect admin password. Please try again.');
+  const page=targetPendingPage||1;
+  closeTargetAuth();
+  await loadTargetAudience(page);
+ }catch(err){error.textContent=err.message||'Unable to verify. Please try again.';error.style.display='block';}
+ finally{btn.disabled=false;btn.textContent='Verify & continue';}
+});
 async function loadTargetAudience(page){
  const status=document.getElementById('targetStatus');status.textContent='Loading matching customers…';
  const [width,height]=document.getElementById('targetSize').value.split('x');
  const p=new URLSearchParams({width,height,period:document.getElementById('targetPeriod').value,minPrints:document.getElementById('targetMinimum').value,page:String(page),from:document.getElementById('targetFrom').value,to:document.getElementById('targetTo').value});
- try{const r=await fetch('/api/targeting/audience?'+p.toString(),{credentials:'same-origin'});const j=await r.json();if(!r.ok||!j.success)throw Error(j.message||'Unable to fetch customers');
- targetPage=j.page;targetTotal=j.total;targetCurrent=j.rows||[];
- status.textContent=j.total.toLocaleString('en-IN')+' matching customers · page '+j.page+' of '+Math.max(1,Math.ceil(j.total/100))+' · '+Math.ceil(j.total/5000)+' batches of up to 5,000';
- document.getElementById('targetRows').innerHTML=targetCurrent.length?targetCurrent.map((x,i)=>'<tr><td><input type="checkbox" class="targetCheck" data-index="'+i+'" onchange="targetCountSelected()"></td><td>'+safeTargetText(x.name||x._id)+'</td><td>'+safeTargetText(x.mobile)+'</td><td>'+Number(x.copies||0).toLocaleString('en-IN')+'</td><td>'+Number(x.jobs||0).toLocaleString('en-IN')+'</td><td>'+safeTargetText(x.lastUsed?new Date(x.lastUsed).toLocaleDateString('en-IN'):'')+'</td></tr>').join(''):'<tr><td colspan="6">No matching customers</td></tr>';
- document.getElementById('targetSelectPage').checked=false;targetCountSelected();
+ try{
+  const r=await fetch('/api/targeting/audience?'+p.toString(),{credentials:'same-origin'});
+  const j=await r.json();
+  if(r.status===401){status.textContent='Admin verification required to view customer results.';targetAuthDialog(page);return;}
+  if(!r.ok||!j.success)throw Error(j.message||'Unable to fetch customers');
+  targetPage=j.page;targetTotal=j.total;targetCurrent=j.rows||[];
+  status.textContent=j.total.toLocaleString('en-IN')+' matching customers · page '+j.page+' of '+Math.max(1,Math.ceil(j.total/100))+' · '+Math.ceil(j.total/5000)+' batches of up to 5,000';
+  document.getElementById('targetRows').innerHTML=targetCurrent.length?targetCurrent.map((x,i)=>'<tr><td><input type="checkbox" class="targetCheck" data-index="'+i+'" onchange="targetCountSelected()"></td><td>'+safeTargetText(x.name||x._id)+'</td><td>'+safeTargetText(x.mobile)+'</td><td>'+Number(x.copies||0).toLocaleString('en-IN')+'</td><td>'+Number(x.jobs||0).toLocaleString('en-IN')+'</td><td>'+safeTargetText(x.lastUsed?new Date(x.lastUsed).toLocaleDateString('en-IN'):'')+'</td></tr>').join(''):'<tr><td colspan="6">No matching customers</td></tr>';
+  document.getElementById('targetSelectPage').checked=false;targetCountSelected();
  }catch(e){status.textContent=e.message;document.getElementById('targetRows').innerHTML='<tr><td colspan="6">Audience unavailable</td></tr>';}
 }
 function selectTargetPage(v){document.querySelectorAll('.targetCheck').forEach(c=>c.checked=v);targetCountSelected();}
