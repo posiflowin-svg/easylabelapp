@@ -126,8 +126,16 @@ router.get('/drafts/:id/review', async (req,res) => {
   // Only an exact account ObjectId match is considered a candidate. This is
   // NOT sufficient evidence of customer consent or eligibility to send.
   const registered=validIds.length ? await DeviceToken.distinct('userId',{enabled:true,userId:{$in:validIds.map(v=>new mongoose.Types.ObjectId(v))}}) : [];
+  // V43: distinguish an enabled token from a recently seen device. Neither
+  // proves opt-in. Do not expose tokens or phone numbers in the response.
+  const DeviceTokenModel=require('../models/DeviceToken');
+  const freshSince=new Date(Date.now()-90*24*60*60*1000);
+  const freshAccounts=validIds.length ? await DeviceTokenModel.distinct('userId',{
+   enabled:true,platform:'android',lastSeenAt:{$gte:freshSince},
+   userId:{$in:validIds.map(v=>new mongoose.Types.ObjectId(v))}
+  }) : [];
   const product=await Product.findById(draft.productId).select('name sku price active variants').lean();
-  res.json({success:true,review:{id:String(draft._id),title:draft.title,status:draft.status,channel:draft.channel,audienceCount:(draft.identities||[]).length,accountIdCandidates:validIds.length,registeredDeviceAccounts:registered.length,unverifiedIdentities:(draft.identities||[]).length-validIds.length,product:product?{name:product.name,sku:product.sku,active:product.active!==false}:null,variantSku:draft.variantSku,discountType:draft.discountType,discountValue:draft.discountValue,readyToSend:false,notes:['No notifications have been sent.','Account identity and marketing permission must be verified before sending.','Discount checkout validation and Android targeted-banner entitlement are not installed.']}});
+  res.json({success:true,review:{id:String(draft._id),title:draft.title,status:draft.status,channel:draft.channel,audienceCount:(draft.identities||[]).length,accountIdCandidates:validIds.length,registeredDeviceAccounts:registered.length,recentDeviceAccounts:freshAccounts.length,marketingConsentVerified:0,checkoutEligibilityEnabled:false,unverifiedIdentities:(draft.identities||[]).length-validIds.length,product:product?{name:product.name,sku:product.sku,active:product.active!==false}:null,variantSku:draft.variantSku,discountType:draft.discountType,discountValue:draft.discountValue,readyToSend:false,blockers:['Marketing consent is not stored or verified for this audience','No authenticated targeted-banner entitlement endpoint','No checkout-side discount authorization or redemption protection','No dry-run delivery receipts or test-device allowlist'],notes:['No notifications have been sent.','Account identity and marketing permission must be verified before sending.','Discount checkout validation and Android targeted-banner entitlement are not installed.']}});
  } catch(e) {res.status(500).json({success:false,message:'Unable to review campaign'});}
 });
 module.exports=router;

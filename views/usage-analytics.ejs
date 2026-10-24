@@ -436,9 +436,12 @@ async function tcReviewDraft(id){
   const r=await fetch('/api/targeting/drafts/'+encodeURIComponent(id)+'/review',{credentials:'same-origin'});
   const j=await r.json();if(!r.ok||!j.success)throw Error(j.message||'Review failed');const v=j.review;
   box.replaceChildren();const heading=document.createElement('strong');heading.textContent='Campaign review: '+v.title;box.appendChild(heading);
-  const items=[['Saved audience',v.audienceCount.toLocaleString('en-IN')],['Account-ID candidates',v.accountIdCandidates.toLocaleString('en-IN')],['Accounts with registered devices',v.registeredDeviceAccounts.toLocaleString('en-IN')],['Unverified audience identities',v.unverifiedIdentities.toLocaleString('en-IN')],['Shop product',v.product?v.product.name:'Product missing'],['Promotion',v.discountValue+(v.discountType==='percent'?'%':' INR')],['Status','Draft — delivery and discount disabled']];
+  const items=[['Saved audience',v.audienceCount.toLocaleString('en-IN')],['Account-ID candidates',v.accountIdCandidates.toLocaleString('en-IN')],['Accounts with registered devices',v.registeredDeviceAccounts.toLocaleString('en-IN')],['Accounts with device seen in last 90 days',(v.recentDeviceAccounts||0).toLocaleString('en-IN')],['Marketing consent verified',String(v.marketingConsentVerified||0)],['Unverified audience identities',v.unverifiedIdentities.toLocaleString('en-IN')],['Shop product',v.product?v.product.name:'Product missing'],['Promotion',v.discountValue+(v.discountType==='percent'?'%':' INR')],['Status','Draft — delivery and discount disabled']];
   items.forEach(([k,val])=>{const line=document.createElement('div');line.style.marginTop='7px';line.textContent=k+': '+val;box.appendChild(line)});
-  const note=document.createElement('p');note.style.marginBottom='0';note.textContent='Safety check: this is a preview only. No push, banner or checkout discount will be activated until account ownership and permission are verified.';box.appendChild(note);
+  const warning=document.createElement('div');warning.style.cssText='margin-top:14px;padding:12px;border:1px solid #fed7aa;background:#fff7ed;border-radius:8px;color:#9a3412';
+  const warningTitle=document.createElement('strong');warningTitle.textContent='Activation blocked — outstanding checks';warning.appendChild(warningTitle);
+  (v.blockers||[]).forEach(b=>{const line=document.createElement('div');line.style.marginTop='6px';line.textContent='• '+b;warning.appendChild(line)});box.appendChild(warning);
+  const note=document.createElement('p');note.style.marginBottom='0';note.textContent='Review only. No push, banner or checkout discount is activated. Device registration alone does not prove marketing consent.';box.appendChild(note);
  }catch(e){box.textContent='Review unavailable: '+e.message;}
 }
 async function tcLoadHistory(){
