@@ -70,10 +70,23 @@ const createOrder = async (req, res) => {
 // 2. Get All Orders (with pagination, filtering, and sorting)
 const getOrders = async (req, res) => {
     try {
-        const { page = 1, limit = 10, status, sortBy = '-createdAt', search } = req.query;
+        const { page = 1, limit = 20, status, sortBy = '-date', search, startDate, endDate, paymentMethod, paymentStatus, minAmount, maxAmount } = req.query;
         
         const query = {};
-        if (status) query.status = status;
+        if (status && status !== 'all') query.status = status;
+        if (['COD', 'Online'].includes(paymentMethod)) query.paymentMethod = paymentMethod;
+        if (['Pending', 'Paid', 'Failed'].includes(paymentStatus)) query.paymentStatus = paymentStatus;
+        if (startDate || endDate) {
+            query.date = {};
+            if (startDate) { const d = new Date(startDate + 'T00:00:00+05:30'); if (isNaN(d)) return res.status(400).json({success:false,message:'Invalid start date'}); query.date.$gte = d; }
+            if (endDate) { const d = new Date(endDate + 'T23:59:59.999+05:30'); if (isNaN(d)) return res.status(400).json({success:false,message:'Invalid end date'}); query.date.$lte = d; }
+        }
+        if (minAmount || maxAmount) {
+            query.totalAmount = {};
+            if (minAmount) query.totalAmount.$gte = Number(minAmount);
+            if (maxAmount) query.totalAmount.$lte = Number(maxAmount);
+            if (Object.values(query.totalAmount).some(v => !Number.isFinite(v))) return res.status(400).json({success:false,message:'Invalid amount range'});
+        }
         if (search) {
             query.$or = [
                 { orderId: { $regex: search, $options: 'i' } },
@@ -82,10 +95,11 @@ const getOrders = async (req, res) => {
             ];
         }
 
+        const allowedSort = {'-date': '-date', 'date': 'date', '-totalAmount': '-totalAmount', 'totalAmount': 'totalAmount', '-createdAt': '-createdAt'};
         const options = {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            sort: sortBy,
+            page: Math.max(1, parseInt(page, 10) || 1),
+            limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 20)),
+            sort: allowedSort[sortBy] || '-date',
             lean: true
         };
 
