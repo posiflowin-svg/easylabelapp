@@ -113,7 +113,7 @@
                 <div><label class="filter-label" for="paymentStatusFilter">Payment status</label><select id="paymentStatusFilter" class="dashboard-filter"><option value="">All payments</option><option value="Paid">Paid</option><option value="Pending">Pending</option><option value="Failed">Failed</option></select></div>
                 <div><label class="filter-label" for="startDateFilter">From date</label><input type="date" id="startDateFilter" class="dashboard-filter"></div>
                 <div><label class="filter-label" for="endDateFilter">To date</label><input type="date" id="endDateFilter" class="dashboard-filter"></div>
-                <div><label class="filter-label" for="paymentMethodFilter">Payment method</label><select id="paymentMethodFilter" class="dashboard-filter"><option value="">All methods</option><option value="COD">COD (historical only)</option><option value="Online">Online / prepaid</option></select></div>
+                <div><label class="filter-label" for="paymentMethodFilter">Payment method</label><select id="paymentMethodFilter" class="dashboard-filter"><option value="">All methods</option><option value="COD">Legacy COD value (unconfirmed)</option><option value="Online">Online / prepaid</option></select></div>
                 <div><label class="filter-label" for="sortOrdersFilter">Sort by</label><select id="sortOrdersFilter" class="dashboard-filter"><option value="-date">Newest first</option><option value="date">Oldest first</option><option value="-totalAmount">Highest value</option><option value="totalAmount">Lowest value</option></select></div>
                 <div><label class="filter-label" for="minAmountFilter">Minimum amount (₹)</label><input id="minAmountFilter" type="number" min="0" class="dashboard-filter" placeholder="0"></div>
                 <div><label class="filter-label" for="maxAmountFilter">Maximum amount (₹)</label><input id="maxAmountFilter" type="number" min="0" class="dashboard-filter" placeholder="Any"></div>
@@ -503,8 +503,8 @@
         <div><div class="font-bold text-sm text-gray-900">${esc(order.orderId)}</div><div class="text-xs text-gray-500 mt-1">${new Date(order.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</div></div>
         <div><div class="font-semibold text-sm text-gray-800">${esc(order.customer?.name)}</div><div class="text-xs text-blue-600">${esc(order.customer?.phone)}</div></div>
         <div><div class="text-xs text-gray-500 mb-1">Order value</div><div class="font-bold text-sm">${amount(order.totalAmount)}</div></div>
-        <div><div class="text-xs text-gray-500 mb-1">Payment</div>${badge(order.paymentStatus==='Paid' && !order.paymentVerifiedAt ? 'Unverified (legacy)' : (order.paymentStatus||'Unknown'),'payment')}</div>
-        <div><div class="text-xs text-gray-500 mb-1">Method</div><div class="text-sm font-medium">${esc(order.paymentMethod==='COD' ? 'COD (legacy record)' : (order.paymentMethod==='Online' ? 'Online / prepaid' : 'Unknown'))}</div></div>
+        <div><div class="text-xs text-gray-500 mb-1">Payment</div>${badge(order.paymentStatus==='Paid' && !order.paymentVerifiedAt ? 'Payment evidence missing' : (order.paymentStatus||'Unknown'),'payment')}</div>
+        <div><div class="text-xs text-gray-500 mb-1">Method</div><div class="text-sm font-medium">${esc(order.paymentVerifiedAt && order.razorpayPaymentId ? 'Online / Razorpay' : (order.paymentMethod==='COD' ? 'Legacy COD value (unconfirmed)' : (order.paymentMethod==='Online' ? 'Online (not verified)' : 'Unknown')))}</div></div>
         <div><div class="text-xs text-gray-500 mb-1">Status</div>${badge(order.status,'status')}</div>
         <div class="order-arrow text-blue-600"><i class="fas fa-chevron-right"></i></div>
       </div>`;
