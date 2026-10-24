@@ -109,11 +109,21 @@ app.get('/icon-library', IconLibraryController.page);
 app.get('/icon-assets/:categoryId/:iconId', IconLibraryController.asset);
 app.get('/api/usage/customer-detail', require('./controllers/UsageAnalyticsController').customerDetail);
 app.get('/usage-analytics', require('./controllers/UsageAnalyticsController').page);
+// Report whether targeting authentication has been configured (no secrets exposed).
+app.get('/api/targeting-auth/status', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.json({ configured: !!(process.env.ADMIN_PASSWORD || process.env.POS_ENQUIRY_ADMIN_PASSWORD), authenticated: !!req.session?.adminAuthenticated });
+});
 // Add the password verification route directly to app
 app.post('/api/verify-admin-password', (req, res) => {
     const { password } = req.body;
     
-    if (process.env.ADMIN_PASSWORD && typeof password === 'string' && password === process.env.ADMIN_PASSWORD) {
+    const configuredPassword = process.env.ADMIN_PASSWORD || process.env.POS_ENQUIRY_ADMIN_PASSWORD;
+    if (!configuredPassword) return res.status(503).json({ success: false, code: 'ADMIN_NOT_CONFIGURED', message: 'Admin verification is not configured. Set ADMIN_PASSWORD in Render environment variables and redeploy.' });
+    const crypto = require('crypto');
+    const submitted = Buffer.from(typeof password === 'string' ? password : '', 'utf8');
+    const expected = Buffer.from(configuredPassword, 'utf8');
+    if (submitted.length === expected.length && crypto.timingSafeEqual(submitted, expected)) {
         req.session.adminAuthenticated = true;
         return req.session.save((error) => {
             if (error) return res.status(500).json({ success: false, message: 'Unable to start admin session.' });
@@ -121,7 +131,7 @@ app.post('/api/verify-admin-password', (req, res) => {
         });
     }
     
-    res.status(401).json({ success: false });
+    res.status(401).json({ success: false, message: 'Incorrect administrator password.' });
 });
 
 // Mount other routes

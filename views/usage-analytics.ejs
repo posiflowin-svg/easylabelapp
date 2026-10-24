@@ -87,7 +87,7 @@
   <div id="targetAuthOverlay" role="presentation" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.58);z-index:9999;align-items:center;justify-content:center;padding:16px">
     <div role="dialog" aria-modal="true" aria-labelledby="targetAuthTitle" style="background:#fff;border-radius:16px;max-width:420px;width:100%;box-shadow:0 20px 70px rgba(0,0,0,.22);padding:26px">
       <h2 id="targetAuthTitle" style="margin:0 0 8px;font-size:21px;color:#14233d">Verify administrator access</h2>
-      <p style="margin:0 0 18px;color:#64748b;line-height:1.5">Customer names and mobile numbers are protected. Enter your existing EasyLabel admin password to view the matching audience.</p>
+      <p style="margin:0 0 18px;color:#64748b;line-height:1.5">Customer names and mobile numbers are protected. Enter the administrator password configured in Render to view the matching audience. This is required once per session.</p>
       <form id="targetAuthForm">
         <label for="targetAdminPassword" style="display:block;font-size:13px;font-weight:700;margin-bottom:7px">Admin password</label>
         <input id="targetAdminPassword" type="password" autocomplete="current-password" required style="box-sizing:border-box;width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:12px;font-size:15px">
@@ -299,8 +299,17 @@ async function openCustomer(mobile,id,name){
 let targetPage=1,targetTotal=0,targetCurrent=[];
 let targetPendingPage=null;
 function safeTargetText(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function targetAuthDialog(page){
+async function targetAuthDialog(page){
  targetPendingPage=page;
+ try {
+  const r=await fetch('/api/targeting-auth/status',{credentials:'same-origin',cache:'no-store'});
+  const state=await r.json();
+  if(!state.configured){
+   document.getElementById('targetStatus').textContent='Customer targeting requires secure admin setup. In Render → Environment, add ADMIN_PASSWORD (a strong new password) and SESSION_SECRET, then redeploy. Customer records remain protected.';
+   document.getElementById('targetRows').innerHTML='<tr><td colspan="6">Administrator access is not configured on the server.</td></tr>';
+   targetPendingPage=null;return;
+  }
+ }catch(e){document.getElementById('targetStatus').textContent='Unable to check admin configuration. Please retry.';targetPendingPage=null;return;} 
  document.getElementById('targetAuthError').style.display='none';
  const overlay=document.getElementById('targetAuthOverlay');overlay.style.display='flex';
  document.getElementById('targetAdminPassword').focus();
@@ -322,7 +331,7 @@ document.getElementById('targetAuthForm').addEventListener('submit',async(e)=>{
  try{
   const response=await fetch('/api/verify-admin-password',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})});
   const result=await response.json();
-  if(!response.ok||!result.success)throw Error('Incorrect admin password. Please try again.');
+  if(!response.ok||!result.success)throw Error(result.message||'Incorrect admin password. Please try again.');
   const page=targetPendingPage||1;
   closeTargetAuth();
   await loadTargetAudience(page);
