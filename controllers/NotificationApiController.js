@@ -5,30 +5,21 @@ const PushNotification = require('../models/PushNotification');
 const User = require('../models/User');
 const firebaseService = require('../services/firebaseService');
 
-exports.registerDevice = async (req, res) => {
-  try {
-    const { userId, token, deviceId, appVersion } = req.body;
-    if (!userId || !token) return res.status(400).json({ success: false, message: 'userId and token are required.' });
-    let user = null;
-    const raw = String(userId).trim();
-    if (mongoose.Types.ObjectId.isValid(raw)) user = await User.findById(raw).lean();
-    if (!user) {
-      const exact = new RegExp('^' + raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i');
-      const digits = raw.replace(/\D/g, '');
-      user = await User.findOne({ $or: [{ email: exact }, { phone: digits || raw }] }).lean();
-    }
-    if (!user) return res.status(404).json({ success: false, message: 'EasyLabel user not found for notification registration.' });
-    const item = await DeviceToken.findOneAndUpdate({ token }, { userId: user._id, token, deviceId: deviceId || '', appVersion: appVersion || '', enabled: true, lastSeenAt: new Date() }, { new: true, upsert: true, runValidators: true });
-    res.json({ success: true, data: item });
-  } catch (error) { res.status(400).json({ success: false, message: error.message }); }
-};
-
-exports.disableDevice = async (req, res) => {
-  try {
-    await DeviceToken.updateOne({ token: req.body.token }, { enabled: false });
-    res.json({ success: true });
-  } catch (error) { res.status(400).json({ success: false, message: error.message }); }
-};
+const campaignAuth = require('../middleware/campaignAuth');
+exports.registerDevice = [campaignAuth, async (req,res) => {
+ try {
+  const {token,deviceId,appVersion}=req.body||{};
+  if(typeof token!=='string'||token.trim().length<20||token.length>4096)return res.status(400).json({success:false,message:'Valid FCM token required'});
+  const user=await User.findById(req.authUserId).select('_id').lean();
+  if(!user)return res.status(404).json({success:false,message:'Account not found'});
+  const item=await DeviceToken.findOneAndUpdate({token:token.trim()},{$set:{userId:user._id,deviceId:String(deviceId||'').slice(0,128),appVersion:String(appVersion||'').slice(0,60),enabled:true,lastSeenAt:new Date()}},{new:true,upsert:true,runValidators:true});
+  res.json({success:true,registered:true});
+ }catch(e){res.status(500).json({success:false,message:'Device registration failed'});}
+}];
+exports.disableDevice = [campaignAuth, async(req,res)=>{
+ try {await DeviceToken.updateOne({token:String(req.body?.token||''),userId:req.authUserId},{$set:{enabled:false}});res.json({success:true});}
+ catch(e){res.status(500).json({success:false,message:'Unable to disable device'});}
+}];
 
 exports.send = async (req, res) => {
   try {

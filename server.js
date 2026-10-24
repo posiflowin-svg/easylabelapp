@@ -157,6 +157,7 @@ app.use('/api/borders', BorderRoute);
 app.use('/api/icon-library', IconLibraryRoute);
 app.use('/api/usage', UsageAnalyticsRoute);
 app.use('/api/targeting', require('./routes/targeting'));
+app.use('/api/campaign-customer', require('./routes/campaignCustomer'));
 app.use('/api/cloud-backup', CloudBackupRoute);
 app.use('/api/account-deletion', AccountDeletionRoute);
 
