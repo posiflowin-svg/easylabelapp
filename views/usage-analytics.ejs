@@ -68,6 +68,21 @@
     <section class="panel"><div class="panelTitle">Labels by Size</div><div id="sizes"></div></section>
   </div>
 
+  <section class="panel" style="padding:20px;margin-bottom:18px" id="customerTargeting">
+    <div class="panelTitle">Customer Targeting by Label Size <span style="font-size:11px;color:#64748b;font-weight:normal">Verified-admin audience preview</span></div>
+    <p class="sub" style="margin:8px 0 18px">Find unique customers by actual label copies printed. Campaign delivery and discounts require identity-verified integration; this view does not send messages.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end">
+      <div class="field"><label>Period</label><select id="targetPeriod"><option value="month">This month</option><option value="last">Last month</option><option value="90days">Last 90 days</option><option value="lifetime">Lifetime</option><option value="custom">Custom</option></select></div>
+      <div class="field"><label>Label size</label><select id="targetSize"><option value="50x25">50×25 mm</option><option value="50x12">50×12 mm</option><option value="50x30">50×30 mm</option><option value="50x50">50×50 mm</option><option value="38x25">38×25 mm</option><option value="38x38">38×38 mm</option><option value="48x100">48×100 mm</option><option value="100x150">100×150 mm</option></select></div>
+      <div class="field"><label>Min copies</label><input id="targetMinimum" type="number" min="1" value="1"></div>
+      <div class="field"><label>From (custom)</label><input id="targetFrom" type="date"></div>
+      <div class="field"><label>To (custom)</label><input id="targetTo" type="date"></div>
+      <button class="apply" onclick="loadTargetAudience(1)">Find Customers</button>
+    </div>
+    <p id="targetStatus" class="sub" style="margin:16px 0">Select filters to preview matching customers.</p>
+    <div class="scroll"><table style="min-width:650px"><thead><tr><th><input type="checkbox" id="targetSelectPage" onchange="selectTargetPage(this.checked)" aria-label="Select current page"></th><th>Customer</th><th>Mobile</th><th>Labels printed</th><th>Print jobs</th><th>Last activity</th></tr></thead><tbody id="targetRows"><tr><td colspan="6">Apply filters to load customers</td></tr></tbody></table></div>
+    <div class="pager"><span id="targetSelected">0 selected on this page</span><div class="pageBtns"><button class="pageBtn" onclick="loadTargetAudience(Math.max(1,targetPage-1))">Previous</button><button class="pageBtn" onclick="loadTargetAudience(targetPage+1)">Next</button></div></div>
+  </section>
   <section class="tabsWrap">
     <div class="tabs">
       <button class="tab active" data-tab="customerTab" onclick="switchTab('customerTab',this)">Customer Summary <span class="tabCount" id="customerCount"></span></button>
@@ -263,5 +278,22 @@ async function openCustomer(mobile,id,name){
   loadSummary();
   loadCustomers();
 })();
+</script>
+<script>
+let targetPage=1,targetTotal=0,targetCurrent=[];
+function safeTargetText(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function loadTargetAudience(page){
+ const status=document.getElementById('targetStatus');status.textContent='Loading matching customers…';
+ const [width,height]=document.getElementById('targetSize').value.split('x');
+ const p=new URLSearchParams({width,height,period:document.getElementById('targetPeriod').value,minPrints:document.getElementById('targetMinimum').value,page:String(page),from:document.getElementById('targetFrom').value,to:document.getElementById('targetTo').value});
+ try{const r=await fetch('/api/targeting/audience?'+p.toString(),{credentials:'same-origin'});const j=await r.json();if(!r.ok||!j.success)throw Error(j.message||'Unable to fetch customers');
+ targetPage=j.page;targetTotal=j.total;targetCurrent=j.rows||[];
+ status.textContent=j.total.toLocaleString('en-IN')+' matching customers · page '+j.page+' of '+Math.max(1,Math.ceil(j.total/100))+' · '+Math.ceil(j.total/5000)+' batches of up to 5,000';
+ document.getElementById('targetRows').innerHTML=targetCurrent.length?targetCurrent.map((x,i)=>'<tr><td><input type="checkbox" class="targetCheck" data-index="'+i+'" onchange="targetCountSelected()"></td><td>'+safeTargetText(x.name||x._id)+'</td><td>'+safeTargetText(x.mobile)+'</td><td>'+Number(x.copies||0).toLocaleString('en-IN')+'</td><td>'+Number(x.jobs||0).toLocaleString('en-IN')+'</td><td>'+safeTargetText(x.lastUsed?new Date(x.lastUsed).toLocaleDateString('en-IN'):'')+'</td></tr>').join(''):'<tr><td colspan="6">No matching customers</td></tr>';
+ document.getElementById('targetSelectPage').checked=false;targetCountSelected();
+ }catch(e){status.textContent=e.message;document.getElementById('targetRows').innerHTML='<tr><td colspan="6">Audience unavailable</td></tr>';}
+}
+function selectTargetPage(v){document.querySelectorAll('.targetCheck').forEach(c=>c.checked=v);targetCountSelected();}
+function targetCountSelected(){document.getElementById('targetSelected').textContent=document.querySelectorAll('.targetCheck:checked').length+' selected on this page';}
 </script>
 </body></html>
