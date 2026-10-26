@@ -61,6 +61,7 @@ app.use(session({
 }));
 
 app.use(morgan('dev'));
+app.post('/api/order/payment/webhook', express.raw({type:'application/json',limit:'256kb'}), require('./routes/razorpayWebhook'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json({ limit: process.env.JSON_BODY_LIMIT || '15mb' }));
 // Border files uploaded from the admin are persisted in MongoDB.

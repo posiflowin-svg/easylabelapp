@@ -34,12 +34,19 @@ const createOrder = async (req, res) => {
         const subtotal = products.reduce((sum, product) => sum + (product.price * product.quantity), 0);
         const totalAmount = subtotal - (req.body.discount || 0);
 
+        // Prepaid checkout: never accept an unverified order as a successful purchase.
+        if (!paymentId || !razorpayOrderId) return res.status(400).json({success:false,message:'Captured Razorpay payment details are required to place an order'});
+        const existingPaymentOrder = await Order.findOne({razorpayPaymentId:String(paymentId)});
+        if (existingPaymentOrder) {
+            if (existingPaymentOrder.razorpayOrderId !== razorpayOrderId || Math.round(existingPaymentOrder.totalAmount*100) !== Math.round(totalAmount*100)) return res.status(409).json({success:false,message:'Payment already used for another purchase'});
+            return res.status(200).json({success:true,message:'Order already recorded',order:existingPaymentOrder});
+        }
         // A client-provided payment status is never trusted. Verify directly with Razorpay.
         let verifiedPayment = null;
         if (paymentId || razorpayOrderId) {
             if (!paymentId || !razorpayOrderId) return res.status(400).json({success:false,message:'Both paymentId and razorpayOrderId are required'});
             const check = await razorpayService.verifyPayment({paymentId, orderId: razorpayOrderId, amount: totalAmount, accountKey});
-            if (!check.verified) return res.status(400).json({success:false,message:'Razorpay payment could not be verified as captured'});
+            if (!check.verified || String(check.payment.currency).toUpperCase() !== 'INR') return res.status(400).json({success:false,message:'Razorpay payment could not be verified as captured in INR'});
             verifiedPayment = check;
             if (await Order.exists({razorpayPaymentId: paymentId})) return res.status(409).json({success:false,message:'Payment already linked to another order'});
         }
