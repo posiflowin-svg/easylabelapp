@@ -143,6 +143,7 @@ app.use('/api/showad', ShowADRoute);
 app.use('/api', AuthRoute);
 app.use('/api/shopping', BannerRoutes);
 app.use('/api/order', OrderRoutes);
+app.use('/api/admin/payment-exceptions', require('./routes/paymentExceptions'));
 app.use('/api/coupon', couponRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/pos-enquiries', require('./routes/posEnquiries'));
