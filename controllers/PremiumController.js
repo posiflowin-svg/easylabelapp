@@ -211,7 +211,7 @@ function sanitizeCampaignPayload(body) {
     buttonAction,
     actionValue,
     targetAudience: body.targetAudience || 'free',
-    savedAudienceId: body.targetAudience === 'saved' ? String(body.savedAudienceId || '') : '',
+    savedAudienceId: body.targetAudience === 'saved' ? String(body.savedAudienceId || '').trim() : null,
     frequency: body.frequency || 'once',
     startDate,
     endDate,
@@ -654,7 +654,7 @@ function campaignPublicBase(req) {
 exports.createCampaign = async (req, res) => {
   try {
     const payload = sanitizeCampaignPayload(req.body);
-    if (payload.targetAudience === 'saved' && !await TargetedCampaignDraft.exists({_id:payload.savedAudienceId})) return res.status(400).json({success:false,message:'Select a valid saved audience'});
+    if (payload.targetAudience === 'saved' && (!mongoose.isValidObjectId(payload.savedAudienceId) || !await TargetedCampaignDraft.exists({_id:payload.savedAudienceId}))) return res.status(400).json({success:false,message:'Select a valid saved audience'});
     if (req.file) {
       payload.imageUrl = '';
       payload.imageData = req.file.buffer;
@@ -709,7 +709,7 @@ exports.createNotification = async (req, res) => {
     if (!validActions.includes(req.body.actionType || 'none')) return res.status(400).json({success:false,message:'Invalid notification action.'});
     if (['category','product','url','open_url','open_feature'].includes(req.body.actionType) && !String(req.body.actionValue || '').trim()) return res.status(400).json({success:false,message:'Please select an action destination.'});
     if (['url','open_url'].includes(req.body.actionType) && !/^https?:\/\//i.test(String(req.body.actionValue || ''))) return res.status(400).json({success:false,message:'URL must begin with https:// or http://'});
-    if (req.body.targetAudience === 'saved' && !await TargetedCampaignDraft.exists({_id:req.body.savedAudienceId})) return res.status(400).json({success:false,message:'Select a valid saved audience'});
+    if (req.body.targetAudience === 'saved' && (!mongoose.isValidObjectId(req.body.savedAudienceId) || !await TargetedCampaignDraft.exists({_id:req.body.savedAudienceId}))) return res.status(400).json({success:false,message:'Select a valid saved audience'});
     const status = req.body.scheduleAt ? 'scheduled' : 'draft';
     const item = await PushNotification.create({
       title: req.body.title,
@@ -719,7 +719,7 @@ exports.createNotification = async (req, res) => {
       imageContentType: req.file ? req.file.mimetype : '',
       imageOriginalName: req.file ? req.file.originalname : '',
       targetAudience: req.body.targetAudience || 'all',
-      savedAudienceId: req.body.targetAudience === 'saved' ? String(req.body.savedAudienceId || '') : '',
+      savedAudienceId: req.body.targetAudience === 'saved' ? String(req.body.savedAudienceId || '').trim() : null,
       actionType: req.body.actionType || 'none',
       actionValue: req.body.actionValue || '',
       buttonText: req.body.buttonText || '',
@@ -979,7 +979,7 @@ exports.updateCampaign = async (req, res) => {
     const existing = await PromoCampaign.findById(req.params.id);
     if (!existing) return res.status(404).json({ success: false, message: 'Campaign not found' });
     const payload = sanitizeCampaignPayload(req.body);
-    if (payload.targetAudience === 'saved' && !await TargetedCampaignDraft.exists({_id:payload.savedAudienceId})) return res.status(400).json({success:false,message:'Select a valid saved audience'});
+    if (payload.targetAudience === 'saved' && (!mongoose.isValidObjectId(payload.savedAudienceId) || !await TargetedCampaignDraft.exists({_id:payload.savedAudienceId}))) return res.status(400).json({success:false,message:'Select a valid saved audience'});
     // Preserve the current hosted image when editing without selecting a new file.
     if (!req.file && !String(req.body.imageUrl || '').trim()) payload.imageUrl = existing.imageUrl || '';
     if (req.file) {
@@ -997,12 +997,13 @@ exports.updateCampaign = async (req, res) => {
 
 exports.updateNotification = async (req, res) => {
   try {
+    if (req.body.targetAudience === 'saved' && (!mongoose.isValidObjectId(req.body.savedAudienceId) || !await TargetedCampaignDraft.exists({_id:req.body.savedAudienceId}))) return res.status(400).json({success:false,message:'Select a valid saved audience'});
     const item = await PushNotification.findByIdAndUpdate(req.params.id, {
       title: req.body.title,
       message: req.body.message,
       imageUrl: req.body.imageUrl || '',
       targetAudience: req.body.targetAudience || 'all',
-      savedAudienceId: req.body.targetAudience === 'saved' ? String(req.body.savedAudienceId || '') : '',
+      savedAudienceId: req.body.targetAudience === 'saved' ? String(req.body.savedAudienceId || '').trim() : null,
       actionType: req.body.actionType || 'none',
       actionValue: req.body.actionValue || '',
       buttonText: req.body.buttonText || '',
