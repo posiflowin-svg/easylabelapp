@@ -3,8 +3,9 @@ const { error } = require('console')
 
 // Show the list of AppVersions
 const index = (req, res, next) => {
-    AppVersions.find()
+    AppVersions.find().sort({ updatedAt: -1, _id: -1 })
     .then(response => {
+        res.set("Cache-Control", "no-store");
         res.json({
             response
         })
@@ -88,8 +89,10 @@ const destroy = (req, res, next) => {
 
 // Fetch the first AppVersion record
 const getLatestVersion = (req, res, next) => {
-    AppVersions.findOne()
+    AppVersions.findOne().sort({ updatedAt: -1, _id: -1 })
     .then(response => {
+        if (!response) return res.status(404).json({ message: "App version not configured" });
+        res.set("Cache-Control", "no-store");
         res.json({
             appVersion: response.appVersion,
             isForce: response.isForce
@@ -109,7 +112,7 @@ const updateLatestVersion = (req, res, next) => {
         isForce: req.body.isForce
     }
 
-    AppVersions.findOneAndUpdate({}, { $set: updateData }, { new: true })
+    AppVersions.findOneAndUpdate({}, { $set: updateData }, { new: true, upsert: true, sort: { updatedAt: -1, _id: -1 } })
     .then(response => {
         res.json({
             message: 'App version updated successfully! Refresh Page!',
