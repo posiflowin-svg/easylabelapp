@@ -20,6 +20,12 @@
     .campaign-preview-image img{width:100%;height:100%;object-fit:cover}
     .campaign-preview-body{padding:16px}.campaign-preview-body h4{font-size:20px;margin-bottom:6px}.campaign-preview-body p{color:#64748b;line-height:1.45}
     .campaign-preview-button{display:inline-block;margin-top:12px;background:#2563eb;color:#fff;border-radius:9px;padding:9px 14px;font-weight:700;font-size:13px}
+    .campaign-preview.portrait-popup{border:0;background:transparent;display:flex;justify-content:center;overflow:visible;min-height:0}
+    .campaign-preview.portrait-popup .campaign-preview-body{display:none}
+    .campaign-preview.portrait-popup .campaign-preview-image{position:relative;aspect-ratio:9/16;width:min(100%,270px);min-height:0;border-radius:22px;background:linear-gradient(135deg,#dce5ed,#f1f5f9);border:7px solid #263445;box-shadow:0 8px 24px rgba(15,23,42,.18);color:#64748b;text-align:center;padding:8px}
+    .campaign-preview.portrait-popup .campaign-preview-image img{object-fit:contain;width:100%;height:100%;border-radius:13px}
+    .campaign-preview-close{display:none;position:absolute;right:13px;top:13px;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.72);color:#fff;align-items:center;justify-content:center;font-size:21px;line-height:1;pointer-events:none;z-index:2}
+    .campaign-preview.portrait-popup .campaign-preview-close{display:flex}
     .campaign-form-layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,.7fr);gap:18px}
     .campaign-actions{display:flex;gap:6px;flex-wrap:wrap}
     @media(max-width:900px){.campaign-form-layout{grid-template-columns:1fr}.campaign-kpis{grid-template-columns:1fr 1fr}}
@@ -153,7 +159,7 @@
           <textarea id="campaignSubtitle" name="subtitle" rows="2" maxlength="260" placeholder="Short message shown to the user" oninput="previewCampaign()"></textarea></div>
 
           <div class="form-grid">
-            <div><label id="campaignImageLabel">Popup Image</label><input id="campaignImage" name="image" type="file" accept="image/jpeg,image/png,image/webp" onchange="previewCampaignImage(this)"><input id="campaignImageUrl" name="imageUrl" type="hidden"><div id="campaignImageHelp" class="mini" style="margin-top:6px">Recommended 1200 × 675 px (16:9) · JPG, PNG or WebP · Max 5 MB</div></div>
+            <div><label id="campaignImageLabel">Popup Image</label><input id="campaignImage" name="image" type="file" accept="image/jpeg,image/png,image/webp" onchange="previewCampaignImage(this)"><input id="campaignImageUrl" name="imageUrl" type="hidden"><div id="campaignImageHelp" class="mini" style="margin-top:6px">Recommended 1080 × 1920 px (9:16) · JPG, PNG or WebP · Max 5 MB</div></div>
             <div id="campaignButtonTextField"><label>Button Text</label><input id="campaignButtonText" name="buttonText" value="View Plans" maxlength="40" oninput="previewCampaign()"></div>
             <div id="campaignButtonActionField"><label>Button Action</label><select name="buttonAction" id="campaignButtonAction" onchange="toggleCampaignActionValue()"><option value="shop">Open Shop - All Products</option><option value="category">Open Shop - Category</option><option value="product">Open Shop - Product</option><option value="quick_billing">Open Quick Billing</option><option value="open_url">Open URL</option><option value="dismiss">No Action</option><option value="open_subscription">Open Subscription (Legacy)</option><option value="open_feature">Open Feature (Legacy)</option></select></div>
             <div id="campaignActionValueField"><label id="campaignActionValueLabel">Action Value</label><input name="actionValue" id="campaignActionValue" placeholder="Feature key or https:// URL"></div>
@@ -172,8 +178,8 @@
 
         <div>
           <label>Live Preview</label>
-          <div class="campaign-preview">
-            <div id="campaignPreviewImage" class="campaign-preview-image"><span>No image</span></div>
+          <div id="campaignPreviewCard" class="campaign-preview">
+            <div id="campaignPreviewImage" class="campaign-preview-image"><span>No image</span><span class="campaign-preview-close" aria-hidden="true">×</span></div>
             <div class="campaign-preview-body">
               <span id="campaignPreviewType" class="campaign-type">POPUP</span>
               <h4 id="campaignPreviewTitle" style="margin-top:10px">Campaign title</h4>
@@ -181,7 +187,7 @@
               <span id="campaignPreviewButton" class="campaign-preview-button">View Plans</span>
             </div>
           </div>
-          <p class="mini" style="margin-top:8px">Preview is for administration. Android controls the final native layout for each campaign type.</p>
+          <p class="mini" style="margin-top:8px">Portrait popup preview: the entire image opens the selected action; X closes it. Android controls the final native layout.</p>
         </div>
       </div>
     </div>
@@ -403,16 +409,21 @@ function toggleCampaignActionValue(){
  previewCampaign();
 }
 function updateCampaignTypeFields(){
-  const isFull=document.getElementById('campaignType')?.value==='full_screen';
-  ['campaignTitleField','campaignSubtitleField','campaignButtonTextField','campaignButtonActionField'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isFull?'none':'';});
+  const type=document.getElementById('campaignType')?.value||'popup';
+  const isFull=type==='full_screen';const isPortrait=type==='popup'||isFull;
+  ['campaignSubtitleField','campaignButtonTextField'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isPortrait?'none':'';});
+  const titleField=document.getElementById('campaignTitleField');if(titleField)titleField.style.display=isFull?'none':'';
   const title=document.getElementById('campaignTitle');if(title)title.required=!isFull;
-  const action=document.getElementById('campaignButtonAction');if(isFull&&action)action.value='open_url';
-  const value=document.getElementById('campaignActionValue');if(value){value.disabled=false;value.required=isFull||(action&&['open_url','open_feature','category','product'].includes(action.value));value.placeholder=isFull?'https://your-external-link.com':'Feature key or https:// URL';}
-  const label=document.getElementById('campaignActionValueLabel');if(label&&isFull)label.textContent='External Link';const wrapper=document.getElementById('campaignActionValueField');if(wrapper&&isFull)wrapper.style.display='';
-  const imageLabel=document.getElementById('campaignImageLabel');if(imageLabel)imageLabel.textContent=isFull?'Full Screen Image':'Popup Image';
-  const help=document.getElementById('campaignImageHelp');if(help)help.textContent=isFull?'Recommended 1080 × 1920 px (9:16) · Covers ~90% of phone screen · JPG, PNG or WebP · Max 5 MB':'Recommended 1200 × 675 px (16:9) · JPG, PNG or WebP · Max 5 MB';
-  const previewTitle=document.getElementById('campaignPreviewTitle');const previewSubtitle=document.getElementById('campaignPreviewSubtitle');const previewButton=document.getElementById('campaignPreviewButton');
-  if(previewTitle)previewTitle.style.display=isFull?'none':'';if(previewSubtitle)previewSubtitle.style.display=isFull?'none':'';if(previewButton)previewButton.style.display=isFull?'none':'';
+  const actionField=document.getElementById('campaignButtonActionField');if(actionField)actionField.style.display=isFull?'none':'';
+  const action=document.getElementById('campaignButtonAction');
+  const value=document.getElementById('campaignActionValue');
+  if(value){value.disabled=false;value.required=isFull||(action&&['open_url','open_feature','category','product'].includes(action.value));value.placeholder=isFull?'https://your-external-link.com':'Feature key or https:// URL';}
+  const label=document.getElementById('campaignActionValueLabel');if(label&&isFull)label.textContent='External Link';
+  const wrapper=document.getElementById('campaignActionValueField');if(wrapper&&isFull)wrapper.style.display='';
+  const imageLabel=document.getElementById('campaignImageLabel');if(imageLabel)imageLabel.textContent=isFull?'Full Screen Image':type==='popup'?'Portrait Popup Image':'Campaign Image';
+  const help=document.getElementById('campaignImageHelp');if(help)help.textContent=isPortrait?'Recommended 1080 × 1920 px (9:16) · JPG, PNG or WebP · Max 5 MB':'Recommended 1200 × 675 px (16:9) · JPG, PNG or WebP · Max 5 MB';
+  const card=document.getElementById('campaignPreviewCard');if(card)card.classList.toggle('portrait-popup',isPortrait);
+  ['campaignPreviewTitle','campaignPreviewSubtitle','campaignPreviewButton','campaignPreviewType'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isPortrait?'none':'';});
 }
 function previewCampaign(){
   const title=document.getElementById('campaignTitle');if(!title)return;
@@ -424,7 +435,7 @@ function previewCampaign(){
   const url=(document.getElementById('campaignImageUrl').value||'').trim();
   renderCampaignPreviewImage(url);
 }
-function renderCampaignPreviewImage(url){const box=document.getElementById('campaignPreviewImage');box.innerHTML='';if(!url){const empty=document.createElement('span');empty.textContent=document.getElementById('campaignType')?.value==='full_screen'?'Upload a 9:16 full-screen image':'Upload a 16:9 campaign image';box.appendChild(empty);return;}const img=document.createElement('img');img.src=url;img.alt='Campaign image';img.onerror=()=>{box.innerHTML='<span>Image unavailable</span>';};box.appendChild(img);}
+function renderCampaignPreviewImage(url){const box=document.getElementById('campaignPreviewImage');box.innerHTML='';if(!url){const empty=document.createElement('span');empty.textContent=['popup','full_screen'].includes(document.getElementById('campaignType')?.value)?'Upload a 9:16 portrait image':'Upload a 16:9 campaign image';box.appendChild(empty);}else{const img=document.createElement('img');img.src=url;img.alt='Campaign image';img.onerror=()=>{img.remove();const empty=document.createElement('span');empty.textContent='Image unavailable';box.prepend(empty);};box.appendChild(img);}const close=document.createElement('span');close.className='campaign-preview-close';close.setAttribute('aria-hidden','true');close.textContent='×';box.appendChild(close);}
 function previewCampaignImage(input){const file=input.files&&input.files[0];if(!file){previewCampaign();return;}if(file.size>5*1024*1024){input.value='';showMessage('Campaign image must be 5 MB or smaller.',false);previewCampaign();return;}if(!['image/jpeg','image/png','image/webp'].includes(file.type)){input.value='';showMessage('Use JPG, PNG or WebP image.',false);previewCampaign();return;}renderCampaignPreviewImage(URL.createObjectURL(file));}
 function resetCampaignForm(){const form=document.getElementById('campaignForm');if(!form)return;form.reset();document.getElementById('campaignId').value='';document.getElementById('campaignImageUrl').value='';document.getElementById('campaignActive').checked=true;document.getElementById('campaignSaveButton').textContent='Create Campaign';document.getElementById('campaignButtonText').value='View Plans';document.querySelector('#campaignForm [name=priority]').value='0';document.querySelector('#campaignForm [name=maxDisplays]').value='1';toggleCampaignActionValue();previewCampaign()}
 function editCampaign(c){openTab('campaigns',document.querySelector('.sidebar a[data-tab="campaigns"]'));const form=document.getElementById('campaignForm');document.getElementById('campaignId').value=c._id||'';form.elements.title.value=c.title||'';form.elements.campaignType.value=c.campaignType||'popup';form.elements.targetAudience.value=c.targetAudience||'free';form.elements.savedAudienceId.value=c.savedAudienceId||'';form.elements.frequency.value=c.frequency||'once';form.elements.subtitle.value=c.subtitle||'';document.getElementById('campaignImageUrl').value=c.imageUrl||'';document.getElementById('campaignImage').value='';form.elements.buttonText.value=c.buttonText||'View Plans';form.elements.buttonAction.value=c.buttonAction||'open_subscription';form.elements.actionValue.value=c.actionValue||'';form.elements.priority.value=Number(c.priority||0);form.elements.maxDisplays.value=Number(c.maxDisplays||0);form.elements.startDate.value=localDateTimeValue(c.startDate);form.elements.endDate.value=localDateTimeValue(c.endDate);document.getElementById('campaignActive').checked=!!c.active;document.getElementById('campaignSaveButton').textContent='Save Changes';toggleCampaignActionValue();if(['category','product','open_url','open_feature'].includes(form.elements.buttonAction.value))form.elements.actionValue.value=c.actionValue||'';previewCampaign();form.scrollIntoView({behavior:'smooth',block:'start'})}

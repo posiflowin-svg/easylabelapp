@@ -444,9 +444,23 @@ async function tcReviewDraft(id){
   const note=document.createElement('p');note.style.marginBottom='0';note.textContent='Review only. No push, banner or checkout discount is activated. Device registration alone does not prove marketing consent.';box.appendChild(note);
  }catch(e){box.textContent='Review unavailable: '+e.message;}
 }
+async function tcDryRunDraft(id){
+ const box=document.getElementById('tcReview');box.style.display='block';box.textContent='Checking campaign delivery readiness…';
+ try{
+  const r=await fetch('/api/targeting/drafts/'+encodeURIComponent(id)+'/dry-run',{credentials:'same-origin'});
+  const j=await r.json();if(!r.ok||!j.success)throw Error(j.message||'Dry run failed');
+  box.replaceChildren();const h=document.createElement('strong');h.textContent='Campaign dry run: '+j.campaign.title;box.appendChild(h);
+  const details=[['Saved audience',j.audience.saved],['Account-ID candidates',j.audience.accountIdCandidates],['Recently registered Android accounts',j.audience.recentDeviceAccounts],['Registered devices',j.audience.recentRegisteredDevices],['Verified marketing consent',j.audience.verifiedMarketingConsent],['Eligible for send',j.audience.eligibleForSend],['Firebase configured',j.firebaseConfigured?'Yes':'No']];
+  details.forEach(([k,v])=>{const line=document.createElement('div');line.style.marginTop='7px';line.textContent=k+': '+v;box.appendChild(line)});
+  const warning=document.createElement('div');warning.style.cssText='margin-top:12px;padding:12px;border:1px solid #fed7aa;border-radius:8px;background:#fff7ed;color:#9a3412';
+  const title=document.createElement('strong');title.textContent='Live activation is disabled';warning.appendChild(title);
+  j.blockers.forEach(b=>{const line=document.createElement('div');line.style.marginTop='6px';line.textContent='• '+b;warning.appendChild(line)});box.appendChild(warning);
+  const note=document.createElement('p');note.textContent=j.message;box.appendChild(note);
+ }catch(e){box.textContent='Dry run unavailable: '+e.message;}
+}
 async function tcLoadHistory(){
  try{const r=await fetch('/api/targeting/drafts',{credentials:'same-origin'});if(!r.ok)return;const j=await r.json();const history=document.getElementById('tcHistory');history.replaceChildren();
- (j.drafts||[]).slice(0,10).forEach(d=>{const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid #e2e8f0';const name=document.createElement('span');name.textContent=d.title+' · '+d.channel+' · '+d.status+' · '+new Date(d.createdAt).toLocaleDateString();row.appendChild(name);const btn=document.createElement('button');btn.type='button';btn.textContent='Review audience';btn.style.cssText='padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;cursor:pointer';btn.addEventListener('click',()=>tcReviewDraft(d._id));row.appendChild(btn);history.appendChild(row)});
+ (j.drafts||[]).slice(0,10).forEach(d=>{const row=document.createElement('div');row.style.cssText='display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:7px 0;border-bottom:1px solid #e2e8f0';const name=document.createElement('span');name.textContent=d.title+' · '+d.channel+' · '+d.status+' · '+new Date(d.createdAt).toLocaleDateString();row.appendChild(name);const btn=document.createElement('button');btn.type='button';btn.textContent='Review audience';btn.style.cssText='padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;cursor:pointer';btn.addEventListener('click',()=>tcReviewDraft(d._id));row.appendChild(btn);const dry=document.createElement('button');dry.type='button';dry.textContent='Dry run';dry.style.cssText='padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;cursor:pointer';dry.addEventListener('click',()=>tcDryRunDraft(d._id));row.appendChild(dry);history.appendChild(row)});
  }catch(e){document.getElementById('tcStatus').textContent='Could not load saved campaign history.';}
 }
 tcLoadHistory();

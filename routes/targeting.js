@@ -138,4 +138,35 @@ router.get('/drafts/:id/review', async (req,res) => {
   res.json({success:true,review:{id:String(draft._id),title:draft.title,status:draft.status,channel:draft.channel,audienceCount:(draft.identities||[]).length,accountIdCandidates:validIds.length,registeredDeviceAccounts:registered.length,recentDeviceAccounts:freshAccounts.length,marketingConsentVerified:0,checkoutEligibilityEnabled:false,unverifiedIdentities:(draft.identities||[]).length-validIds.length,product:product?{name:product.name,sku:product.sku,active:product.active!==false}:null,variantSku:draft.variantSku,discountType:draft.discountType,discountValue:draft.discountValue,readyToSend:false,blockers:['Marketing consent is not stored or verified for this audience','No authenticated targeted-banner entitlement endpoint','No checkout-side discount authorization or redemption protection','No dry-run delivery receipts or test-device allowlist'],notes:['No notifications have been sent.','Account identity and marketing permission must be verified before sending.','Discount checkout validation and Android targeted-banner entitlement are not installed.']}});
  } catch(e) {res.status(500).json({success:false,message:'Unable to review campaign'});}
 });
+// V44: server-side dry run only. This endpoint never returns tokens, sends
+// messages, creates entitlements, or changes any campaign state.
+router.get('/drafts/:id/dry-run', async (req,res) => {
+ try {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({success:false,message:'Invalid campaign ID'});
+  const draft=await TargetedCampaignDraft.findById(req.params.id).select('+identities').lean();
+  if (!draft) return res.status(404).json({success:false,message:'Campaign not found'});
+  const ids=[...new Set((draft.identities||[]).filter(v=>typeof v==='string'&&v.startsWith('id:')).map(v=>v.slice(3)).filter(v=>mongoose.isValidObjectId(v)))];
+  const DeviceToken=require('../models/DeviceToken');
+  const freshSince=new Date(Date.now()-90*86400000);
+  const deviceRows=ids.length?await DeviceToken.aggregate([
+   {$match:{userId:{$in:ids.map(v=>new mongoose.Types.ObjectId(v))},enabled:true,platform:'android',lastSeenAt:{$gte:freshSince}}},
+   {$group:{_id:'$userId',devices:{$sum:1}}}
+  ]):[];
+  const config=require('../services/firebaseService').getConfigurationStatus();
+  const product=await Product.findById(draft.productId).select('name active price').lean();
+  const reasons=[
+   'Verified promotional consent is not available in the current user/account schema',
+   'The device-registration API currently accepts a client-supplied userId without account authentication',
+   'Android banner access is not protected by a verified campaign entitlement',
+   'Order pricing and payment verification do not enforce targeted discount eligibility or redemption limits'
+  ];
+  if (!config.configured) reasons.push('Firebase Admin credentials are not configured');
+  if (!product || product.active===false) reasons.push('The selected Shop product is inactive or missing');
+  res.json({success:true,dryRun:true,sendEnabled:false,discountEnabled:false,
+   campaign:{id:String(draft._id),title:draft.title,channel:draft.channel,status:draft.status,product:product?.name||null,discountType:draft.discountType,discountValue:draft.discountValue},
+   audience:{saved:(draft.identities||[]).length,accountIdCandidates:ids.length,recentDeviceAccounts:deviceRows.length,recentRegisteredDevices:deviceRows.reduce((n,r)=>n+r.devices,0),verifiedMarketingConsent:0,eligibleForSend:0},
+   firebaseConfigured:config.configured,blockers:reasons,
+   message:'Dry run completed. No notifications, banners or discounts were activated.'});
+ }catch(e){res.status(500).json({success:false,message:'Unable to perform campaign dry run'});}
+});
 module.exports=router;
