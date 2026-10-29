@@ -64,4 +64,8 @@ async function verifyPayment({ paymentId, orderId, amount, accountKey }) {
   return { verified: statusOk && orderOk && amountOk, payment, account };
 }
 
-module.exports={getAccount,createPaymentOrder,verifyPayment};
+async function fetchPayment({paymentId,accountKey}) {
+  if (!/^pay_[A-Za-z0-9]+$/.test(String(paymentId||''))) throw new Error('Invalid payment ID');
+  return requestRazorpay('GET',`/v1/payments/${encodeURIComponent(paymentId)}`,getAccount(accountKey));
+}
+module.exports={getAccount,createPaymentOrder,verifyPayment,fetchPayment};
