@@ -165,8 +165,8 @@
             <div id="campaignActionValueField"><label id="campaignActionValueLabel">Action Value</label><input name="actionValue" id="campaignActionValue" placeholder="Feature key or https:// URL"></div>
             <div><label>Priority</label><input name="priority" type="number" value="0"><div class="mini">Higher priority displays first.</div></div>
             <div><label>Maximum Displays</label><input name="maxDisplays" type="number" min="0" value="1"><div class="mini">Per user/device. 0 = unlimited.</div></div>
-            <div><label>Start Date</label><input name="startDate" type="datetime-local"></div>
-            <div><label>End Date</label><input name="endDate" type="datetime-local"></div>
+            <div><label>Start Date (IST · Asia/Kolkata)</label><input name="startDate" type="datetime-local"></div>
+            <div><label>End Date (IST · Asia/Kolkata)</label><input name="endDate" type="datetime-local"></div>
           </div>
 
           <div class="inline" style="margin-top:13px"><input type="checkbox" name="active" id="campaignActive" checked> <label for="campaignActive" style="margin:0">Active</label></div>
@@ -207,7 +207,7 @@
             <tr>
               <td><strong><%=c.title%></strong><div class="mini"><span class="campaign-type"><%=c.campaignType.replaceAll('_',' ').toUpperCase()%></span> · <%=c.frequency.replaceAll('_',' ')%></div><div class="mini"><%=c.subtitle||''%></div></td>
               <td><%=c.targetAudience%><div class="mini">Max <%=Number(c.maxDisplays||0)===0?'Unlimited':c.maxDisplays%></div></td>
-              <td class="nowrap"><%=new Date(c.startDate).toLocaleString('en-IN')%><div class="mini">to <%=c.endDate ? new Date(c.endDate).toLocaleString('en-IN') : 'No end date'%></div></td>
+              <td class="nowrap"><%=new Date(c.startDate).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})+' IST'%><div class="mini">to <%=c.endDate ? new Date(c.endDate).toLocaleString('en-IN',{timeZone:'Asia/Kolkata'})+' IST' : 'No end date'%></div></td>
               <td><strong><%=Number(c.displayCount||0)%></strong> views<div class="mini"><%=Number(c.clickCount||0)%> clicks · <%=ctr%>% CTR</div></td>
               <td><span class="status <%=c.active?'on':'off'%>"><%=c.active?'ACTIVE':'INACTIVE'%></span></td>
               <td>
@@ -392,7 +392,7 @@ function filterSubscriptions(){const q=(document.getElementById('subSearch').val
 
 async function recordPayment(id){const amount=prompt('Enter received amount (₹):');if(amount===null)return;const orderId=prompt('Order ID / reference (optional):')||'';try{await api('/api/premium/subscriptions/'+id+'/payments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount,orderId})});showMessage('Payment recorded successfully.');setTimeout(()=>location.reload(),500)}catch(e){showMessage(e.message,false)}}
 async function deleteSubscription(id){if(!confirm('Permanently delete this subscription record?'))return;try{await api('/api/premium/subscriptions/'+id,{method:'DELETE'});showMessage('Subscription deleted.');setTimeout(()=>location.reload(),500)}catch(e){showMessage(e.message,false)}}
-function localDateTimeValue(value){if(!value)return '';const d=new Date(value);if(Number.isNaN(d.getTime()))return '';const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);return local.toISOString().slice(0,16)}
+function localDateTimeValue(value){if(!value)return '';const d=new Date(value);if(Number.isNaN(d.getTime()))return '';const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d);const f=Object.fromEntries(parts.map(p=>[p.type,p.value]));return `${f.year}-${f.month}-${f.day}T${f.hour}:${f.minute}`}
 function toggleCampaignActionValue(){
  const action=document.getElementById('campaignButtonAction');
  const input=document.getElementById('campaignActionValue');

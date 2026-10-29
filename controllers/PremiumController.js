@@ -95,6 +95,23 @@ function parseOptionalDate(value, fallback = null) {
   return Number.isNaN(date.getTime()) ? fallback : date;
 }
 
+// Campaign date/time inputs are wall-clock times in India (UTC+05:30).
+// ISO timestamps with Z/offset are already absolute instants and are not shifted.
+function parseCampaignISTDate(value, fallback = null) {
+  if (value === undefined || value === null || String(value).trim() === '') return fallback;
+  const raw = String(value).trim();
+  const local = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?$/.exec(raw);
+  const normalized = local ? `${local[1]}T${local[2]}:${local[3] || '00'}${local[4] ? '.' + local[4].padEnd(3, '0') : ''}+05:30` : raw;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) throw new Error('Invalid campaign date/time. Enter a valid IST date and time.');
+  if (local) {
+    const actual = new Intl.DateTimeFormat('en-CA', {timeZone:'Asia/Kolkata', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).formatToParts(date);
+    const fields = Object.fromEntries(actual.map(x=>[x.type,x.value]));
+    if (`${fields.year}-${fields.month}-${fields.day}T${fields.hour}:${fields.minute}` !== `${local[1]}T${local[2]}`) throw new Error('Invalid campaign calendar date.');
+  }
+  return date;
+}
+
 function campaignIdentityQuery(campaignId, userId, deviceId) {
   return {
     campaignId,
@@ -171,8 +188,8 @@ function sanitizeCampaignPayload(body) {
   const title = String(body.title || '').trim() || (isFullScreen ? 'Full Screen Campaign' : '');
   if (!title) throw new Error('Campaign title is required.');
 
-  const startDate = parseOptionalDate(body.startDate, new Date());
-  const endDate = parseOptionalDate(body.endDate, null);
+  const startDate = parseCampaignISTDate(body.startDate, new Date());
+  const endDate = parseCampaignISTDate(body.endDate, null);
 
   if (endDate && startDate && endDate <= startDate) {
     throw new Error('End date must be after start date.');
