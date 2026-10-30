@@ -122,18 +122,20 @@ app.get('/api/targeting-auth/status', (req, res) => {
 });
 // Add the password verification route directly to app
 app.post('/api/verify-admin-password', adminSecurity.loginLimiter, (req, res) => {
-    const { password } = req.body;
+    res.set('Cache-Control', 'no-store');
+    const { password } = req.body || {};
+    if (typeof password !== 'string' || !password.length) return res.status(400).json({success:false,code:'PASSWORD_REQUIRED',message:'Enter your administrator password.'});
     
     const configuredPassword = process.env.ADMIN_PASSWORD || process.env.POS_ENQUIRY_ADMIN_PASSWORD;
     if (!configuredPassword) return res.status(503).json({ success: false, code: 'ADMIN_NOT_CONFIGURED', message: 'Admin verification is not configured. Set ADMIN_PASSWORD in Render environment variables and redeploy.' });
     const valid = adminSecurity.comparePassword(password,configuredPassword);
     if (valid) {
         req.session.regenerate((regenError) => {
-        if (regenError) return res.status(500).json({success:false,message:'Unable to start admin session.'});
+        if (regenError) { console.error('[ADMIN_LOGIN] Session regeneration failed:', regenError.message); return res.status(500).json({success:false,code:'SESSION_REGENERATE_FAILED',message:'Unable to start admin session. Check server logs.'}); }
         req.session.adminAuthenticated = true;
         return req.session.save((error) => {
-            if (error) return res.status(500).json({ success: false, message: 'Unable to start admin session.' });
-            return res.json({ success: true });
+            if (error) { console.error('[ADMIN_LOGIN] Session save failed:', error.message); return res.status(500).json({ success: false, code:'SESSION_SAVE_FAILED', message: 'Unable to save admin session. Check server logs.' }); }
+            return res.json({ success: true, redirect: '/' });
         });
         });
     }

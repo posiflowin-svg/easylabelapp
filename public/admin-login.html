@@ -1,1 +1,29 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EasyLabel Admin Login</title><style>body{font:16px system-ui;background:#f2f5fa;display:grid;place-items:center;min-height:100vh;margin:0}main{background:white;padding:32px;border-radius:16px;box-shadow:0 8px 40px #1223  ;width:min(360px,85vw)}input,button{box-sizing:border-box;width:100%;padding:13px;margin-top:14px;border-radius:8px}button{background:#1b4dd9;color:white;border:0;cursor:pointer}#error{color:#b91c1c}</style></head><body><main><h2>EasyLabel Admin</h2><p>Sign in to access the management dashboard.</p><form id="login"><input id="password" type="password" placeholder="Admin password" autocomplete="current-password" required><button>Sign in</button></form><p id="error" role="alert"></p></main><script>document.getElementById('login').addEventListener('submit',async e=>{e.preventDefault();let error=document.getElementById('error');error.textContent='';try{let r=await fetch('/api/verify-admin-password',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({password:document.getElementById('password').value})});if(r.ok){location.assign('/');return}let j=await r.json();error.textContent=j.message||'Login failed'}catch(_){error.textContent='Unable to connect to server'}})</script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EasyLabel Admin Login</title><style>body{font:16px system-ui;background:#f2f5fa;display:grid;place-items:center;min-height:100vh;margin:0}main{background:white;padding:32px;border-radius:16px;box-shadow:0 8px 40px #1223  ;width:min(360px,85vw)}input,button{box-sizing:border-box;width:100%;padding:13px;margin-top:14px;border-radius:8px}button{background:#1b4dd9;color:white;border:0;cursor:pointer}#error{color:#b91c1c}</style></head><body><main><h2>EasyLabel Admin</h2><p>Sign in to access the management dashboard.</p><form id="login"><input id="password" type="password" placeholder="Admin password" autocomplete="current-password" required><button>Sign in</button></form><p id="error" role="alert"></p></main><script>
+const form=document.getElementById('login');
+form.addEventListener('submit',async event=>{
+ event.preventDefault();
+ const error=document.getElementById('error');
+ const button=form.querySelector('button');
+ error.textContent='';button.disabled=true;button.textContent='Signing in…';
+ try {
+   const response=await fetch('/api/verify-admin-password',{
+     method:'POST',credentials:'same-origin',cache:'no-store',
+     headers:{'Content-Type':'application/json','Accept':'application/json'},
+     body:JSON.stringify({password:document.getElementById('password').value})
+   });
+   const contentType=response.headers.get('content-type')||'';
+   let data=null;
+   if(contentType.includes('application/json')) {
+     try { data=await response.json(); } catch (_) { /* show status below */ }
+   }
+   if(response.ok && data && data.success===true) {
+     window.location.assign(data.redirect||'/');return;
+   }
+   if(response.status===429) error.textContent='Too many login attempts. Wait 15 minutes before trying again.';
+   else if(data && data.message) error.textContent=data.message;
+   else error.textContent='Login request failed (HTTP '+response.status+'). Check Render logs if this persists.';
+ } catch (err) {
+   error.textContent='Network request failed. Check your connection and Render service status.';
+ } finally {button.disabled=false;button.textContent='Sign in';}
+});
+</script></body></html>
