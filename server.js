@@ -137,9 +137,19 @@ app.post('/api/verify-admin-password', adminSecurity.loginLimiter, (req, res) =>
     const { password } = req.body || {};
     if (typeof password !== 'string' || !password.length) return reply(400,{success:false,code:'PASSWORD_REQUIRED',message:'Enter your administrator password.'});
     
-    const configuredPassword = process.env.ADMIN_PASSWORD || process.env.POS_ENQUIRY_ADMIN_PASSWORD;
-    if (!configuredPassword) return reply(503,{ success: false, code: 'ADMIN_NOT_CONFIGURED', message: 'Admin verification is not configured. Set ADMIN_PASSWORD in Render environment variables and redeploy.' });
-    const valid = adminSecurity.comparePassword(password,configuredPassword);
+    // Prefer the dedicated admin credential; legacy fallback is only for older installations.
+    // Never log passwords, hashes, password lengths, or submitted request bodies.
+    const passwordSource = process.env.ADMIN_PASSWORD ? 'ADMIN_PASSWORD' :
+        (process.env.POS_ENQUIRY_ADMIN_PASSWORD ? 'POS_ENQUIRY_ADMIN_PASSWORD' : 'NOT_CONFIGURED');
+    const configuredPassword = passwordSource === 'ADMIN_PASSWORD' ? process.env.ADMIN_PASSWORD :
+        (passwordSource === 'POS_ENQUIRY_ADMIN_PASSWORD' ? process.env.POS_ENQUIRY_ADMIN_PASSWORD : undefined);
+    if (!configuredPassword) {
+        console.error('[ADMIN_AUTH_DIAGNOSTIC]', requestId, 'password source missing');
+        return reply(503,{ success: false, code: 'ADMIN_NOT_CONFIGURED', message: 'Admin verification is not configured. Set ADMIN_PASSWORD in Render environment variables and redeploy.' });
+    }
+    const valid = adminSecurity.comparePassword(password, configuredPassword);
+    console.info('[ADMIN_AUTH_DIAGNOSTIC]', requestId, 'source=' + passwordSource,
+        'match=' + (valid ? 'yes' : 'no'), 'sessionAvailable=' + Boolean(req.session));
     if (valid) {
         req.session.regenerate((regenError) => {
         if (regenError) { console.error('[ADMIN_LOGIN] Session regeneration failed:', regenError.message); return reply(500,{success:false,code:'SESSION_REGENERATE_FAILED',message:'Unable to start admin session. Check server logs.'}); }
@@ -198,5 +208,6 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('Server is running on port ' + PORT);
+    console.info('[ADMIN_AUTH_CONFIG] source=' + (process.env.ADMIN_PASSWORD ? 'ADMIN_PASSWORD' : (process.env.POS_ENQUIRY_ADMIN_PASSWORD ? 'POS_ENQUIRY_ADMIN_PASSWORD' : 'NOT_CONFIGURED')));
     notificationScheduler.start();
 });
