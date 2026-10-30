@@ -151,7 +151,9 @@ app.post('/api/verify-admin-password', adminSecurity.loginLimiter, (req, res) =>
     console.info('[ADMIN_AUTH_DIAGNOSTIC]', requestId, 'source=' + passwordSource,
         'match=' + (valid ? 'yes' : 'no'), 'sessionAvailable=' + Boolean(req.session));
     if (valid) {
-        req.session.regenerate((regenError) => {
+        // Return the asynchronous session operation so execution cannot fall through
+        // to the invalid-password 401 response while regeneration is pending.
+        return req.session.regenerate((regenError) => {
         if (regenError) { console.error('[ADMIN_LOGIN] Session regeneration failed:', regenError.message); return reply(500,{success:false,code:'SESSION_REGENERATE_FAILED',message:'Unable to start admin session. Check server logs.'}); }
         req.session.adminAuthenticated = true;
         return req.session.save((error) => {
