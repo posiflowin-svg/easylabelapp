@@ -87,54 +87,30 @@ router.post('/', async (req,res) => {
     console.error('POS enquiry submission:',e);res.status(500).json({success:false,message:'Could not save enquiry.'});
   }
 });
-// This password protects POS enquiries only. The rest of EasyLabel remains unchanged.
-// Configure POS_ENQUIRY_ADMIN_PASSWORD and SESSION_SECRET on Render.
-const loginAttempts = new Map();
-const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
-function samePassword(input, expected) {
-  if (typeof input !== 'string' || !expected) return false;
-  const a = crypto.createHash('sha256').update(input).digest();
-  const b = crypto.createHash('sha256').update(expected).digest();
-  return crypto.timingSafeEqual(a, b);
-}
+// POS Enquiries uses the SAME admin session as the EasyLabel admin dashboard.
+// Legacy POS-specific login URL redirects to the central admin login.
 function adminOnly(req, res, next) {
-  if (req.session && req.session.posEnquiryAuthenticated === true) return next();
-  if (req.method === 'GET' && req.accepts('html')) return res.redirect('/api/pos-enquiries/admin/login');
-  return res.status(403).json({ success:false, message:'POS Enquiry admin authentication required' });
+  if (req.session && req.session.adminAuthenticated === true) return next();
+  if (req.method === 'GET' && req.accepts('html')) {
+    return res.redirect('/admin-login?next=' + encodeURIComponent('/api/pos-enquiries/admin'));
+  }
+  return res.status(401).json({ success:false, code:'ADMIN_AUTH_REQUIRED', message:'Administrator login required' });
 }
 router.get('/admin/login', (req,res) => {
-  if (req.session?.posEnquiryAuthenticated) return res.redirect('/api/pos-enquiries/admin');
-  res.set('Cache-Control','no-store');
-  res.render('pos-enquiries-login', { configured: !!process.env.POS_ENQUIRY_ADMIN_PASSWORD });
+  if (req.session?.adminAuthenticated) return res.redirect('/api/pos-enquiries/admin');
+  return res.redirect('/admin-login?next=' + encodeURIComponent('/api/pos-enquiries/admin'));
 });
-router.post('/admin/login', async (req,res) => {
-  res.set('Cache-Control','no-store');
-  if (!process.env.POS_ENQUIRY_ADMIN_PASSWORD) return res.status(503).json({success:false,message:'POS Enquiry admin password is not configured on Render.'});
-  const origin = req.get('origin');
-  if (origin) {
-    try { if (new URL(origin).host !== req.get('host')) return res.status(403).json({success:false,message:'Invalid request origin.'}); }
-    catch (_) { return res.status(403).json({success:false,message:'Invalid request origin.'}); }
-  }
-  const key = req.ip || 'unknown';
-  const now = Date.now();
-  let record = loginAttempts.get(key);
-  if (!record || now - record.since > ATTEMPT_WINDOW_MS) record = { since:now, failures:0 };
-  if (record.failures >= 8) return res.status(429).json({success:false,message:'Too many attempts. Try again in 15 minutes.'});
-  if (!samePassword(req.body?.password, process.env.POS_ENQUIRY_ADMIN_PASSWORD)) {
-    record.failures++; loginAttempts.set(key,record);
-    return res.status(401).json({success:false,message:'Incorrect POS Enquiry password.'});
-  }
-  loginAttempts.delete(key);
-  req.session.regenerate(err => {
-    if (err) return res.status(500).json({success:false,message:'Could not start session.'});
-    req.session.posEnquiryAuthenticated = true;
-    req.session.save(error => error
-      ? res.status(500).json({success:false,message:'Could not save session.'})
-      : res.json({success:true}));
-  });
+router.post('/admin/login', (req,res) => {
+  // Compatibility for old POS login form: use central login endpoint instead.
+  if (req.session?.adminAuthenticated) return res.json({success:true,redirect:'/api/pos-enquiries/admin'});
+  return res.status(401).json({success:false,code:'ADMIN_AUTH_REQUIRED',message:'Please sign in using the main EasyLabel Admin Login.'});
 });
 router.post('/admin/logout', adminOnly, (req,res) => {
-  req.session.destroy(() => { res.clearCookie('connect.sid'); res.redirect('/api/pos-enquiries/admin/login'); });
+  req.session.destroy((error) => {
+    if (error) return res.status(500).send('Unable to sign out');
+    res.clearCookie('connect.sid');
+    return res.redirect('/admin-login');
+  });
 });
 router.get('/admin',adminOnly,async(req,res)=>{
  try { const status=req.query.status;const category=req.query.category;const filter=['New','Contacted','Converted','Closed'].includes(status)?{status}:{};

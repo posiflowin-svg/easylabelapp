@@ -47,7 +47,14 @@ function apiPolicy(req,res,next) {
  if(starts('/api/template')) return ((m==='GET')||(m==='POST'&&p==='/api/template/show'))?next():requireAdmin(req,res,next);
  if(starts('/api/borders')) return m==='GET'?next():requireAdmin(req,res,next);
  if(starts('/api/icon-library')) return m==='GET'?next():requireAdmin(req,res,next);
- if(starts('/api/pos-enquiries')) return (m==='POST'&&p==='/api/pos-enquiries')?next():requireAdmin(req,res,next);
+ if(starts('/api/pos-enquiries')) {
+   // Public customer submissions and POS login endpoints must reach their router.
+   // All enquiry data and status changes require the shared admin session.
+   if (m==='POST' && p==='/api/pos-enquiries') return next();
+   if (p==='/api/pos-enquiries/admin/login' && (m==='GET'||m==='POST')) return next();
+   if (m==='GET' && p==='/api/pos-enquiries/admin' && req.accepts('html')) return adminPage(req,res,next);
+   return requireAdmin(req,res,next);
+ }
  if(starts('/api/admin')) return requireAdmin(req,res,next);
  if(p==='/api/users'||p==='/api/referred-users'||p==='/api/update-status') return requireAdmin(req,res,next);
  next();

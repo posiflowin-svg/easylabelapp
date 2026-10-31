@@ -17,7 +17,9 @@ form.addEventListener('submit',async event=>{
      try { data=await response.json(); } catch (_) { /* show status below */ }
    }
    if(response.ok && data && data.success===true) {
-     window.location.assign(data.redirect||'/');return;
+     const next = new URLSearchParams(window.location.search).get('next');
+     const allowedNext = next === '/api/pos-enquiries/admin' ? next : null;
+     window.location.assign(allowedNext || data.redirect || '/');return;
    }
    if(response.status===429) error.textContent='Too many login attempts. Wait 15 minutes before trying again.';
    else if(data && data.message) error.textContent=data.message;
