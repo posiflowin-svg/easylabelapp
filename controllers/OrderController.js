@@ -1,4 +1,5 @@
 const Order = require('../models/Order');
+const { enrichOrderVariations, preserveOrderVariations } = require('../utils/orderVariations');
 // const { sendOrderStatusEmail } = require('../services/emailService');
 const ExcelJS = require('exceljs');
 const razorpayService = require('../services/razorpayService');
@@ -69,7 +70,7 @@ const createOrder = async (req, res) => {
             date: new Date(),
             time: getCurrentTime(),
             customer,
-            products,
+            products: preserveOrderVariations(products),
             subtotal,
             couponCode,
             discount: req.body.discount || 0,
@@ -137,6 +138,7 @@ const getOrders = async (req, res) => {
         };
 
         const orders = await Order.paginate(query, options);
+        await enrichOrderVariations(orders.docs);
 
         res.json({
             success: true,
@@ -194,6 +196,7 @@ const filterOrders = async (req, res) => {
         };
 
         const result = await Order.paginate(query, options);
+        await enrichOrderVariations(result.docs);
 
         res.json({
             success: true,
@@ -554,7 +557,8 @@ const getOrderById = async (req, res) => {
         }
 
         const order = await Order.findOne({ orderId: id })
-            .populate('products.productId', 'name images');
+            .populate('products.productId', 'name images')
+            .lean();
 
         if (!order) {
             return res.status(404).json({
@@ -563,6 +567,7 @@ const getOrderById = async (req, res) => {
             });
         }
 
+        await enrichOrderVariations([order]);
         res.json({
             success: true,
             message: 'Order retrieved successfully',
@@ -673,7 +678,7 @@ const createRazorpayPaymentOrder = async (req, res) => {
             if (Math.round((subtotal-discount)*100) !== paymentAmountPaise) return res.status(409).json({success:false,message:'Cart total does not match payment amount'});
             const delivery = new Date(expectedDeliveryDate);
             if (Number.isNaN(delivery.getTime())) return res.status(400).json({success:false,message:'Invalid delivery date'});
-            snapshot = {customer,products,subtotal,discount,totalAmount:subtotal-discount,couponCode:checkout.couponCode || null,expectedDeliveryDate:delivery};
+            snapshot = {customer,products:preserveOrderVariations(products),subtotal,discount,totalAmount:subtotal-discount,couponCode:checkout.couponCode || null,expectedDeliveryDate:delivery};
         }
         const { account, order } = await razorpayService.createPaymentOrder({ amount, currency, receipt, accountKey });
         let shopOrderId = null;

@@ -545,13 +545,28 @@
       order.products.forEach(item => {
         const itemElement = document.createElement('div');
         itemElement.className = 'flex justify-between';
-        itemElement.innerHTML = `
-          <span>${item.name} × ${item.quantity}</span>
-          <span>₹${item.price * item.quantity}</span>
-        `;
+        const left = document.createElement('div');
+        const name = document.createElement('div');
+        name.textContent = `${item.name} × ${item.quantity}`;
+        left.appendChild(name);
+        const variantName = item.variantName || item.variationName || '';
+        const variantSku = item.variantSku || '';
+        const attributes = item.variantAttributes && typeof item.variantAttributes === 'object'
+          ? Object.entries(item.variantAttributes).map(([k,v]) => `${k}: ${v}`).join(' | ')
+          : '';
+        if (variantName || variantSku || attributes) {
+          const detail = document.createElement('div');
+          detail.style.cssText = 'font-size:12px;color:#64748b;margin-top:3px;white-space:normal';
+          detail.textContent = [variantName, attributes, variantSku ? `SKU: ${variantSku}` : ''].filter(Boolean).join(' • ');
+          left.appendChild(detail);
+        }
+        const price = document.createElement('span');
+        price.textContent = `₹${Number(item.price) * Number(item.quantity)}`;
+        itemElement.appendChild(left);
+        itemElement.appendChild(price);
         itemsContainer.appendChild(itemElement);
       });
-      
+
       document.getElementById('modalOrderTotal').textContent = `Total: ₹${order.totalAmount.toFixed(2)}`;
       
       document.getElementById('activeStatusUpdate').classList.add('hidden');

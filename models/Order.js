@@ -37,7 +37,11 @@ const OrderSchema = new mongoose.Schema({
             category: { type: String, required: true },
             quantity: { type: Number, required: true },
             price: { type: Number, required: true },
-            productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' }
+            productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+            variantId: { type: String, default: '' },
+            variantName: { type: String, default: '' },
+            variantSku: { type: String, default: '' },
+            variantAttributes: { type: mongoose.Schema.Types.Mixed, default: undefined }
         }
     ],
     subtotal: { type: Number, required: true },
