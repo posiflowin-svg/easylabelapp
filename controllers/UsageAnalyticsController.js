@@ -431,3 +431,32 @@ exports.purchaseHistory = async (req,res) => {
 };
 
 exports.page = (req,res) => res.render('usage-analytics');
+
+// Batch CRM lookup: one total per normalized mobile, across all recorded label prints.
+// Returns only the mobile numbers explicitly requested by the authenticated CRM server.
+exports.customerSummaries = async (req, res) => {
+  try {
+    const input = Array.isArray(req.body && req.body.mobiles) ? req.body.mobiles : [];
+    const mobiles = [...new Set(input.slice(0, 500).map(normalizeMobile).filter(m => /^\d{10}$/.test(m)))];
+    if (!mobiles.length) return res.json({success:true, data:{}, customers:{}});
+    const rows = await UsageEvent.aggregate([
+      {$match:{eventType:'LABEL_PRINT'}},
+      {$project:{mobile:{$substrCP:[{$ifNull:['$customerMobile','']},0,32]},copies:1,occurredAt:1,labelWidthMm:1,labelHeightMm:1}},
+      {$group:{_id:'$mobile',labelsPrinted:{$sum:'$copies'},printCommands:{$sum:1},lastActivity:{$max:'$occurredAt'}}}
+    ]).allowDiskUse(true);
+    const requested = new Set(mobiles), data = {};
+    for (const row of rows) {
+      const mobile = normalizeMobile(row._id);
+      if (!requested.has(mobile)) continue;
+      const entry = data[mobile] || {mobile,labelsPrinted:0,printCommands:0,lastActivity:null};
+      entry.labelsPrinted += Number(row.labelsPrinted || 0);
+      entry.printCommands += Number(row.printCommands || 0);
+      if (!entry.lastActivity || (row.lastActivity && new Date(row.lastActivity)>new Date(entry.lastActivity))) entry.lastActivity=row.lastActivity;
+      data[mobile]=entry;
+    }
+    return res.json({success:true,data,customers:data});
+  } catch (e) {
+    console.error('CRM customer summaries failed',e);
+    return res.status(500).json({success:false,message:'Unable to load customer summaries'});
+  }
+};

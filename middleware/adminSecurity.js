@@ -40,6 +40,9 @@ function apiPolicy(req,res,next) {
    if(m==='POST' && (/^\/api\/premium\/campaigns\/[^/]+\/(impression|click|dismiss)$/.test(p)||p==='/api/premium/ai-usage')) return next();
    return requireAdmin(req,res,next);
  }
+ // CRM-only analytics requests pass to route-level shared-key verification.
+ // All other analytics endpoints still require an administrator session.
+ if ((m==='GET' && p==='/api/usage/crm/customer-activity') || (m==='POST' && p==='/api/usage/crm/customer-summaries')) return next();
  if(starts('/api/usage')) return (m==='POST'&&p==='/api/usage/events')?next():requireAdmin(req,res,next);
  if(starts('/api/campaign-customer')) return requireAdmin(req,res,next);
  if(starts('/api/targeting')) return requireAdmin(req,res,next);
