@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const PosEnquiry = require('../models/PosEnquiry');
 const router = express.Router();
+const {syncEnquiry}=require('../services/posEnquiryCrmSync');
+async function deliver(enquiryId){const result=await syncEnquiry(enquiryId);await PosEnquiry.findByIdAndUpdate(enquiryId,{$set:{'crmSync.status':result.success?'synced':'failed','crmSync.lastAttempt':new Date(),'crmSync.error':result.success?'':result.message,'crmSync.syncedAt':result.success?new Date():null}});return result;}
 const valid = (value, allowed) => allowed.includes(value);
 router.post('/', async (req,res) => {
   try {
@@ -82,6 +84,8 @@ router.post('/', async (req,res) => {
     }
     const enquiry = await PosEnquiry.create({...contact,...enquiryFields});
     res.status(201).json({success:true,message:'Enquiry submitted successfully.',id:enquiry._id});
+    // The customer submission must not fail because CRM is temporarily offline.
+    deliver(enquiry._id).catch(e=>console.error('CRM enquiry delivery',e));
   } catch (e) {
     if (e.name === 'JsonWebTokenError' || e.name === 'TokenExpiredError') return res.status(401).json({success:false,message:'Session expired. Please sign in again.'});
     console.error('POS enquiry submission:',e);res.status(500).json({success:false,message:'Could not save enquiry.'});
@@ -118,6 +122,12 @@ router.get('/admin',adminOnly,async(req,res)=>{
  if(category==='POS')filter.enquiryType={$in:['POS',null]};
  const items=await PosEnquiry.find(filter).sort({createdAt:-1}).limit(1000).lean();res.render('pos-enquiries',{items,status:status||'',category:category||'ALL'});
  }catch(e){console.error(e);res.status(500).send('Unable to load enquiries');}
+});
+router.post('/admin/:id/retry-crm',adminOnly,async(req,res)=>{
+ try{const result=await deliver(req.params.id);return res.status(result.success?200:502).json(result);}catch(e){return res.status(500).json({success:false,message:'Retry failed'});}
+});
+router.post('/admin/retry-pending-crm',adminOnly,async(req,res)=>{
+ try{const pending=await PosEnquiry.find({'crmSync.status':{$ne:'synced'}}).sort({createdAt:1}).limit(100).select('_id').lean();let synced=0;for(const item of pending){const result=await deliver(item._id);if(result.success)synced++;}return res.json({success:true,attempted:pending.length,synced});}catch(e){return res.status(500).json({success:false,message:'Retry failed'});}
 });
 router.post('/admin/:id/status',adminOnly,async(req,res)=>{
  try{if(!valid(req.body.status,['New','Contacted','Converted','Closed']))return res.status(400).send('Invalid status');

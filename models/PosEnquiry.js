@@ -11,6 +11,7 @@ const schema = new mongoose.Schema({
   outlets: { type: String, enum: ['1 Outlet','2-5 Outlets','6+ Outlets'], required: function() { return this.enquiryType === 'POS'; } },
   purchaseTimeline: { type: String, enum: ['Within 7 Days','Within 30 Days','Exploring Options','Just Exploring'], required: function() { return this.enquiryType === 'POS'; } },
   discountInterest: { type: Boolean, default: false },
+  crmSync: { status: {type:String,enum:['pending','synced','failed'],default:'pending'}, lastAttempt:Date, error:String, syncedAt:Date },
   status: { type: String, enum: ['New','Contacted','Converted','Closed'], default: 'New' }
 }, { timestamps: true });
 schema.index({createdAt:-1});
