@@ -212,4 +212,5 @@ app.listen(PORT, () => {
     console.log('Server is running on port ' + PORT);
     console.info('[ADMIN_AUTH_CONFIG] source=' + (process.env.ADMIN_PASSWORD ? 'ADMIN_PASSWORD' : (process.env.POS_ENQUIRY_ADMIN_PASSWORD ? 'POS_ENQUIRY_ADMIN_PASSWORD' : 'NOT_CONFIGURED')));
     notificationScheduler.start();
+    require('./routes/posEnquiries').startCrmRetryWorker();
 });

@@ -5,7 +5,32 @@ const User = require('../models/User');
 const PosEnquiry = require('../models/PosEnquiry');
 const router = express.Router();
 const {syncEnquiry}=require('../services/posEnquiryCrmSync');
-async function deliver(enquiryId){const result=await syncEnquiry(enquiryId);await PosEnquiry.findByIdAndUpdate(enquiryId,{$set:{'crmSync.status':result.success?'synced':'failed','crmSync.lastAttempt':new Date(),'crmSync.error':result.success?'':result.message,'crmSync.syncedAt':result.success?new Date():null}});return result;}
+async function deliver(enquiryId){
+ const result=await syncEnquiry(enquiryId);
+ await PosEnquiry.findByIdAndUpdate(enquiryId,{$set:{'crmSync.status':result.success?'synced':'failed','crmSync.lastAttempt':new Date(),'crmSync.error':result.success?'':result.message,'crmSync.syncedAt':result.success?new Date():null}});
+ if(!result.success)console.warn('[EASYLABEL_CRM_SYNC]',String(enquiryId),result.message);
+ return result;
+}
+// Retry failed and historical pending enquiries. The database, not in-memory state,
+// is the source of truth, so restarts do not lose deliveries.
+let retryRunning=false;
+async function retryCrmBatch(limit=30){
+ if(retryRunning)return {attempted:0,synced:0,busy:true};
+ retryRunning=true;
+ try{
+  const cutoff=new Date(Date.now()-60*1000);
+  const pending=await PosEnquiry.find({$or:[{'crmSync.status':{$exists:false}},{'crmSync.status':{$in:['pending','failed']}}],$and:[{$or:[{'crmSync.lastAttempt':{$exists:false}},{'crmSync.lastAttempt':{$lt:cutoff}}]}]}).sort({createdAt:1}).limit(limit).select('_id').lean();
+  let synced=0;
+  for(const item of pending){const result=await deliver(item._id);if(result.success)synced++;}
+  return {attempted:pending.length,synced};
+ }finally{retryRunning=false;}
+}
+function startCrmRetryWorker(){
+ const run=()=>retryCrmBatch().catch(e=>console.error('[EASYLABEL_CRM_RETRY]',e.message));
+ setTimeout(run,15000).unref?.();
+ setInterval(run,2*60*1000).unref?.();
+}
+
 const valid = (value, allowed) => allowed.includes(value);
 router.post('/', async (req,res) => {
   try {
@@ -120,7 +145,7 @@ router.get('/admin',adminOnly,async(req,res)=>{
  try { const status=req.query.status;const category=req.query.category;const filter=['New','Contacted','Converted','Closed'].includes(status)?{status}:{};
  if(['THERMAL_LABEL','THERMAL_RECEIPT','MOBILE_PRINTER','RECEIPT_PRINTER','LABEL_PRINTER','BARCODE_SCANNER'].includes(category))filter.enquiryType=category;
  if(category==='POS')filter.enquiryType={$in:['POS',null]};
- const items=await PosEnquiry.find(filter).sort({createdAt:-1}).limit(1000).lean();res.render('pos-enquiries',{items,status:status||'',category:category||'ALL'});
+ const items=await PosEnquiry.find(filter).sort({createdAt:-1}).limit(1000).lean();const syncCounts=await PosEnquiry.aggregate([{$group:{_id:'$crmSync.status',count:{$sum:1}}}]);res.render('pos-enquiries',{items,status:status||'',category:category||'ALL',syncCounts});
  }catch(e){console.error(e);res.status(500).send('Unable to load enquiries');}
 });
 router.post('/admin/:id/retry-crm',adminOnly,async(req,res)=>{
@@ -135,3 +160,4 @@ router.post('/admin/:id/status',adminOnly,async(req,res)=>{
  }catch(e){res.status(400).send('Unable to update status');}
 });
 module.exports=router;
+module.exports.startCrmRetryWorker=startCrmRetryWorker;
