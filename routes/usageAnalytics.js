@@ -9,7 +9,9 @@ router.get('/groups', admin, async (req,res) => {
 // Shared-key endpoint for CRM background synchronization.
 router.post('/crm/usage-groups', async (req,res)=>{
  const key=String(process.env.POSIFLOW_ANALYTICS_KEY||process.env.EASYLABEL_ANALYTICS_KEY||'').trim();
- if(!key||String(req.get('x-easylabel-key')||'').trim()!==key)return res.status(401).json({success:false});
+ const supplied=String(req.get('x-easylabel-key')||'').trim();
+ if(!key||!supplied||!require('../middleware/adminSecurity').comparePassword(supplied,key))return res.status(401).json({success:false,code:'CRM_KEY_REQUIRED'});
+ res.set('Cache-Control','no-store');
  try{
  const normalize=v=>String(v||'').replace(/\D/g,'').slice(-10);
  const wanted=new Set((Array.isArray(req.body?.mobiles)?req.body.mobiles:[]).slice(0,500).map(normalize).filter(v=>/^\d{10}$/.test(v)));
