@@ -8,7 +8,7 @@ async function refresh(){
  pending=(async()=>{const now=new Date(), from=cutoff(now);
  const rows=await UsageEvent.aggregate([
  {$sort:{occurredAt:1,_id:1}},
- {$group:{_id:{$cond:[{$ne:[{$ifNull:['$customerMobile','']},'']},{$concat:['m:','$customerMobile']},{$cond:[{$ne:[{$ifNull:['$customerId','']},'']},{$concat:['i:','$customerId']},null]}]},mobile:{$last:'$customerMobile'},id:{$last:'$customerId'},name:{$last:'$customerName'},email:{$last:'$customerEmail'},lastActivity:{$max:'$occurredAt'},labels:{$sum:{$cond:[{$and:[{$eq:['$eventType','LABEL_PRINT']},{$gte:['$occurredAt',from]},{$lte:['$occurredAt',now]}]},'$copies',0]}}}},{$match:{_id:{$ne:null}}},{$sort:{labels:-1,_id:1}}
+ {$group:{_id:{$cond:[{$ne:[{$ifNull:['$customerMobile','']},'']},{$concat:['m:','$customerMobile']},{$cond:[{$ne:[{$ifNull:['$customerId','']},'']},{$concat:['i:','$customerId']},null]}]},mobile:{$last:'$customerMobile'},id:{$last:'$customerId'},name:{$last:'$customerName'},email:{$last:'$customerEmail'},lastActivity:{$max:'$occurredAt'},lifetimeLabels:{$sum:{$cond:[{$eq:['$eventType','LABEL_PRINT']},'$copies',0]}},labels:{$sum:{$cond:[{$and:[{$eq:['$eventType','LABEL_PRINT']},{$gte:['$occurredAt',from]},{$lte:['$occurredAt',now]}]},'$copies',0]}}}},{$match:{_id:{$ne:null}}},{$sort:{labels:-1,_id:1}}
  ]).allowDiskUse(true);
  const counts={A:0,B:0,C:0,D:0}; for(const r of rows){r.group=classify(r.labels);counts[r.group]++;}
  snapshot={rows,counts,updatedAt:now,from};return snapshot;
