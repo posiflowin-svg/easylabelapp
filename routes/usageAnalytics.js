@@ -1,11 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const c = require('../controllers/UsageAnalyticsController');
+const cache = require('../middleware/usageCache');
+const admin = require('../middleware/adminSecurity').requireAdmin;
+router.get('/groups', admin, async (req,res) => {
+ try { const snap=await require('../services/usageGroups').get(); const group=String(req.query.group||''); const q=String(req.query.customer||'').trim().toLowerCase(); const page=Math.max(1,Math.min(100000,parseInt(req.query.page,10)||1)); const rows=snap.rows.filter(r=>(!group||r.group===group)&&(!q||[r.name,r.mobile,r.email].some(v=>String(v||'').toLowerCase().includes(q)))); res.json({success:true,counts:snap.counts,updatedAt:snap.updatedAt,from:snap.from,total:rows.length,page,rows:rows.slice((page-1)*100,page*100)}); } catch(e){console.error(e);res.status(503).json({success:false,message:'Usage groups temporarily unavailable'});}
+});
 router.post('/events', c.ingest);
-router.get('/summary', c.summary);
-router.get('/customers', c.customers);
-router.get('/recent', c.recent);
-router.get('/models', c.models);
+router.get('/summary', admin, cache, c.summary);
+router.get('/customers', admin, cache, c.customers);
+router.get('/recent', admin, cache, c.recent);
+router.get('/models', admin, cache, c.models);
 router.get('/customer-activity', c.customerActivity);
 
 // Server-to-server endpoint used by Posiflow CRM Label Customer page.

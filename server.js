@@ -46,6 +46,7 @@ db.on('error', (err) => {
 
 db.once('open', () => {
     console.log('DB Connection Success');
+    require('./services/usageGroups').start();
 });
 
 const app = express();
